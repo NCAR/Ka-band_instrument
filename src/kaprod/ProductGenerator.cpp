@@ -13,7 +13,7 @@
 
 const int ProductGenerator::PRODGEN_MAX_GATES = 4096;
 
-ProductGenerator::ProductGenerator(QtTSReader *source, ProductWriter *sink,
+ProductGenerator::ProductGenerator(QtKaTSReader *source, KaProductWriter *sink,
         int nSamples) :
     _reader(source),
     _writer(sink),
@@ -80,7 +80,7 @@ ProductGenerator::showInfo() {
 }
 
 void
-ProductGenerator::handleItem(RadarDDS::TimeSeriesSequence* tsSequence) {
+ProductGenerator::handleItem(RadarDDS::KaTimeSeriesSequence* tsSequence) {
     bool ok = true;
 
     _itemCount++;
@@ -95,7 +95,7 @@ ProductGenerator::handleItem(RadarDDS::TimeSeriesSequence* tsSequence) {
 
     // Run through the samples in the item
     for (unsigned int samp = 0; samp < nPulses; samp++) {
-        RadarDDS::TimeSeries &ts = tsSequence->tsList[samp];
+        RadarDDS::KaTimeSeries &ts = tsSequence->tsList[samp];
         // Get the housekeeping as a class which gives us access to derived
         // values (like radar constant, gate spacing, etc.) in addition to the 
         // raw metadata members.
@@ -257,7 +257,7 @@ done:
 void
 ProductGenerator::publish_(const MomentsFields *moments,
         const MomentsFields *filteredMoments) {
-    RadarDDS::ProductSet *productSet;
+    RadarDDS::KaProductSet *productSet;
     int nGates = _dwellHskp.gates;
 
     productSet = _writer->getEmptyItem();
@@ -270,7 +270,7 @@ ProductGenerator::publish_(const MomentsFields *moments,
     // The number of products is currently fixed at 8: DM, DMRAW, DZ, VE,
     // SW, SNR, DZ_F, VE_F
     productSet->products.length(8);
-    RadarDDS::Product *product = productSet->products.get_buffer();
+    RadarDDS::KaProduct *product = productSet->products.get_buffer();
 
     // RAP moments "dbm" is really:
     //
@@ -449,7 +449,7 @@ ProductGenerator::publish_(const MomentsFields *moments,
 }
 
 void
-ProductGenerator::addProductHousekeeping_(RadarDDS::Product & p) {
+ProductGenerator::addProductHousekeeping_(RadarDDS::KaProduct & p) {
     // Copy housekeeping from the first pulse of the dwell
     p.hskp = _dwellHskp;
     // replace az and el with values from mid-dwell

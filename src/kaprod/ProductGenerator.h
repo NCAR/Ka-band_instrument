@@ -10,8 +10,8 @@
 
 #include <vector>
 #include <QThread>
-#include <QtTSReader.h>
-#include <ProductWriter.h>
+#include <QtKaTSReader.h>
+#include <KaProductWriter.h>
 #include <radar/RadarMoments.hh>
 #include <kaddsSysHskp.h>
 
@@ -26,7 +26,7 @@ public:
 	 * @param sink the ProductWriter sink for resulting products
 	 * int nSamples the number of pulses to use per dwell
 	 */
-    ProductGenerator(QtTSReader *source, ProductWriter *sink, int nSamples);
+    ProductGenerator(QtKaTSReader *source, KaProductWriter *sink, int nSamples);
     virtual ~ProductGenerator();
     void run();
     /**
@@ -45,7 +45,7 @@ protected slots:
      * products becomes available after handling, it will be published.
      * @param item pointer to the new RadarDDS::TimeSeries item
      */
-    virtual void handleItem(RadarDDS::TimeSeriesSequence *item);
+    virtual void handleItem(RadarDDS::KaTimeSeriesSequence *item);
     /**
      * Show information.
      */
@@ -57,23 +57,23 @@ signals:
      * from our source.
      * @param item pointer to the RadarDDS::TimeSeries item being returned
      */
-    void returnItem(RadarDDS::TimeSeriesSequence *item);
+    void returnItem(RadarDDS::KaTimeSeriesSequence *item);
     
 private:
     /**
      * Publish a ray of data
      */
     void publish_(const MomentsFields *moments, const MomentsFields *filteredMoments);
-    void addProductHousekeeping_(RadarDDS::Product & p);
+    void addProductHousekeeping_(RadarDDS::KaProduct & p);
             
     /**
      * QtTSReader source of time series data
      */
-    QtTSReader *_reader;
+    QtKaTSReader *_reader;
     /**
      * ProductWriter sink for our products
      */
-    ProductWriter *_writer;
+    KaProductWriter *_writer;
     /**
      * The RAP radar moments calculator
      */

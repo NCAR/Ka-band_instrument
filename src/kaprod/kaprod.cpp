@@ -14,8 +14,8 @@
 #include "DDSPublisher.h"
 #include "DDSSubscriber.h"
 #include "ProductGenerator.h"
-#include "QtTSReader.h"
-#include "ProductWriter.h"
+#include "QtKaTSReader.h"
+#include "KaProductWriter.h"
 
 std::string _ORB;                ///< path to the ORB configuration file.
 std::string _DCPS;               ///< path to the DCPS configuration file.
@@ -131,10 +131,10 @@ main (int argc, char** argv) {
     QApplication app(argc, argv, false);
 
     // create the DDS reader for incoming time-series data
-    QtTSReader *tsReader = new QtTSReader(subscriber, _tsTopic);
+    QtKaTSReader *tsReader = new QtKaTSReader(subscriber, _tsTopic);
 
     // create the DDS writer for outgoing products
-    ProductWriter *productWriter = new ProductWriter(publisher, _prodTopic);
+    KaProductWriter *productWriter = new KaProductWriter(publisher, _prodTopic);
 
     // create the products generator thread and run it
     ProductGenerator generator(tsReader, productWriter, 1024);
