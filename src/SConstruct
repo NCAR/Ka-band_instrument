@@ -1,0 +1,37 @@
+# -*- python -*-
+# $Id: SConstruct,v 1.4 2005/08/23 16:22:41 granger Exp $
+
+import os,os.path, sys
+sys.path.insert(0, os.path.join(os.getcwd(),'config'))
+import eol_scons
+import SCons
+
+options = eol_scons.GlobalOptions()
+
+def KaSetup(env):
+    env.AppendUnique(CCFLAGS = ['-g'])
+    env.AppendUnique(CCFLAGS=['-Wall','-Wno-char-subscripts'])
+    env.AppendUnique(CXXFLAGS=['-Wno-non-virtual-dtor'])  
+    env['DOXYFILE_DICT'] = dict()
+    env['DOXYFILE_DICT'].update({ 'HTML_HEADER' : env.File("#header.html") })
+    return env
+    
+env = Environment(tools = ['default'], 
+                  GLOBAL_TOOLS = ['prefixoptions', 'buildmode', 'svninfo', KaSetup])
+svnInfo = env.SvnInfo('svnInfo.h', '#')
+
+SConscript("acex/SConscript")
+SConscript("rtfcommon/SConscript")
+SConscript("pentek/SConscript")
+SConscript("sniffer/SConscript")
+SConscript("bscan/SConscript")
+SConscript("kadrx/SConscript")
+SConscript("kascope/SConscript")
+SConscript("kaprod/SConscript")
+SConscript("kaarchiver/SConscript")
+
+env.Alias('apidocs', env.Dir("apidocs"))
+
+options.Update(env)
+env.SetHelp(options.GenerateHelpText(env))
+

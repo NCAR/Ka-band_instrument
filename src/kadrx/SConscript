@@ -1,0 +1,31 @@
+# -*- python -*-
+
+tools = Split("""
+kadds
+pentek
+qtt_qtconfig
+boost_date_time
+boost_program_options
+doxygen
+qt4
+""")
+
+sources = Split("""
+KaDrxConfig.cpp
+main.cpp
+kaDnThread.cpp
+""")
+
+headers = Split("""
+KaDrxConfig.h
+kaDnThread.h
+""")
+
+env = Environment(tools = ['default'] + tools)
+
+kadrx = env.Program('kadrx', sources)
+
+html = env.Apidocs(sources + headers, DOXYFILE_FILE = "Doxyfile")
+
+Default(kadrx, html)
+

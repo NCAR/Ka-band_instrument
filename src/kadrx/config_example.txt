@@ -1,0 +1,29 @@
+# Test config file for Ka
+radar_id                Ka
+
+gates                   100
+
+ant_gain                46.2    # dB
+ant_hbeam_width         0.75    # deg
+ant_vbeam_width         0.68    # deg
+
+staggered_prt           0
+prt1                    1.00352e-4  # s
+
+rcvr_bandwidth          1.37e6  # Hz
+rcvr_digital_gain       -2.67   # dB
+rcvr_filter_mismatch    1.1     # dB
+rcvr_gate0_delay        0.0     # s
+rcvr_noise_figure       8.9     # dB
+rcvr_pulse_width        5.12e-7 # s
+rcvr_rf_gain            39.48   # dB
+
+tx_cntr_freq            9.44065e10 # Hz
+tx_peak_power           58.78   # dBm
+tx_pulse_width          5.12e-7 # s
+tx_delay                0.0     # s
+
+# FL1 location
+latitude            40.03794
+longitude           -105.24127
+altitude            1609
