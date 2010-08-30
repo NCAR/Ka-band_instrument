@@ -27,7 +27,7 @@
 #include "kaDnThread.h"
 #include "p7142.h"
 #include "DDSPublisher.h"
-#include "TSWriter.h"
+#include "KaTSWriter.h"
 
 #include "KaDrxConfig.h"
 
@@ -49,7 +49,7 @@ int _tsLength;                   ///< The time series length
 std::string _gaussianFile = "";  ///< gaussian filter coefficient file
 std::string _kaiserFile = "";    ///< kaiser filter coefficient file
 DDSPublisher* _publisher = 0;    ///< The publisher.
-TSWriter* _tsWriter = 0;         ///< The time series writer.
+KaTSWriter* _tsWriter = 0;         ///< The time series writer.
 bool _simulate;                  ///< Set true for simulate mode
 int _simWaveLength;              ///< The simulated data wavelength, in samples
 int _simPauseMS;                 ///< The number of millisecnds to pause when reading in simulate mode.
@@ -82,7 +82,7 @@ void createDDSservices()
 	}
 
 	// create the DDS time series writer
-	_tsWriter = new TSWriter(*_publisher, _tsTopic.c_str());
+	_tsWriter = new KaTSWriter(*_publisher, _tsTopic.c_str());
 }
 
 //////////////////////////////////////////////////////////////////////

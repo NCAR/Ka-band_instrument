@@ -9,7 +9,7 @@ using namespace boost::posix_time;
 //////////////////////////////////////////////////////////////////////////////////
 kaDnThread::kaDnThread(
                 const KaDrxConfig& config,
-                TSWriter* tsWriter,
+                KaTSWriter* tsWriter,
                 bool publish,
                 int tsLength,
                 std::string devName,
@@ -19,7 +19,7 @@ kaDnThread::kaDnThread(
                 bool simulate,
                 int simPauseMS,
                 int simWavelength) :
-    kaDn(devName,
+    p7142sd3cdn(devName,
              chanId,
              config.gates(),
              1,
@@ -307,7 +307,7 @@ kaDnThread::_decodeAndPublishRaw(char* buf, int buflen) {
             //
             // Copy this pulse into our DDS sample in progress
             //
-            RadarDDS::TimeSeries & ts = _ddsSampleInProgress->tsList[_ndxInDdsSample++];
+            RadarDDS::KaTimeSeries & ts = _ddsSampleInProgress->tsList[_ndxInDdsSample++];
             // Copy our fixed metadata into this pulse
             ts.hskp = _baseDdsHskp;
             // Then fill the non-fixed metadata

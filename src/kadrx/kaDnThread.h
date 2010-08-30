@@ -1,12 +1,12 @@
-#ifndef P7142DNTHREAD_H_
-#define P7142DNTHREAD_H_
+#ifndef KADNTHREAD_H_
+#define KADNTHREAD_H_
 
 #include <QThread>
 #include <p7142sd3c.h>
-#include <TSWriter.h>
+#include <KaTSWriter.h>
 #include "KaDrxConfig.h"
 
-class kaDnThread: public QThread, public Pentek::kaDn {
+class kaDnThread: public QThread, public Pentek::p7142sd3cdn {
 	Q_OBJECT
 	public:
         /**
@@ -31,7 +31,7 @@ class kaDnThread: public QThread, public Pentek::kaDn {
          */
         kaDnThread(
                 const KaDrxConfig& config,
-                TSWriter* tsWriter,
+                KaTSWriter* tsWriter,
                 bool publish,
                 int tsLength,
                 std::string devName,
@@ -110,7 +110,7 @@ class kaDnThread: public QThread, public Pentek::kaDn {
 		/// Set true if we are going to publish the data
 		bool _publish;
 		/// The DDS time series writer
-		TSWriter* _tsWriter;
+		KaTSWriter* _tsWriter;
 		/// The number of unpublished blocks or partial blocks, due to no
 		/// empty items being available from DDS. It is reset to zero whenever 
 		/// tsDiscards() is called.
@@ -135,7 +135,7 @@ class kaDnThread: public QThread, public Pentek::kaDn {
 		int _ddsSamplePulses;
         /// The DDS time series sequence we're filling. Once it has 
 		/// _ddsSamplePulses pulses in it, we publish it.
-        RadarDDS::TimeSeriesSequence *_ddsSampleInProgress;
+        RadarDDS::KaTimeSeriesSequence *_ddsSampleInProgress;
         /// Where are we in _ddsSampleInProgress?
         int _ndxInDdsSample;
 		/// The DDS sample number; increment when a sample is published.
@@ -146,4 +146,4 @@ class kaDnThread: public QThread, public Pentek::kaDn {
 		
 };
 
-#endif /*P7142DNTHREAD_H_*/
+#endif /*KADNTHREAD_H_*/
