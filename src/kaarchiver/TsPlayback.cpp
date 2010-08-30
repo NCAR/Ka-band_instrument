@@ -15,7 +15,7 @@
 
 static const double SPEED_OF_LIGHT = 2.99792458e8; // m s-1
 
-TsPlayback::TsPlayback(TSWriter *sink, const QStringList & fileNames,
+TsPlayback::TsPlayback(KaTSWriter *sink, const QStringList & fileNames,
         float playbackSpeed) : 
     _reader(fileNames),
     _writer(sink),
@@ -30,7 +30,7 @@ TsPlayback::~TsPlayback() {
 void 
 TsPlayback::run() {
     bool channelCountWarned = false;
-    RadarDDS::TimeSeriesSequence *tsSequence;
+    RadarDDS::KaTimeSeriesSequence *tsSequence;
     
     // Have we warned about our receiver bandwidth kluge yet?
     bool warnedOnRxBandwidth = false;
@@ -56,7 +56,7 @@ TsPlayback::run() {
                         " but only channel zero will be published!" << std::endl;
                 channelCountWarned = true;
             }
-            RadarDDS::TimeSeries & ddsPulse = tsSequence->tsList[pulse];
+            RadarDDS::KaTimeSeries & ddsPulse = tsSequence->tsList[pulse];
             TimeSeriesAdapter::IwrfToDDS(iwrfPulse, ddsPulse);
             // IwrfTsPulse has no metadata for receiver bandwidth, so 
             // rcvr_bandwidth in our RadarDDS::TimeSeries is currently unset.

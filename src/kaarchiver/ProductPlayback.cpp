@@ -15,7 +15,7 @@
 
 static const double SPEED_OF_LIGHT = 2.99792458e8; // m s-1
 
-ProductPlayback::ProductPlayback(ProductWriter *sink, const QStringList & fileNames,
+ProductPlayback::ProductPlayback(KaProductWriter *sink, const QStringList & fileNames,
         float playbackSpeed) : 
     _reader(fileNames),
     _writer(sink),
@@ -30,7 +30,7 @@ ProductPlayback::~ProductPlayback() {
 void 
 ProductPlayback::run() {
     bool channelCountWarned = false;
-    RadarDDS::ProductSet *productSet;
+    RadarDDS::KaProductSet *productSet;
 
     while (1) {
         productSet = _writer->getEmptyItem();

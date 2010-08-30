@@ -25,12 +25,12 @@ public:
      * Convert from RadxRay (+ its RadxVol) to a RadarDDS::ProductSet ray.
      * @param radxRay the RadxRay to be converted
      * @param radxVol the RadxVol associated with radxRay
-     * @param productSet the destination RadarDDS::ProductSet
+     * @param productSet the destination RadarDDS::KaProductSet
      */
     static void RadxRayToDDS(const RadxRay& radxRay, const RadxVol& RadxVol,
-            RadarDDS::ProductSet& productSet);
+            RadarDDS::KaProductSet& productSet);
     /**
-     * Convert a RadarDDS::ProductSet ray to a RadxRay/RadxVol/RadxRcalib
+     * Convert a RadarDDS::KaProductSet ray to a RadxRay/RadxVol/RadxRcalib
      * combination. Note that the three Radx objects will be populated, but
      * no association will be set between them. I.e., insertion of the RadxRay
      * into the RadxVol and association of the RadxRcalib with the RadxVol
@@ -44,7 +44,7 @@ public:
      * @param radxRcalib the RadxRcalib to hold calibration information 
      *     extracted from productSet.
      */
-    static void DDSToRadxRay(const RadarDDS::ProductSet& productSet,
+    static void DDSToRadxRay(const RadarDDS::KaProductSet& productSet,
             RadxRay& radxRay, RadxVol& radxVol, RadxRcalib& radxRcalib);
 };
 

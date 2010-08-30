@@ -24,7 +24,7 @@
 ProductArchiver::ProductArchiver(DDSSubscriber& subscriber, 
         std::string topicName, std::string dataDir, uint raysPerFile,
         RadxFile::file_format_t fileFormat) :
-            ProductReader(subscriber, topicName),
+            KaProductReader(subscriber, topicName),
             _dataDir(dataDir),
             _raysPerFile(raysPerFile),
             _radxFile(),
@@ -63,7 +63,7 @@ void
 ProductArchiver::notify() {
     ACE_Guard<ACE_Recursive_Thread_Mutex> guard(_mutex);
     
-    while (RadarDDS::ProductSet* ps = getNextItem()) {
+    while (RadarDDS::KaProductSet* ps = getNextItem()) {
         _raysRead++;
 
         // Build a new RadxRay from the ProductSet

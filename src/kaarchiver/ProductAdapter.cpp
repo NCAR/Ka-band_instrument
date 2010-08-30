@@ -17,7 +17,7 @@ static const double SPEED_OF_LIGHT = 2.99792458e8; // m s-1
 
 
 void ProductAdapter::RadxRayToDDS(const RadxRay& radxRay, const RadxVol& radxVol,
-            RadarDDS::ProductSet& productSet) {
+            RadarDDS::KaProductSet& productSet) {
     long long timetagUsecs = radxRay.getTimeSecs() * 1000000LL +
             (long long)(radxRay.getNanoSecs() / 1000);   // usecs since 1970-01-01 00:00:00 UTC
 
@@ -29,7 +29,7 @@ void ProductAdapter::RadxRayToDDS(const RadxRay& radxRay, const RadxVol& radxVol
     int nProducts = radxRay.getNFields();
     
     productSet.products.length(nProducts);
-    RadarDDS::Product *productList = productSet.products.get_buffer();
+    RadarDDS::KaProduct *productList = productSet.products.get_buffer();
     
     for (int p = 0; p < nProducts; p++) {
         // Get the next RadxField
@@ -48,7 +48,7 @@ void ProductAdapter::RadxRayToDDS(const RadxRay& radxRay, const RadxVol& radxVol
         }
         
         // Get references to the destination Product and its SysHousekeeping
-        RadarDDS::Product & product = productList[p];
+        RadarDDS::KaProduct & product = productList[p];
         RadarDDS::SysHousekeeping & hskp = product.hskp;
         
         // SysHousekeeping.timetag
@@ -211,13 +211,13 @@ void ProductAdapter::RadxRayToDDS(const RadxRay& radxRay, const RadxVol& radxVol
     }
 }
 
-void ProductAdapter::DDSToRadxRay(const RadarDDS::ProductSet& productSet, 
+void ProductAdapter::DDSToRadxRay(const RadarDDS::KaProductSet& productSet, 
         RadxRay& radxRay, RadxVol& radxVol, RadxRcalib& radxRcalib) {
     // Will this be the first ray added to RadxVol?
     bool firstRayInVol = (radxVol.getNRays() == 0);
     
     // Get common housekeeping from the first product in the ProductSet
-    const RadarDDS::Product &firstProduct = productSet.products[0];
+    const RadarDDS::KaProduct &firstProduct = productSet.products[0];
     const kaddsSysHskp hskp(firstProduct.hskp);
     
     // If the platform type is not Radx::PLATFORM_TYPE_FIXED, we need to
@@ -419,7 +419,7 @@ void ProductAdapter::DDSToRadxRay(const RadarDDS::ProductSet& productSet,
     // Add each product in productSet as a new field in radxRay
     int nProducts = productSet.products.length();
     for (int p = 0; p < nProducts; p++) {
-        const RadarDDS::Product& product = productSet.products[p];
+        const RadarDDS::KaProduct& product = productSet.products[p];
         radxRay.addField(std::string(product.name), 
                 std::string(product.units), product.data.length(), 
                 (Radx::si16)product.bad_value, 

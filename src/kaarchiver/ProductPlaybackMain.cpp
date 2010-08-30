@@ -4,7 +4,7 @@
 #include <boost/program_options.hpp>
 
 #include "ProductPlayback.h"
-#include "ProductWriter.h"
+#include "KaProductWriter.h"
 
 namespace po = boost::program_options;
 
@@ -117,7 +117,7 @@ main(int argc, char *argv[])
     }
 
     // create the DDS writer for outgoing time series
-    ProductWriter *productWriter = new ProductWriter(publisher, productTopic);
+    KaProductWriter *productWriter = new KaProductWriter(publisher, productTopic);
 
     ProductPlayback pb(productWriter, FileNames, PlaybackSpeed);
     pb.run();

@@ -32,7 +32,7 @@ TsArchiver* TsArchiver::_theArchiver = 0;
 
 TsArchiver::TsArchiver(DDSSubscriber& subscriber, 
         std::string topicName, std::string dataDir) : 
-            TSReader(subscriber, topicName), 
+            KaTSReader(subscriber, topicName), 
             _acceptNotify(false),
             _iwrfInfo(),
             _iwrfPulse(_iwrfInfo),
@@ -92,7 +92,7 @@ TsArchiver::notify() {
         return;
     }
     
-    while (RadarDDS::TimeSeriesSequence* pItem = getNextItem()) {
+    while (RadarDDS::KaTimeSeriesSequence* pItem = getNextItem()) {
     	
 		// check for dropped samples by examining the DDS sample counter
 		int ddsSample = pItem->sampleNumber;
@@ -113,7 +113,7 @@ TsArchiver::notify() {
 
         int nPulses = pItem->tsList.length();
         for (int pulse = 0; pulse < nPulses; pulse++) {
-            const RadarDDS::TimeSeries & ts = pItem->tsList[pulse];
+            const RadarDDS::KaTimeSeries & ts = pItem->tsList[pulse];
             long pulseNum = ts.pulseNum;
             long delta = pulseNum - _lastPulseRcvd;
             if (_lastPulseRcvd > 0 && (delta != 1) && pulse != 0) {
@@ -130,7 +130,7 @@ TsArchiver::notify() {
 }
 
 void
-TsArchiver::_assembleIwrfPulse(const RadarDDS::TimeSeries & ddsPulse) {
+TsArchiver::_assembleIwrfPulse(const RadarDDS::KaTimeSeries & ddsPulse) {
     // Radar info
     if (! (_pktSeqNum % 100)) {
         iwrf_radar_info_t radarInfo;

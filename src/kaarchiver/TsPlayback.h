@@ -16,7 +16,7 @@
 
 #include <QThread>
 #include <QTime>
-#include <TSWriter.h>
+#include <KaTSWriter.h>
 
 #include "IwrfTsFilesReader.h"
 
@@ -27,10 +27,10 @@ class TsPlayback : public QThread {
 public:
 	/**
 	 * Constructor.
-	 * @param sink the TSWriter sink for resulting time series
+	 * @param sink the KaTSWriter sink for resulting time series
 	 * @param fileNames the names of time series archive files for playback
 	 */
-    TsPlayback(TSWriter *sink, const QStringList & fileNames, float playbackSpeed = 1.0);
+    TsPlayback(KaTSWriter *sink, const QStringList & fileNames, float playbackSpeed = 1.0);
     virtual ~TsPlayback();
     void run();
 protected slots:
@@ -46,9 +46,9 @@ private:
     IwrfTsFilesReader _reader;
 
     /**
-     * TSWriter sink for our time series data
+     * KaTSWriter sink for our time series data
      */
-    TSWriter *_writer;
+    KaTSWriter *_writer;
     
     /**
      * Number of pulses to pack in each published ProfilerDDS::TimeSeriesSequence

@@ -13,7 +13,7 @@ static const double SPEED_OF_LIGHT = 2.99792458e8; // m s-1
 
 void
 TimeSeriesAdapter::IwrfToDDS(const IwrfTsPulse& iwrfPulse,
-        RadarDDS::TimeSeries& ddsPulse) {
+        RadarDDS::KaTimeSeries& ddsPulse) {
     // Shortcut to the IwrfTsInfo from the incoming IwrfTsPulse
     const IwrfTsInfo iwrfInfo = iwrfPulse.getTsInfo();
     
@@ -205,7 +205,7 @@ TimeSeriesAdapter::IwrfToDDS(const IwrfTsPulse& iwrfPulse,
 }
 
 void
-TimeSeriesAdapter::DDSToIwrf(const RadarDDS::TimeSeries& ddsPulse,
+TimeSeriesAdapter::DDSToIwrf(const RadarDDS::KaTimeSeries& ddsPulse,
         IwrfTsPulse& iwrfPulse, si64 packetSequenceNum) {
     // Get a reference to the IwrfTsPulse's IwrfTsInfo member
     IwrfTsInfo & iwrfInfo = iwrfPulse.getTsInfo();

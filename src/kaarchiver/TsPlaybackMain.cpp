@@ -4,7 +4,7 @@
 #include <boost/program_options.hpp>
 
 #include "TsPlayback.h"
-#include "TSWriter.h"
+#include "KaTSWriter.h"
 
 namespace po = boost::program_options;
 
@@ -117,7 +117,7 @@ main(int argc, char *argv[])
     }
 
     // create the DDS writer for outgoing time series
-    TSWriter *tsWriter = new TSWriter(publisher, tsTopic);
+    KaTSWriter *tsWriter = new KaTSWriter(publisher, tsTopic);
 
     TsPlayback pb(tsWriter, FileNames, PlaybackSpeed);
     pb.run();

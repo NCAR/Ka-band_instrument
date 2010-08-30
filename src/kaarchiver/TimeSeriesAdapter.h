@@ -25,7 +25,7 @@ public:
      * @param[out] ddsPulse the destination RadarDDS::TimeSeries
      */
     static void IwrfToDDS(const IwrfTsPulse& iwrfPulse, 
-            RadarDDS::TimeSeries& ddsPulse);
+            RadarDDS::KaTimeSeries& ddsPulse);
     /**
      * Convert from RadarDDS::TimeSeries to IwrfTsPulse.
      * @param ddsPulse the RadarDDS::TimeSeries to be converted
@@ -33,7 +33,7 @@ public:
      * @param packetSequenceNum the packet sequence number to assign to the
      *     IwrfTsPulse
      */
-    static void DDSToIwrf(const RadarDDS::TimeSeries& ddsPulse,
+    static void DDSToIwrf(const RadarDDS::KaTimeSeries& ddsPulse,
             IwrfTsPulse& iwrfPulse, si64 packetSequenceNum);
 };
 

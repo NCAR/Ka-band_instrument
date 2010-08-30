@@ -16,7 +16,7 @@
 
 #include <QThread>
 #include <QTime>
-#include <ProductWriter.h>
+#include <KaProductWriter.h>
 
 #include "CfRadialFilesReader.h"
 
@@ -30,7 +30,7 @@ public:
 	 * @param sink the ProductWriter sink for resulting time series
 	 * @param fileNames the names of time series archive files for playback
 	 */
-    ProductPlayback(ProductWriter *sink, const QStringList & fileNames, float playbackSpeed = 1.0);
+    ProductPlayback(KaProductWriter *sink, const QStringList & fileNames, float playbackSpeed = 1.0);
     virtual ~ProductPlayback();
     void run();
 protected slots:
@@ -48,7 +48,7 @@ private:
     /**
      * ProductWriter sink for our time series data
      */
-    ProductWriter *_writer;
+    KaProductWriter *_writer;
     
     /**
      * Number of pulses to pack in each published ProfilerDDS::TimeSeriesSequence

@@ -6,14 +6,14 @@
 
 // headers for radd/archiver
 #include <archiver/ArchiverService_impl.h>
-#include <TSReader.h>
+#include <KaTSReader.h>
 
 // RAL IwrfTsPulse class
 #include <radar/IwrfTsPulse.hh>
 
 
 // Singleton TsArchiver class
-class TsArchiver : public TSReader {
+class TsArchiver : public KaTSReader {
 public:
     // Get the singleton instance, creating it if necessary.
     static TsArchiver* TheArchiver(DDSSubscriber& subscriber,
@@ -45,7 +45,7 @@ protected:
     		std::string dataDir);
     virtual ~TsArchiver();
     
-    void _assembleIwrfPulse(const RadarDDS::TimeSeries& ddsPulse);
+    void _assembleIwrfPulse(const RadarDDS::KaTimeSeries& ddsPulse);
     
     void _writeIwrfPulse();
     

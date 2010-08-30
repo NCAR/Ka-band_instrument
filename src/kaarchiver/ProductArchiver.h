@@ -8,7 +8,7 @@
 #ifndef PRODUCTARCHIVER_H_
 #define PRODUCTARCHIVER_H_
 
-#include <ProductReader.h>
+#include <KaProductReader.h>
 
 #include <Radx/RadxFile.hh>
 #include <Radx/RadxVol.hh>
@@ -17,7 +17,7 @@
 /// ProductArchiver class
 /// Collect incoming product data via the given DDSSubscriber and write 
 /// CFRadial netCDF files containing the product data.
-class ProductArchiver : public ProductReader {
+class ProductArchiver : public KaProductReader {
 public:
     /// ProductArchiver constructor
     /// @param subscriber the associated DDSSubscriber
