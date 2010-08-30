@@ -2,12 +2,12 @@
 #define ASCOPEREADER_H_
 
 #include "AScope.h"
-#include "QtTSReader.h"
+#include "QtKaTSReader.h"
 
 /// A DDS reader for the AScope. It is derived from QtTSReader, and translates
 /// DDS samples to AScope::TimeSeries. It will emit a newTSItemSlot(RadarDDS::TimeSeriesSequence*)
 /// when new data arrives.
-class AScopeReader: public QtTSReader 
+class AScopeReader: public QtKaTSReader 
 {
 		Q_OBJECT
 public:

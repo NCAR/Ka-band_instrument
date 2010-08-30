@@ -8,7 +8,7 @@ Q_DECLARE_METATYPE(AScope::TimeSeries)
 // are accepting all DDS samples.
 AScopeReader::AScopeReader(DDSSubscriber& subscriber,
 		std::string topicName):
-		QtTSReader(subscriber, topicName, 0)
+		QtKaTSReader(subscriber, topicName, 0)
 {
 	// this are required in order to send structured data types
 	// via a qt signal
@@ -23,14 +23,14 @@ AScopeReader::~AScopeReader() {
 void
 AScopeReader::returnItemSlot(AScope::TimeSeries pItem) {
 	
-	RadarDDS::TimeSeriesSequence* ddsItem
-		= static_cast<RadarDDS::TimeSeriesSequence*>(pItem.handle);
+	RadarDDS::KaTimeSeriesSequence* ddsItem
+		= static_cast<RadarDDS::KaTimeSeriesSequence*>(pItem.handle);
 
 	// It had better be a RadarDDS::TimeSeriesSequence*
 	assert(ddsItem);
 	
 	// return the DDS sample
-	TSReader::returnItem(ddsItem);
+	KaTSReader::returnItem(ddsItem);
 }
 
 ////////////////////////////////////////////////////////////////////////
@@ -41,7 +41,7 @@ AScopeReader::returnItemSlot(AScope::TimeSeries pItem) {
 /// when they are finished with it.
 void AScopeReader::notify(){
 	// a DDS data notification has been received.
-	while (RadarDDS::TimeSeriesSequence* ddsItem = getNextItem()) {
+	while (RadarDDS::KaTimeSeriesSequence* ddsItem = getNextItem()) {
 		int tsLength   = ddsItem->tsList.length();
 
 		// copy required metadata
