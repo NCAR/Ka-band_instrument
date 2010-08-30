@@ -22,7 +22,7 @@ svnInfo = env.SvnInfo('svnInfo.h', '#')
 
 SConscript("acex/SConscript")
 SConscript("rtfcommon/SConscript")
-SConscript("pentek/SConscript")
+SConscript("pentek-ka/SConscript")
 SConscript("sniffer/SConscript")
 SConscript("kadrx/SConscript")
 SConscript("kascope/SConscript")
