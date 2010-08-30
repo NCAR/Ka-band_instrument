@@ -195,7 +195,7 @@ main(int argc, char** argv)
 
 	while (1) {
 
-		TimeSeriesSequence* tss = _tsReader->nextTSS();
+		KaTimeSeriesSequence* tss = _tsReader->nextTSS();
 
 		if (!tss) {
 			usleep(1000);    // 1 ms polling should be fine...
@@ -203,7 +203,7 @@ main(int argc, char** argv)
 			samples++;
 			// sum data sizes from all of the pulses in this sequence
 			for (unsigned int p = 0; p < tss->tsList.length(); p++) {
-			    const TimeSeries &ts = tss->tsList[p];
+			    const KaTimeSeries &ts = tss->tsList[p];
 			    total += ts.data.length() * sizeof(ts.data[0]);
 			    subTotal += ts.data.length() * sizeof(ts.data[0]);
 			}

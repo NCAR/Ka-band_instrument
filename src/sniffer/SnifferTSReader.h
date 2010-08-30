@@ -9,12 +9,12 @@
 #define SNIFFERTSREADER_H_
 
 #include <deque>
-#include "TSReader.h"
+#include "KaTSReader.h"
 #include <pthread.h>
 
 using namespace RadarDDS;
 
-class SnifferTSReader: public TSReader {
+class SnifferTSReader: public KaTSReader {
 public:
 	SnifferTSReader(DDSSubscriber& subscriber, std::string topicName);
 	virtual ~SnifferTSReader();
@@ -22,7 +22,7 @@ public:
 	/// Block until the next time series is available
 	/// @return The next time series. It must be returned
 	/// with returnItem();
-	TimeSeriesSequence* nextTSS();
+	KaTimeSeriesSequence* nextTSS();
 
 	/// Called when one or more items have become available.
 	/// Signal to nextTS() via the condition variable that
@@ -30,7 +30,7 @@ public:
 	virtual void notify();
 
 protected:
-	std::deque<TimeSeriesSequence*> _sequences;
+	std::deque<KaTimeSeriesSequence*> _sequences;
 	pthread_mutex_t _sequencesMutex;
 };
 
