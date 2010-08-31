@@ -27,7 +27,7 @@ public:
     /**
      * Get the next ray from the file(s), as a RadxRay object.
      * Return true iff we successfully return a ray.
-     * @param pulse the RadxRay to be filled
+     * @param ray the RadxRay to be filled
      * @return true iff we return a good ray
      */
     bool getNextRay(RadxRay & ray);
