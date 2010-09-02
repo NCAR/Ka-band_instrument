@@ -12,13 +12,13 @@ qt4
 
 sources = Split("""
 KaDrxConfig.cpp
+KaDrxPub.cpp
 main.cpp
-kaDnThread.cpp
 """)
 
 headers = Split("""
 KaDrxConfig.h
-kaDnThread.h
+KaDrxPub.h
 """)
 
 env = Environment(tools = ['default'] + tools)

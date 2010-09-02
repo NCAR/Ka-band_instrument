@@ -24,7 +24,7 @@
 // with OpenDDS 2.0/2.1
 #include <dds/Version.h>
 
-#include "kaDnThread.h"
+#include "KaDrxPub.h"
 #include "p7142.h"
 #include "DDSPublisher.h"
 #include "KaTSWriter.h"
@@ -284,12 +284,12 @@ main(int argc, char** argv)
 	// these are multiply inherited from the down converters
 	// and QThread. The threads are not run at creation, but
 	// they do instantiate the down converters.
-	std::vector<kaDnThread*> down7142(_chans);
+	std::vector<KaDrxPub*> down7142(_chans);
 
 	for (int c = 0; c < _chans; c++) {
 
 		std::cout << "*** Channel " << c << " ***" << std::endl;
-		down7142[c] = new kaDnThread(
+		down7142[c] = new KaDrxPub(
                 kaConfig,
                 _tsWriter,
                 _publish,
@@ -298,6 +298,7 @@ main(int argc, char** argv)
                 c,
                 _gaussianFile,
                 _kaiserFile,
+                false,
                 _simulate,
                 _simPauseMS,
                 _simWaveLength);
