@@ -187,5 +187,12 @@ KaDrxPub::_configIsValid() const {
             "PRT must be greater than (gates+1)*(pulse width)." << std::endl;
         valid = false;
     }
+    // Make sure the Pentek's FPGA is using DDC10DECIMATE
+    if (_ddcType != DDC10DECIMATE) {
+        std::cerr << "The Pentek FPGA is using DDC type " << 
+                ddcTypeName(_ddcType) << 
+                ", but Ka requires DDC10DECIMATE." << std::endl;
+        valid = false;
+    }
     return valid;
 }
