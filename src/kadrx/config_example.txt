@@ -21,6 +21,8 @@ rcvr_rf_gain            39.48   # dB
 tx_cntr_freq            9.44065e10 # Hz
 tx_peak_power           58.78   # dBm
 tx_pulse_width          5.12e-7 # s
+tx_pulse_mod_delay      8.0e-8  # s
+tx_pulse_mod_width      7.68e-7 # s
 tx_delay                0.0     # s
 
 # FL1 location

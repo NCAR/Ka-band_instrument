@@ -16,7 +16,7 @@
 #include <cmath>
 #include <cstring>
 
-const double KaDrxConfig::UNSET_FLOAT = -INFINITY;
+const double KaDrxConfig::UNSET_DOUBLE = -INFINITY;
 const int KaDrxConfig::UNSET_INT = INT_MIN;
 const std::string KaDrxConfig::UNSET_STRING("<unset string>");
 const int KaDrxConfig::UNSET_BOOL = UNSET_INT;
@@ -30,7 +30,10 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("tx_peak_power");
     keys.insert("tx_cntr_freq");
     keys.insert("tx_chirp_bandwidth");
+    keys.insert("tx_delay");
     keys.insert("tx_pulse_width");
+    keys.insert("tx_pulse_mod_delay");
+    keys.insert("tx_pulse_mod_width");
     keys.insert("tx_switching_network_loss");
     keys.insert("tx_waveguide_loss");
     keys.insert("tx_peak_pwr_coupling");
@@ -53,7 +56,6 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("rcvr_rf_gain");
     keys.insert("rcvr_switching_network_loss");
     keys.insert("rcvr_waveguide_loss");
-    keys.insert("tx_delay");
     keys.insert("latitude");
     keys.insert("longitude");
     keys.insert("altitude");
@@ -248,7 +250,7 @@ KaDrxConfig::isValid(bool verbose) const {
             std::cerr << "'gates' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (ant_gain() == UNSET_FLOAT) {
+    if (ant_gain() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'ant_gain' unset in DRX configuration" << std::endl;
         valid = false;
@@ -268,37 +270,37 @@ KaDrxConfig::isValid(bool verbose) const {
             std::cerr << "'staggered_prt' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (prt1() == UNSET_FLOAT) {
+    if (prt1() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'prt1' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (rcvr_bandwidth() == UNSET_FLOAT) {
+    if (rcvr_bandwidth() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'rcvr_bandwidth' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (rcvr_digital_gain() == UNSET_FLOAT) {
+    if (rcvr_digital_gain() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'rcvr_digital_gain' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (rcvr_filter_mismatch() == UNSET_FLOAT) {
+    if (rcvr_filter_mismatch() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'rcvr_filter_mismatch' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (rcvr_gate0_delay() == UNSET_FLOAT) {
+    if (rcvr_gate0_delay() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'rcvr_gate0_delay' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (rcvr_noise_figure() == UNSET_FLOAT) {
+    if (rcvr_noise_figure() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'rcvr_noise_figure' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (rcvr_pulse_width() == UNSET_FLOAT) {
+    if (rcvr_pulse_width() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'rcvr_pulse_width' unset in DRX configuration" << std::endl;
         valid = false;
@@ -308,30 +310,40 @@ KaDrxConfig::isValid(bool verbose) const {
             std::cerr << "'rcvr_rf_gain' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (tx_cntr_freq() == UNSET_FLOAT) {
+    if (tx_cntr_freq() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'tx_cntr_freq' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (tx_peak_power() == UNSET_FLOAT) {
+    if (tx_peak_power() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'tx_peak_power' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (tx_pulse_width() == UNSET_FLOAT) {
+    if (tx_pulse_width() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'tx_pulse_width' unset in DRX configuration" << std::endl;
         valid = false;
     }
     if (tx_pulse_width() != rcvr_pulse_width()) {
-    	if (verbose)
-    		std::cerr << "'rcvr_pulse_width' must be the same as " <<
-    			"'tx_pulse_width' for Ka" << std::endl;
-    		valid = false;
+        if (verbose)
+            std::cerr << "'rcvr_pulse_width' must be the same as " <<
+                "'tx_pulse_width' for Ka" << std::endl;
+            valid = false;
     }
-    if (tx_delay() == UNSET_FLOAT) {
+    if (tx_delay() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'tx_delay' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (tx_pulse_mod_delay() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'tx_pulse_mod_delay' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (tx_pulse_mod_width() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'tx_pulse_mod_width' unset in DRX configuration" << std::endl;
         valid = false;
     }
     
@@ -339,29 +351,31 @@ KaDrxConfig::isValid(bool verbose) const {
 }
 
 std::vector<double> 
-KaDrxConfig::timer_delays() const {
-    std::vector<double> result;
-    // The first of the extra timers (TIMER4) is used for ?.
-    // This value was taken from the hardwired value originally in p7142sd3cdn
-    result.push_back(rcvr_gate0_delay() + 5*2/125.0e6);
-    result.push_back(0);
-    result.push_back(0);
-    result.push_back(0);
-    result.push_back(0);
+KaDrxConfig::gp_timer_delays() const {
+    std::vector<double> delays;
+    // The first of the general purpose timers (TIMER3) is used in Ka for 
+    // transmit pulse modulation.
+    delays.push_back(tx_pulse_mod_delay());
+    // The other GP timers are unused
+    delays.push_back(0);
+    delays.push_back(0);
+    delays.push_back(0);
+    delays.push_back(0);
     
-    return result;
+    return delays;
 }
-std::vector<double> 
-KaDrxConfig::timer_widths() const {
 
-    // The first of the extra timers (TIMER4) is used for ?.
-    // This value was taken from the hardwired value originally in p7142sd3cdn
-    std::vector<double> result;
-    result.push_back(rcvr_pulse_width() + 16*2/125.0e6 );
-    result.push_back(0);
-    result.push_back(0);
-    result.push_back(0);
-    result.push_back(0);
+std::vector<double> 
+KaDrxConfig::gp_timer_widths() const {
+    std::vector<double> widths;
+    // The first of the general purpose timers (TIMER3) is used in Ka for 
+    // transmit pulse modulation.
+    widths.push_back(tx_pulse_mod_width());
+    // The other GP timers are unused
+    widths.push_back(0);
+    widths.push_back(0);
+    widths.push_back(0);
+    widths.push_back(0);
     
-    return result;
+    return widths;
 }

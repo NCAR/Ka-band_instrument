@@ -66,9 +66,21 @@ public:
     double tx_chirp_bandwidth() const {
         return _getDoubleVal("tx_chirp_bandwidth");
     }
+    /// transmit pulse delay, s
+    double tx_delay() const {
+        return _getDoubleVal("tx_delay");
+    }
     /// transmit pulse width, s
     double tx_pulse_width() const {
         return _getDoubleVal("tx_pulse_width");
+    }
+    /// transmit pulse modulation timer delay, s
+    double tx_pulse_mod_delay() const {
+        return _getDoubleVal("tx_pulse_mod_delay");
+    }
+    /// transmit pulse modulation timer width, s
+    double tx_pulse_mod_width() const {
+        return _getDoubleVal("tx_pulse_mod_width");
     }
     // @TODO End-of-line comments below are not working correctly in doxygen. Change to pre-comments.
     double tx_switching_network_loss() const { return _getDoubleVal("tx_switching_network_loss"); }  /// dB
@@ -96,15 +108,14 @@ public:
     double rcvr_if_gain() const { return _getDoubleVal("rcvr_if_gain"); }            /// dB
     double rcvr_digital_gain() const { return _getDoubleVal("rcvr_digital_gain"); }  /// dB
     double rcvr_gate0_delay() const { return _getDoubleVal("rcvr_gate0_delay"); }    /// seconds
-    double tx_delay() const { return _getDoubleVal("tx_delay"); }    /// seconds
-    /// Five delay values for the extra timers in the sd3c firmware.
-    /// The firt one is hardwired to an KA specific value. The remaining
-    /// ones are zero.
-    std::vector<double> timer_delays() const; 
-    /// Five width values for the extra timers in the sd3c firmware.
-    /// The firt one is hardwired to an KA specific value. The remaining
-    /// ones are zero.
-    std::vector<double> timer_widths() const; 
+    /// Five delay values for the general purpose timers in the sd3c firmware.
+    /// The first GP timer is used for tx pulse modulation, and the rest are
+    /// unused.
+    std::vector<double> gp_timer_delays() const; 
+    /// Five width values for the general purpose timers in the sd3c firmware.
+    /// The first GP timer is used for tx pulse modulation, and the rest are
+    /// unused.
+    std::vector<double> gp_timer_widths() const; 
 
     double latitude() const { return _getDoubleVal("latitude"); }    /// degrees
     double longitude() const { return _getDoubleVal("longitude"); }  /// degrees
@@ -130,7 +141,7 @@ public:
     /**
      * Value returned when an unset double item is requested.
      */
-    static const double UNSET_FLOAT;
+    static const double UNSET_DOUBLE;
     /**
      * Value returned when an unset int item is requested.
      */
@@ -148,9 +159,9 @@ private:
     
     /**
      * Look up the given key and return the associated double value, or
-     * UNSET_FLOAT if the key has no value set.
+     * UNSET_DOUBLE if the key has no value set.
      * @param key the key to look up
-     * @return the double value for the key, or UNSET_FLOAT if the key has
+     * @return the double value for the key, or UNSET_DOUBLE if the key has
      *    no value set.
      */
     double _getDoubleVal(std::string key) const {
@@ -163,7 +174,7 @@ private:
         if (it != _doubleVals.end())
             return it->second;
         else
-            return UNSET_FLOAT;
+            return UNSET_DOUBLE;
     }
     
     /**
