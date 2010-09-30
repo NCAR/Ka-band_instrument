@@ -59,6 +59,8 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("latitude");
     keys.insert("longitude");
     keys.insert("altitude");
+    keys.insert("burst_sample_delay");
+    keys.insert("burst_sample_width");
     return keys;
 }
 
@@ -344,6 +346,16 @@ KaDrxConfig::isValid(bool verbose) const {
     if (tx_pulse_mod_width() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'tx_pulse_mod_width' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (burst_sample_delay() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'burst_sample_delay' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (burst_sample_width() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'burst_sample_width' unset in DRX configuration" << std::endl;
         valid = false;
     }
     

@@ -54,6 +54,14 @@ public:
     double prt2() const {
         return _getDoubleVal("prt2");
     }
+    /// Burst sample delay, s
+    double burst_sample_delay() const { 
+        return _getDoubleVal("burst_sample_delay"); 
+    }
+    /// Burst sample width, s
+    double burst_sample_width() const { 
+        return _getDoubleVal("burst_sample_width"); 
+    }
     /// peak transmit power, kW
     double tx_peak_power() const {
         return _getDoubleVal("tx_peak_power");
