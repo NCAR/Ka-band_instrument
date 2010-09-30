@@ -397,9 +397,8 @@ main(int argc, char** argv)
 					  << " ovr:" << overUnder[c]
 					  << " nopub:"<< discards[c]
 					  << " drop:" << droppedPulses[c]
-	                  << " sync:" << syncErrors[c];
+	                  << " sync:" << syncErrors[c] << std::endl;
 		}
-		std::cout << std::endl;
 	}
 
 	// stop the DAC
