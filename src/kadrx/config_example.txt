@@ -1,7 +1,7 @@
 # Test config file for Ka
 radar_id                Ka
 
-gates                   200
+gates                   980
 
 ant_gain                46.2    # dB
 ant_hbeam_width         0.75    # deg
