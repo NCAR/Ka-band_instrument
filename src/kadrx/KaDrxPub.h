@@ -59,6 +59,19 @@ class KaDrxPub: public QThread, public Pentek::p7142sd3cdn {
 		/// @return The number of timeseries blocks that have been discarded
 		/// since the last time this function was called.
 		unsigned long tsDiscards();
+		/**
+		 * Enumerated values for the Ka receive channels.
+		 * KA_H_CHANNEL is the horizontal data channel
+		 * KA_V_CHANNEL is the vertical data channel
+		 * KA_BURST_CHANNEL is the transmit pulse sample (burst) channel
+		 * KA_N_CHANNELS provides the total count of Ka channels
+		 */
+		typedef enum {
+		    KA_H_CHANNEL,
+		    KA_V_CHANNEL,
+		    KA_BURST_CHANNEL,
+		    KA_N_CHANNELS
+		} KaChannel;
 
 	private:
 		/// Return the current time in seconds since 1970/01/01 00:00:00 UTC.
