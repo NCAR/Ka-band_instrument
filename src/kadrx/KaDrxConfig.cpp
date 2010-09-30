@@ -365,11 +365,10 @@ KaDrxConfig::isValid(bool verbose) const {
 std::vector<double> 
 KaDrxConfig::gp_timer_delays() const {
     std::vector<double> delays;
-    // The first of the general purpose timers (TIMER3) is used in Ka for 
+    // The first of the general purpose timers (OUTPUT_TIMER) is used in Ka for 
     // transmit pulse modulation.
     delays.push_back(tx_pulse_mod_delay());
     // The other GP timers are unused
-    delays.push_back(0);
     delays.push_back(0);
     delays.push_back(0);
     delays.push_back(0);
@@ -380,11 +379,10 @@ KaDrxConfig::gp_timer_delays() const {
 std::vector<double> 
 KaDrxConfig::gp_timer_widths() const {
     std::vector<double> widths;
-    // The first of the general purpose timers (TIMER3) is used in Ka for 
+    // The first of the general purpose timers (OUTPUT_TIMER) is used in Ka for 
     // transmit pulse modulation.
     widths.push_back(tx_pulse_mod_width());
     // The other GP timers are unused
-    widths.push_back(0);
     widths.push_back(0);
     widths.push_back(0);
     widths.push_back(0);
