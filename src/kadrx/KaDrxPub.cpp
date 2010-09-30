@@ -174,15 +174,15 @@ KaDrxPub::_configIsValid() const {
         valid = false;
     }
     // PRT must be a multiple of the pulse width
-    if (_prt % _timer_widths[2]) {
-        std::cerr << "PRT is " << _prt * 2 / adcFrequency() << " (" << _prt <<
-            ") and pulse width is " << _timer_widths[2] * 2 / adcFrequency() << 
-            " (" << _timer_widths[2] << 
+    if (_prtCounts % _timerWidth(TX_PULSE_TIMER)) {
+        std::cerr << "PRT is " << countsToTime(_prtCounts) << " (" << _prtCounts <<
+            ") and pulse width is " << countsToTime(_timerWidth(TX_PULSE_TIMER)) << 
+            " (" << _timerWidth(TX_PULSE_TIMER) << 
             "): PRT must be an integral number of pulse widths." << std::endl;
         valid = false;
     }
     // PRT must be longer than (gates + 1) * pulse width
-    if (_prt <= ((_gates + 1) * _timer_widths[2])) {
+    if (_prtCounts <= ((_gates + 1) * _timerWidth(TX_PULSE_TIMER))) {
         std::cerr << 
             "PRT must be greater than (gates+1)*(pulse width)." << std::endl;
         valid = false;
