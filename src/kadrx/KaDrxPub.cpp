@@ -22,7 +22,7 @@ KaDrxPub::KaDrxPub(
                 int simWavelength) :
     p7142sd3cdn(devName,
              chanId,
-             (chanId != KA_BURST_CHANNEL) ? config.gates() : timeToCounts(config.burst_sample_width()),
+             (chanId != KA_BURST_CHANNEL) ? config.gates() : -1,
              1,
              tsLength,
              (chanId != KA_BURST_CHANNEL) ? config.rcvr_gate0_delay() : config.burst_sample_delay(),
@@ -47,6 +47,9 @@ KaDrxPub::KaDrxPub(
      _ddsSeqInProgress(0),
      _ndxInDdsSample(0)
 {
+    if (_chanId == KA_BURST_CHANNEL) {
+        std::cout << "Burst channel sampling " << _gates << " gates" << std::endl;
+    }
     // Bail out if we're not configured legally.
     if (! _configIsValid())
         abort();
@@ -167,32 +170,37 @@ KaDrxPub::tsDiscards() {
 bool
 KaDrxPub::_configIsValid() const {
     bool valid = true;
-    // gate count must be in the interval [1,511]
-    if (_gates < 1 || _gates > 511) {
+    // gate count must be in the interval [1,1023]
+    if (_gates < 1 || _gates > 1023) {
         std::cerr << "gates is " << _gates <<
-            "; it must be greater than 0 and less than 512." << std::endl;
+            "; it must be greater than 0 and less than 1024." << std::endl;
         valid = false;
     }
-    // PRT must be a multiple of the pulse width
-    if (_prtCounts % _timerWidth(TX_PULSE_TIMER)) {
-        std::cerr << "PRT is " << countsToTime(_prtCounts) << " (" << _prtCounts <<
-            ") and pulse width is " << countsToTime(_timerWidth(TX_PULSE_TIMER)) << 
-            " (" << _timerWidth(TX_PULSE_TIMER) << 
-            "): PRT must be an integral number of pulse widths." << std::endl;
-        valid = false;
-    }
-    // PRT must be longer than (gates + 1) * pulse width
-    if (_prtCounts <= ((_gates + 1) * _timerWidth(TX_PULSE_TIMER))) {
-        std::cerr << 
-            "PRT must be greater than (gates+1)*(pulse width)." << std::endl;
-        valid = false;
-    }
-    // Make sure the Pentek's FPGA is using DDC10DECIMATE
-    if (_ddcType != DDC10DECIMATE) {
-        std::cerr << "The Pentek FPGA is using DDC type " << 
-                ddcTypeName(_ddcType) << 
-                ", but Ka requires DDC10DECIMATE." << std::endl;
-        valid = false;
+    
+    // Tests for non-burst data channels
+    if (_chanId != KA_BURST_CHANNEL) {
+        // PRT must be a multiple of the pulse width
+        if (_prtCounts % _timerWidth(TX_PULSE_TIMER)) {
+            std::cerr << "PRT is " << countsToTime(_prtCounts) << " (" << 
+                _prtCounts << ") and pulse width is " << 
+                countsToTime(_timerWidth(TX_PULSE_TIMER)) << 
+                " (" << _timerWidth(TX_PULSE_TIMER) << 
+                "): PRT must be an integral number of pulse widths." << std::endl;
+            valid = false;
+        }
+        // PRT must be longer than (gates + 1) * pulse width
+        if (_prtCounts <= ((_gates + 1) * _timerWidth(TX_PULSE_TIMER))) {
+            std::cerr << 
+                "PRT must be greater than (gates+1)*(pulse width)." << std::endl;
+            valid = false;
+        }
+        // Make sure the Pentek's FPGA is using DDC10DECIMATE
+        if (_ddcType != DDC10DECIMATE) {
+            std::cerr << "The Pentek FPGA is using DDC type " << 
+                    ddcTypeName(_ddcType) << 
+                    ", but Ka requires DDC10DECIMATE." << std::endl;
+            valid = false;
+        }
     }
     return valid;
 }
