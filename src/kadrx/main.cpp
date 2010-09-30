@@ -38,7 +38,7 @@ namespace po = boost::program_options;
 bool _publish;                   ///< set true if the pentek data should be published to DDS.
 std::string _devRoot;            ///< Device root e.g. /dev/pentek/0
 std::string _drxConfig;          ///< DRX configuration file
-int _chans = 1;                  ///< number of channels
+int _chans = KaDrxPub::KA_N_CHANNELS;                  ///< number of channels
 std::string _ORB;                ///< path to the ORB configuration file.
 std::string _DCPS;               ///< path to the DCPS configuration file.
 std::string _DCPSInfoRepo;       ///< URL to access DCPSInfoRepo
