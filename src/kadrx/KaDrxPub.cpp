@@ -100,6 +100,10 @@ double KaDrxPub::_nowTime() {
 static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1), time_duration(0, 0, 0));
 
 ///////////////////////////////////////////////////////////
+
+// @TODO remove this when we're done with the temporary burst file stuff below
+static FILE* BurstFile = 0;
+
 void
 KaDrxPub::publishDDS(char* buf, unsigned int pulsenum) {
     
@@ -154,6 +158,29 @@ KaDrxPub::publishDDS(char* buf, unsigned int pulsenum) {
 			// publish it
 			_tsWriter->publishItem(_ddsSeqInProgress);
 			_ddsSeqInProgress = 0;
+		}
+
+		// @TODO remove this
+		// For the burst channel, write data directly to a simple CSV text file
+		if (_isBurst) {
+		    if (! BurstFile) {
+		        char ofilename[80];
+		        sprintf(ofilename, "Ka_burst_%d.csv", timeFromEpoch.total_seconds());
+		        BurstFile = fopen(ofilename, "a");
+		        if (! BurstFile) {
+		            std::cerr << "Error opening burst CSV file: " << ofilename <<
+		                    std::endl;
+		            exit(1);
+		        }
+		    }
+		    double dtime = ts.hskp.timetag * 1.0e-6;
+		    fprintf(BurstFile, "%.6f", dtime);
+		    int16_t * shortdata = (int16_t *)buf;
+		    for (int g = 0; g < _gates; g++) {
+		        fprintf(BurstFile, "%d,%d", shortdata[2 * g], shortdata[2 * g + 1]);
+		    }
+		    fprintf(BurstFile, "\n");
+		    fflush(BurstFile);
 		}
 	}
 }
