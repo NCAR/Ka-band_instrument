@@ -177,7 +177,7 @@ KaDrxPub::publishDDS(char* buf, unsigned int pulsenum) {
 		    fprintf(BurstFile, "%.6f", dtime);
 		    int16_t * shortdata = (int16_t *)buf;
 		    for (int g = 0; g < _gates; g++) {
-		        fprintf(BurstFile, "%d,%d", shortdata[2 * g], shortdata[2 * g + 1]);
+		        fprintf(BurstFile, ",%d,%d", shortdata[2 * g], shortdata[2 * g + 1]);
 		    }
 		    fprintf(BurstFile, "\n");
 		    fflush(BurstFile);
