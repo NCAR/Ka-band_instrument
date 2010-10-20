@@ -25,7 +25,7 @@
 #include <dds/Version.h>
 
 #include "KaDrxPub.h"
-#include "p7142.h"
+#include "p7142sd3c.h"
 #include "DDSPublisher.h"
 #include "KaTSWriter.h"
 
@@ -51,8 +51,8 @@ std::string _kaiserFile = "";    ///< kaiser filter coefficient file
 DDSPublisher* _publisher = 0;    ///< The publisher.
 KaTSWriter* _tsWriter = 0;         ///< The time series writer.
 bool _simulate;                  ///< Set true for simulate mode
-int _simWaveLength;              ///< The simulated data wavelength, in samples
-int _simPauseMS;                 ///< The number of millisecnds to pause when reading in simulate mode.
+int _simWavelength;              ///< The simulated data wavelength, in samples
+int _simPauseMs;                 ///< The number of millisecnds to pause when reading in simulate mode.
 
 bool _terminate = false;         ///< set true to signal the main loop to terminate
 
@@ -119,8 +119,8 @@ void getConfigParams()
 	_devRoot       = config.getString("Device/DeviceRoot",  "/dev/pentek/p7142/0");
 	_tsLength      = config.getInt   ("Radar/TsLength",     256);
 	_simulate      = config.getBool  ("Simulate",           false);
-	_simPauseMS    = config.getInt   ("SimPauseMs",         20);
-	_simWaveLength = config.getInt   ("SimWavelength",      5000);
+	_simPauseMs    = config.getInt   ("SimPauseMs",         20);
+	_simWavelength = config.getInt   ("SimWavelength",      5000);
 
 }
 
@@ -142,7 +142,7 @@ void parseOptions(int argc,
 	("drxConfig", po::value<std::string>(&_drxConfig), "DRX configuration file")
 	("nopublish",                                  "Do not publish data")
 	("simulate",                                   "Enable simulation")
-	("simPauseMS",  po::value<int>(&_simPauseMS),  "Simulation pause interval (ms)")
+	("simPauseMS",  po::value<int>(&_simPauseMs),  "Simulation pause interval (ms)")
 	("ORB", po::value<std::string>(&_ORB),         "ORB service configuration file (Corba ORBSvcConf arg)")
 	("DCPS", po::value<std::string>(&_DCPS),       "DCPS configuration file (OpenDDS DCPSConfigFile arg)")
 	("DCPSInfoRepo", po::value<std::string>(&_DCPSInfoRepo),
@@ -210,7 +210,7 @@ double nowTime()
 }
 
 ///////////////////////////////////////////////////////////
-void startUpConverter(Pentek::p7142up& upConverter, 
+void startUpConverter(Pentek::p7142Up& upConverter, 
         unsigned int pulsewidth_counts) {
 
 	// create the signal
@@ -273,63 +273,50 @@ main(int argc, char** argv)
         }
     }
 
-    if (_simulate)
+    if (_simulate) {
         std::cout << "*** Operating in simulation mode" << std::endl;
+        // Make sure our simulated p7142sd3c uses Ka's DDC10DECIMATE decimation.
+        Pentek::p7142sd3c::setSimulateDDCType(Pentek::p7142sd3c::DDC10DECIMATE);
+    }
 
 	// create the dds services
 	if (_publish)
 		createDDSservices();
 	
-	// create the down converter threads. Remember that
-	// these are multiply inherited from the down converters
-	// and QThread. The threads are not run at creation, but
-	// they do instantiate the down converters.
-	std::vector<KaDrxPub*> down7142(_chans);
+    // Instantiate our p7142sd3c, with appropriate tx timing
+    Pentek::p7142sd3c sd3c(_devRoot, _simulate, kaConfig.tx_delay(),
+        kaConfig.tx_pulse_width(), kaConfig.prt1(), kaConfig.prt2(),
+        kaConfig.staggered_prt(), false);
+    
+	// Create (but don't yet start) the downconversion threads.
+    
+    // H channel (0)
+    KaDrxPub hThread(sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, _tsWriter, _publish,
+        _tsLength, _gaussianFile, _kaiserFile, false, _simulate, _simPauseMs, 
+        _simWavelength); 
 
-	for (int c = 0; c < _chans; c++) {
+    // V channel (1)
+    KaDrxPub vThread(sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, _tsWriter, _publish,
+        _tsLength, _gaussianFile, _kaiserFile, false, _simulate, _simPauseMs, 
+        _simWavelength); 
 
-		std::cout << "*** Channel " << c << " ***" << std::endl;
-		down7142[c] = new KaDrxPub(
-                kaConfig,
-                _tsWriter,
-                _publish,
-                _tsLength,
-                _devRoot,
-                c,
-                _gaussianFile,
-                _kaiserFile,
-                false,
-                _simulate,
-                _simPauseMS,
-                _simWaveLength);
-		if (!down7142[c]->ok()) {
-			std::cerr << "cannot access " << down7142[c]->dnName() << "\n";
-			perror("");
-			exit(1);
-		}
-	}
+    // Burst channel (2)
+    KaDrxPub burstThread(sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig, _tsWriter, 
+        _publish, _tsLength, _gaussianFile, _kaiserFile, false, _simulate, 
+        _simPauseMs, _simWavelength); 
 
     // Create the upConverter.
     // Configure the DAC to use CMIX by fDAC/4 (coarse mixer mode = 9)
-    Pentek::p7142up upConverter(_devRoot, "0C", down7142[0]->adcFrequency(), 
-            down7142[0]->adcFrequency() / 4, 9, _simulate); 
-
-    if (!upConverter.ok()) {
-        std::cerr << "cannot access " << upConverter.upName() << "\n";
-        exit(1);
-    }
+    Pentek::p7142Up & upConverter = *sd3c.addUpconverter("0C", 
+        sd3c.adcFrequency(), sd3c.adcFrequency() / 4, 9); 
 
     // catch a control-C
     signal(SIGINT, sigHandler);
 
-	for (int c = 0; c < _chans; c++) {
-		// run the downconverter thread. This will cause the
-		// thread code to call the run() method, which will
-		// start reading data, but should block on the first
-		// read since the timers and filters are not running yet.
-		down7142[c]->start();
-		std::cout << "processing enabled on " << down7142[c]->dnName() << std::endl;
-	}
+    // Start the downconverter threads.
+    hThread.start();
+    vThread.start();
+    burstThread.start();
 
     // wait awhile, so that the threads can all get to the first read.
 	struct timespec sleepTime = { 1, 0 }; // 1 second, 0 nanoseconds
@@ -344,20 +331,17 @@ main(int argc, char** argv)
 	    }
 	}
 
-	// all of the filters are started by any call to
-    // start filters(). So just call it for channel 0
-    down7142[0]->startFilters();
+	// Start filters on all downconverters
+    sd3c.startFilters();
 
 	// Load the DAC memory bank 2, clear the DACM fifo, and enable the 
 	// DAC memory counters. This must take place before the timers are started.
-    unsigned int pulsewidth_counts = (unsigned int)
-      (down7142[0]->rcvrPulseWidth() * down7142[0]->adcFrequency());
-	startUpConverter(upConverter, pulsewidth_counts);
+	startUpConverter(upConverter, sd3c.txPulseWidthCounts());
 
 	// Start the timers, which will allow data to flow.
     // All timers are started by calling timerStartStop for
     // any one channel.
-    down7142[0]->timersStartStop(true);
+    sd3c.timersStartStop(true);
 
 	double startTime = nowTime();
 	while (1) {
@@ -376,36 +360,36 @@ main(int argc, char** argv)
 		double elapsed = currentTime - startTime;
 		startTime = currentTime;
 
-		std::vector<long> bytes(_chans);
-		std::vector<int> overUnder(_chans);
-		std::vector<unsigned long> discards(_chans);
-		std::vector<unsigned long> droppedPulses(_chans);
-		std::vector<unsigned long> syncErrors(_chans);
-		
-		for (int c = 0; c < _chans; c++) {
-			bytes[c] = down7142[c]->bytesRead();
-			overUnder[c] = down7142[c]->overUnderCount();
-			discards[c] = down7142[c]->tsDiscards();
-			droppedPulses[c] = down7142[c]->droppedPulses();
-            syncErrors[c] = down7142[c]->syncErrors();
-		}
-		
-		for (int c = 0; c < _chans; c++) {
-			std::cout << std::setprecision(3) << std::setw(5)
-                      << "chan " << c << " -- "
-                      << bytes[c]/1000000.0/elapsed << " MB/s "
-					  << " ovr:" << overUnder[c]
-					  << " nopub:"<< discards[c]
-					  << " drop:" << droppedPulses[c]
-	                  << " sync:" << syncErrors[c] << std::endl;
-		}
+        std::cout << std::setprecision(3) << std::setw(5) << "H channel " << 
+                hThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
+                " MB/s  ovr: " << hThread.downconverter()->overUnderCount() <<
+                " nopub: " << hThread.tsDiscards() <<
+                " drop: " << hThread.downconverter()->droppedPulses() <<
+                " sync errs: " << hThread.downconverter()->syncErrors() << 
+                std::endl;
+        
+        std::cout << std::setprecision(3) << std::setw(5) << "V channel " << 
+                vThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
+                " MB/s  ovr: " << vThread.downconverter()->overUnderCount() <<
+                " nopub: " << vThread.tsDiscards() <<
+                " drop: " << vThread.downconverter()->droppedPulses() <<
+                " sync errs: " << vThread.downconverter()->syncErrors() << 
+                std::endl;
+        
+        std::cout << std::setprecision(3) << std::setw(5) << "burst channel " << 
+                burstThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
+                " MB/s  ovr: " << burstThread.downconverter()->overUnderCount() <<
+                " nopub: " << burstThread.tsDiscards() <<
+                " drop: " << burstThread.downconverter()->droppedPulses() <<
+                " sync errs: " << burstThread.downconverter()->syncErrors() << 
+                std::endl;
 	}
 
 	// stop the DAC
 	upConverter.stopDAC();
 
 	// stop the timers
-    down7142[0]->timersStartStop(false);
+	sd3c.timersStartStop(false);
 
 	std::cout << "terminated on command" << std::endl;
 }

@@ -6,40 +6,24 @@
 
 using namespace boost::posix_time;
 
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 KaDrxPub::KaDrxPub(
+                Pentek::p7142sd3c& sd3c,
+                KaChannel chanId,
                 const KaDrxConfig& config,
                 KaTSWriter* tsWriter,
                 bool publish,
                 int tsLength,
-                std::string devName,
-                int chanId,
                 std::string gaussianFile,
                 std::string kaiserFile,
                 bool freeRun,
                 bool simulate,
                 double simPauseMS,
                 int simWavelength) :
-    p7142sd3cdn(devName,
-             chanId,
-             (chanId != KA_BURST_CHANNEL) ? config.gates() : -1,
-             1,
-             tsLength,
-             (chanId != KA_BURST_CHANNEL) ? config.rcvr_gate0_delay() : config.burst_sample_delay(),
-             config.tx_delay(),
-             config.prt1(),
-             config.prt2(),
-             (chanId != KA_BURST_CHANNEL) ? config.rcvr_pulse_width() : config.burst_sample_width(),
-             (config.staggered_prt() == KaDrxConfig::UNSET_BOOL) ? false : config.staggered_prt(),
-             config.gp_timer_delays(),
-             config.gp_timer_widths(),
-             freeRun,
-             gaussianFile,
-             kaiserFile,
-             simulate,
-             simPauseMS,
-             simWavelength,
-             false),
+     _sd3c(sd3c),
+     _chanId(chanId),
+     _down(0),
+     _gates(config.gates()),
      _publish(publish),
      _tsWriter(tsWriter),
      _tsDiscards(0),
@@ -47,28 +31,43 @@ KaDrxPub::KaDrxPub(
      _ddsSeqInProgress(0),
      _ndxInDdsSample(0)
 {
-    if (_chanId == KA_BURST_CHANNEL) {
-        std::cout << "Burst channel sampling " << _gates << " gates" << std::endl;
-    }
     // Bail out if we're not configured legally.
     if (! _configIsValid())
         abort();
+
+    // Create our associated downconverter.
+    double delay = config.rcvr_gate0_delay();
+    double width = config.rcvr_pulse_width();
+    if (_chanId == KA_BURST_CHANNEL) {
+        _gates = -1; // have downconverter calculate # of gates for burst
+        delay = config.burst_sample_delay();
+        width = config.burst_sample_width();
+    }
+    _down = sd3c.addDownconverter(_chanId, _gates, 1, tsLength,
+        delay, width, gaussianFile, kaiserFile, simPauseMS, simWavelength);
+
+    if (_chanId == KA_BURST_CHANNEL) {
+        // Get the burst gate count calculated by the downconverter
+        _gates = _down->gates();
+        std::cout << "Burst channel sampling " << _gates << 
+            " gates" << std::endl;
+    }
 
     // Fill our DDS base housekeeping values from the configuration
     config.fillDdsSysHousekeeping(_baseDdsHskp);
 }
 
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 KaDrxPub::~KaDrxPub() {
 
 }
 
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 void KaDrxPub::run() {
 
-  static unsigned short int ttl_toggle = 0;
+//  static unsigned short int ttl_toggle = 0;
 
-  int bl = beamLength();
+  int bl = _down->beamLength();
   
   std::cout << "Channel " << _chanId << " beam length is " << bl <<
     ", waiting for data..." << std::endl;
@@ -77,33 +76,34 @@ void KaDrxPub::run() {
   while (1) {
 
 	unsigned int pulsenum;
-	char* buf = getBeam(pulsenum);
+	char* buf = _down->getBeam(pulsenum);
 
-    ttl_toggle = ~ttl_toggle;
-    TTLOut(ttl_toggle);
+//    ttl_toggle = ~ttl_toggle;
+//    TTLOut(ttl_toggle);
 
     publishDDS(buf, pulsenum);
     
   }
 }
 
-///////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 double KaDrxPub::_nowTime() {
   struct timeb timeB;
   ftime(&timeB);
   return timeB.time + timeB.millitm/1000.0;
 }
 
-///////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // 1970-01-01 00:00:00 UTC
 static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1), time_duration(0, 0, 0));
 
-///////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 
 // @TODO remove this when we're done with the temporary burst file stuff below
 static FILE* BurstFile = 0;
 
+////////////////////////////////////////////////////////////////////////////////
 void
 KaDrxPub::publishDDS(char* buf, unsigned int pulsenum) {
     
@@ -144,7 +144,7 @@ KaDrxPub::publishDDS(char* buf, unsigned int pulsenum) {
 		ts.hskp.chanId = _chanId;
 		ts.prt_seq_num = 1;   // single-PRT only for now
 		ts.pulseNum = pulsenum;
-		time_duration timeFromEpoch = timeOfPulse(pulsenum) - Epoch1970;
+		time_duration timeFromEpoch = _down->timeOfPulse(pulsenum) - Epoch1970;
 		// Calculate the timetag, which is usecs since 1970-01-01 00:00:00 UTC
 		ts.hskp.timetag = timeFromEpoch.total_seconds() * 1000000LL +
 				(timeFromEpoch.fractional_seconds() * 1000000LL) /
@@ -162,7 +162,7 @@ KaDrxPub::publishDDS(char* buf, unsigned int pulsenum) {
 
 		// @TODO remove this
 		// For the burst channel, write data directly to a simple CSV text file
-		if (_isBurst) {
+		if (_chanId == KA_BURST_CHANNEL) {
 		    if (! BurstFile) {
 		        char ofilename[80];
 		        sprintf(ofilename, "Ka_burst_%d.csv", timeFromEpoch.total_seconds());
@@ -176,7 +176,7 @@ KaDrxPub::publishDDS(char* buf, unsigned int pulsenum) {
 		    double dtime = ts.hskp.timetag * 1.0e-6;
 		    fprintf(BurstFile, "%.6f", dtime);
 		    int16_t * shortdata = (int16_t *)buf;
-		    for (int g = 0; g < _gates; g++) {
+		    for (unsigned int g = 0; g < _gates; g++) {
 		        fprintf(BurstFile, ",%d,%d", shortdata[2 * g], shortdata[2 * g + 1]);
 		    }
 		    fprintf(BurstFile, "\n");
@@ -185,7 +185,7 @@ KaDrxPub::publishDDS(char* buf, unsigned int pulsenum) {
 	}
 }
 
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 unsigned long
 KaDrxPub::tsDiscards() {
 	unsigned long retval = _tsDiscards;
@@ -193,10 +193,11 @@ KaDrxPub::tsDiscards() {
 	return retval;
 }
 
-//////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 bool
 KaDrxPub::_configIsValid() const {
     bool valid = true;
+    
     // gate count must be in the interval [1,1023]
     if (_gates < 1 || _gates > 1023) {
         std::cerr << "gates is " << _gates <<
@@ -207,24 +208,24 @@ KaDrxPub::_configIsValid() const {
     // Tests for non-burst data channels
     if (_chanId != KA_BURST_CHANNEL) {
         // PRT must be a multiple of the pulse width
-        if (_prtCounts % _timerWidth(TX_PULSE_TIMER)) {
-            std::cerr << "PRT is " << countsToTime(_prtCounts) << " (" << 
-                _prtCounts << ") and pulse width is " << 
-                countsToTime(_timerWidth(TX_PULSE_TIMER)) << 
-                " (" << _timerWidth(TX_PULSE_TIMER) << 
+        if (_sd3c.prtCounts() % _sd3c.txPulseWidthCounts()) {
+            std::cerr << "PRT is " << _sd3c.prt() << " (" << 
+                _sd3c.prtCounts() << ") and pulse width is " << 
+                _sd3c.txPulseWidth() << 
+                " (" << _sd3c.txPulseWidthCounts() << 
                 "): PRT must be an integral number of pulse widths." << std::endl;
             valid = false;
         }
         // PRT must be longer than (gates + 1) * pulse width
-        if (_prtCounts <= ((_gates + 1) * _timerWidth(TX_PULSE_TIMER))) {
-            std::cerr << 
-                "PRT must be greater than (gates+1)*(pulse width)." << std::endl;
+        if (_sd3c.prtCounts() <= ((_gates + 1) * _sd3c.txPulseWidthCounts())) {
+            std::cerr << "PRT must be greater than (gates+1)*(pulse width)." <<
+                    std::endl;
             valid = false;
         }
         // Make sure the Pentek's FPGA is using DDC10DECIMATE
-        if (_ddcType != DDC10DECIMATE) {
+        if (_sd3c.ddcType() != Pentek::p7142sd3c::DDC10DECIMATE) {
             std::cerr << "The Pentek FPGA is using DDC type " << 
-                    ddcTypeName(_ddcType) << 
+                    _sd3c.ddcTypeName() << 
                     ", but Ka requires DDC10DECIMATE." << std::endl;
             valid = false;
         }
