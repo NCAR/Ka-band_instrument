@@ -65,24 +65,20 @@ KaDrxPub::~KaDrxPub() {
 ////////////////////////////////////////////////////////////////////////////////
 void KaDrxPub::run() {
 
-//  static unsigned short int ttl_toggle = 0;
-
   int bl = _down->beamLength();
   
   std::cout << "Channel " << _chanId << " beam length is " << bl <<
     ", waiting for data..." << std::endl;
 
+  // Since we have no event loop, allow thread termination via the terminate()
+  // method.
+  setTerminationEnabled(true);
+  
   // start the loop. The thread will block on getBeam()
   while (1) {
-
 	unsigned int pulsenum;
 	char* buf = _down->getBeam(pulsenum);
-
-//    ttl_toggle = ~ttl_toggle;
-//    TTLOut(ttl_toggle);
-
-    publishDDS(buf, pulsenum);
-    
+    publishDDS(buf, pulsenum); 
   }
 }
 
