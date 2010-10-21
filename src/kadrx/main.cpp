@@ -384,6 +384,16 @@ main(int argc, char** argv)
                 " sync errs: " << burstThread.downconverter()->syncErrors() << 
                 std::endl;
 	}
+    
+    // Stop the downconverter threads.
+    hThread.terminate();
+    vThread.terminate();
+    burstThread.terminate();
+    
+    // Wait for threads' termination (up to 1 second for each)
+    hThread.wait(1000);
+    vThread.wait(1000);
+    burstThread.wait(1000);
 
 	// stop the DAC
 	upConverter.stopDAC();
