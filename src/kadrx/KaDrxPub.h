@@ -16,6 +16,9 @@
 /// the data processing. It is initiated by calling the start() method,
 /// which then invokes the run() method. run() simple loops, reading beams
 /// from p7142sd3cDn and publishing them via the TSWriter.
+///
+/// Since KaDrxPub does not use a Qt event loop at this point, the thread
+/// should be stopped by calling its terminate() method.
 class KaDrxPub : public QThread {
 	Q_OBJECT
 	public:
