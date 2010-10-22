@@ -292,17 +292,17 @@ main(int argc, char** argv)
     
     // H channel (0)
     KaDrxPub hThread(sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, _tsWriter, _publish,
-        _tsLength, _gaussianFile, _kaiserFile, false, _simulate, _simPauseMs, 
+        _tsLength, _gaussianFile, _kaiserFile, _simulate, _simPauseMs, 
         _simWavelength); 
 
     // V channel (1)
     KaDrxPub vThread(sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, _tsWriter, _publish,
-        _tsLength, _gaussianFile, _kaiserFile, false, _simulate, _simPauseMs, 
+        _tsLength, _gaussianFile, _kaiserFile, _simulate, _simPauseMs, 
         _simWavelength); 
 
     // Burst channel (2)
     KaDrxPub burstThread(sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig, _tsWriter, 
-        _publish, _tsLength, _gaussianFile, _kaiserFile, false, _simulate, 
+        _publish, _tsLength, _gaussianFile, _kaiserFile, _simulate, 
         _simPauseMs, _simWavelength); 
 
     // Create the upConverter.
