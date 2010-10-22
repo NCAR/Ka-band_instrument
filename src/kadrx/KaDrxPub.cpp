@@ -19,6 +19,7 @@ KaDrxPub::KaDrxPub(
                 bool simulate,
                 double simPauseMS,
                 int simWavelength) :
+     QThread(),
      _sd3c(sd3c),
      _chanId(chanId),
      _down(0),
