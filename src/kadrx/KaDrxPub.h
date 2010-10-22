@@ -49,8 +49,6 @@ class KaDrxPub : public QThread {
          *     filter parameters
          * @param kaiserFile Name of the file containing the Kaiser
          *     filter parameters
-         * @param simulate generate simulated data? (no Pentek card is used
-         *     if simulate is true)
          * @param simPauseMS The number of milliseconds to wait before returning
          *     simulated data when calling read()
          * @param simWavelength The wavelength of a simulated signal. The wavelength
@@ -65,7 +63,6 @@ class KaDrxPub : public QThread {
                 int tsLength,
                 std::string gaussianFile,
                 std::string kaiserFile,
-                bool simulate,
                 double simPauseMS,
                 int simWavelength);
         

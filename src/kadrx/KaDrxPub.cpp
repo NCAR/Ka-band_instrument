@@ -16,7 +16,6 @@ KaDrxPub::KaDrxPub(
                 int tsLength,
                 std::string gaussianFile,
                 std::string kaiserFile,
-                bool simulate,
                 double simPauseMS,
                 int simWavelength) :
      QThread(),
