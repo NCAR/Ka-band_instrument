@@ -37,15 +37,17 @@ KaDrxPub::KaDrxPub(
     // Create our associated downconverter.
     double delay = config.rcvr_gate0_delay();
     double width = config.rcvr_pulse_width();
-    if (_chanId == KA_BURST_CHANNEL) {
-        _gates = -1; // have downconverter calculate # of gates for burst
+    
+    // Special handling for the burst channel
+    bool burstSampling = (_chanId == KA_BURST_CHANNEL);
+    if (burstSampling) {
         delay = config.burst_sample_delay();
         width = config.burst_sample_width();
     }
-    _down = sd3c.addDownconverter(_chanId, _gates, 1, tsLength,
+    _down = sd3c.addDownconverter(_chanId, burstSampling, tsLength,
         delay, width, gaussianFile, kaiserFile, simPauseMS, simWavelength);
 
-    if (_chanId == KA_BURST_CHANNEL) {
+    if (burstSampling) {
         // Get the burst gate count calculated by the downconverter
         _gates = _down->gates();
         std::cout << "Burst channel sampling " << _gates << 

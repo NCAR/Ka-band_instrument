@@ -273,20 +273,15 @@ main(int argc, char** argv)
         }
     }
 
-    if (_simulate) {
-        std::cout << "*** Operating in simulation mode" << std::endl;
-        // Make sure our simulated p7142sd3c uses Ka's DDC10DECIMATE decimation.
-        Pentek::p7142sd3c::setSimulateDDCType(Pentek::p7142sd3c::DDC10DECIMATE);
-    }
-
 	// create the dds services
 	if (_publish)
 		createDDSservices();
 	
-    // Instantiate our p7142sd3c, with appropriate tx timing
+    // Instantiate our p7142sd3c
     Pentek::p7142sd3c sd3c(_devRoot, _simulate, kaConfig.tx_delay(),
         kaConfig.tx_pulse_width(), kaConfig.prt1(), kaConfig.prt2(),
-        kaConfig.staggered_prt(), false);
+        kaConfig.staggered_prt(), kaConfig.gates(), 1, false,
+        Pentek::p7142sd3c::DDC10DECIMATE);
     
     // We use SD3C's first general purpose timer for transmit pulse modulation
     sd3c.setGPTimer0(kaConfig.tx_pulse_mod_delay(), kaConfig.tx_pulse_mod_width());
@@ -339,8 +334,6 @@ main(int argc, char** argv)
 	startUpConverter(upConverter, sd3c.txPulseWidthCounts());
 
 	// Start the timers, which will allow data to flow.
-    // All timers are started by calling timerStartStop for
-    // any one channel.
     sd3c.timersStartStop(true);
 
 	double startTime = nowTime();
