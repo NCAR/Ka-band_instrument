@@ -1,0 +1,22 @@
+# -*- python -*-
+
+tools = Split("""
+pmc730
+doxygen
+""")
+
+sources = Split("""
+KaAfc.cpp
+""")
+
+headers = Split("""
+""")
+
+env = Environment(tools = ['default'] + tools)
+
+kaafc = env.Program('kaafc', sources)
+
+html = env.Apidocs(sources + headers, DOXYFILE_FILE = "Doxyfile")
+
+Default(kaafc, html)
+
