@@ -28,6 +28,7 @@ SConscript("kadrx/SConscript")
 SConscript("kascope/SConscript")
 SConscript("kaprod/SConscript")
 SConscript("kaarchiver/SConscript")
+SConscript("kaafc/SConscript")
 
 env.Alias('apidocs', env.Dir("apidocs"))
 
