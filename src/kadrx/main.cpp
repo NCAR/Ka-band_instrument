@@ -58,6 +58,8 @@ bool _terminate = false;         ///< set true to signal the main loop to termin
 
 /////////////////////////////////////////////////////////////////////
 void sigHandler(int sig) {
+    std::cout << "Interrupt received...termination may take a few seconds" << 
+        std::endl;
     _terminate = true;
 }
 
