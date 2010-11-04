@@ -1,5 +1,6 @@
 #include "KaDrxPub.h"
 #include <sys/timeb.h>
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <iomanip>
@@ -79,7 +80,7 @@ void KaDrxPub::run() {
   while (1) {
 	unsigned int pulsenum;
 	char* buf = _down->getBeam(pulsenum);
-    publishDDS(buf, pulsenum); 
+    _publishDDS(buf, pulsenum); 
   }
 }
 
@@ -96,13 +97,8 @@ double KaDrxPub::_nowTime() {
 static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1), time_duration(0, 0, 0));
 
 ////////////////////////////////////////////////////////////////////////////////
-
-// @TODO remove this when we're done with the temporary burst file stuff below
-static FILE* BurstFile = 0;
-
-////////////////////////////////////////////////////////////////////////////////
 void
-KaDrxPub::publishDDS(char* buf, unsigned int pulsenum) {
+KaDrxPub::_publishDDS(char* buf, unsigned int pulsenum) {
     
 
 	// bufPos is now pointing to the pulse data
@@ -158,27 +154,10 @@ KaDrxPub::publishDDS(char* buf, unsigned int pulsenum) {
 		}
 
 		// @TODO remove this
-		// For the burst channel, write data directly to a simple CSV text file
-		if (_chanId == KA_BURST_CHANNEL) {
-		    if (! BurstFile) {
-		        char ofilename[80];
-		        sprintf(ofilename, "Ka_burst_%d.csv", timeFromEpoch.total_seconds());
-		        BurstFile = fopen(ofilename, "a");
-		        if (! BurstFile) {
-		            std::cerr << "Error opening burst CSV file: " << ofilename <<
-		                    std::endl;
-		            exit(1);
-		        }
-		    }
-		    double dtime = ts.hskp.timetag * 1.0e-6;
-		    fprintf(BurstFile, "%.6f", dtime);
-		    int16_t * shortdata = (int16_t *)buf;
-		    for (unsigned int g = 0; g < _gates; g++) {
-		        fprintf(BurstFile, ",%d,%d", shortdata[2 * g], shortdata[2 * g + 1]);
-		    }
-		    fprintf(BurstFile, "\n");
-		    fflush(BurstFile);
-		}
+		// Perform some burst-related calculations and dump burst data
+	    if (_chanId == KA_BURST_CHANNEL) {
+	        _handleBurst(reinterpret_cast<int16_t*>(buf), ts.hskp.timetag);
+	    }
 	}
 }
 
@@ -228,4 +207,94 @@ KaDrxPub::_configIsValid() const {
         }
     }
     return valid;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+// @TODO remove this when we're done with the temporary burst stuff below
+static FILE* BurstFile = 0;
+
+void
+KaDrxPub::_handleBurst(int16_t * iqData, long long timetag) {
+    // initialize variables
+    double numerator = 0;
+    double denominator = 0;
+    const double DIS_WT = 0.01;
+
+    // Separate I and Q data
+    int i[_gates];
+    int q[_gates];
+    for (unsigned int g = 0; g < _gates; g++) {
+        i[g] = iqData[2 * g];
+        q[g] = iqData[2 * g + 1];
+    }
+
+    // Frequency discriminator -- runs every hit
+    // Compute cross product over middle 20 samples (frequency discriminator) 
+    // using moving coherent average to reduce variance
+    // ib contains inphase samples; qb contains quadrature samples
+    for (unsigned int g = 2; g <= 20; g++) {
+        
+        int a = i[g] + i[g + 1];
+        int b = q[g] + q[g + 1];
+        int c = i[g + 2] + i[g + 1];
+        int d = q[g + 2] + q[g + 1];
+
+        if (a < 0) {
+            a = -a;
+            b = -b;
+            c = -c;
+            d = -d;
+        }
+
+        numerator *= (1 - DIS_WT);
+        numerator += DIS_WT * (a * d - b * c); // cross product
+        
+        denominator *= (1 - DIS_WT);
+        denominator *= DIS_WT * (a * c + b * d); // normalization factor proportional to G0 magnitude
+    }
+
+    double normCrossProduct = numerator / denominator;  // normalized cross product proportional to frequency change
+    _freqCorrection = 8.0e6 * numerator / normCrossProduct; // experimentally determined scale factor to convert correction to Hz
+
+    _g0Mag = sqrt(i[0] * i[0] + q[0] * q[0]);
+    _g0MagDb = 10 * log10(_g0Mag);
+
+//    -----------------------------------------------------------------------------------
+//
+//    // Phase correction -- runs every hit
+//    // Correct Phase of original signal by normalized initial vector
+//    // Ih and Qh contain Horizontally received data; Iv and Qv contained vertically received data
+//
+//    for(i=1:1:ngates)
+//    // Correct Horizontal Channel    
+//
+//        ibcorrh(i) = ib(1)*invg0mag*Ih(i) - qb(1)*invg0mag*Qh(i);
+//        qbcorrh(i) = qb(1)*invg0mag*Ih(i) + ib(1)*invg0mag*Qh(i);
+//
+//    // Correct Vertical Channel  
+//
+//        ibcorrv(i) = ib(1)*invg0mag*Iv(i) - qb(1)*invg0mag*Qv(i);
+//        qbcorrv(i) = qb(1)*invg0mag*Iv(i) + ib(1)*invg0mag*Qv(i);
+//
+//    end
+    
+    // Write data directly to a simple CSV text file
+    if (! BurstFile) {
+        char ofilename[80];
+        sprintf(ofilename, "Ka_burst_%lld.csv", timetag / 1000000);
+        BurstFile = fopen(ofilename, "a");
+        if (! BurstFile) {
+            std::cerr << "Error opening burst CSV file: " << ofilename <<
+                    std::endl;
+            exit(1);
+        }
+    }
+    double dtime = timetag * 1.0e-6;
+    fprintf(BurstFile, "%.6f", dtime);
+    for (unsigned int g = 0; g < _gates; g++) {
+        fprintf(BurstFile, ",%d,%d", iqData[2 * g], iqData[2 * g + 1]);
+    }
+    fprintf(BurstFile, "\n");
+    fflush(BurstFile);
 }

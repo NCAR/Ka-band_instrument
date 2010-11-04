@@ -81,12 +81,13 @@ class KaDrxPub : public QThread {
 		/// Returned value has 1 ms precision.
 		/// @return the current time in seconds since 1970/01/01 00:00:00 UTC
 		double _nowTime();
+		
         /// Publish a beam. A DDS sample is built and put into _ddsSeqInProgress.
 		/// When all of the samples have been filled in _ddsSeqInProgress, it is published.
         /// @param buf The raw buffer of data from the downconverter
         /// channel. It contains all Is and Qs
 		/// @param pulsenum The pulse number. Will be zero for raw data.
-        void publishDDS(char* buf, unsigned int pulsenum);
+        void _publishDDS(char* buf, unsigned int pulsenum);
         
         /**
          * Return true iff the current configuration is valid.
@@ -129,6 +130,19 @@ class KaDrxPub : public QThread {
 		/// downconverter.
 		RadarDDS::SysHousekeeping _baseDdsHskp;
 		
+		//
+		// Burst frequency calculation stuff. This should be removed when
+		// burst calculations are moved elsewhere.
+		//
+		double _freqCorrection;
+		double _g0Mag;
+		double _g0MagDb;
+		
+        void _handleBurst(int16_t *iq_data, long long timetag);
+        
+        double _getFreqCorrection() const  { return _freqCorrection; }
+        double _getG0Mag() const { return _g0Mag; }
+        double _getG0MagDb() const { return _g0MagDb; }
 };
 
 #endif /*KADRXPUB_H_*/
