@@ -157,6 +157,12 @@ KaDrxPub::_publishDDS(char* buf, unsigned int pulsenum) {
 		// Perform some burst-related calculations and dump burst data
 	    if (_chanId == KA_BURST_CHANNEL) {
 	        _handleBurst(reinterpret_cast<int16_t*>(buf), ts.hskp.timetag);
+            if (! (pulsenum % 1000)) {
+                std::cout << "At pulse " << pulsenum << ": freq corr. " <<
+                    _freqCorrection << " Hz, g0 magnitude " << _g0Mag << " (" <<
+                    _g0MagDb << " dB)" << std::endl;
+                std::cout << std::flush;
+            }
 	    }
 	}
 }
@@ -222,8 +228,8 @@ KaDrxPub::_handleBurst(int16_t * iqData, long long timetag) {
     const double DIS_WT = 0.01;
 
     // Separate I and Q data
-    int i[_gates];
-    int q[_gates];
+    double i[_gates];
+    double q[_gates];
     for (unsigned int g = 0; g < _gates; g++) {
         i[g] = iqData[2 * g];
         q[g] = iqData[2 * g + 1];
@@ -251,11 +257,11 @@ KaDrxPub::_handleBurst(int16_t * iqData, long long timetag) {
         numerator += DIS_WT * (a * d - b * c); // cross product
         
         denominator *= (1 - DIS_WT);
-        denominator *= DIS_WT * (a * c + b * d); // normalization factor proportional to G0 magnitude
+        denominator += DIS_WT * (a * c + b * d); // normalization factor proportional to G0 magnitude
     }
 
     double normCrossProduct = numerator / denominator;  // normalized cross product proportional to frequency change
-    _freqCorrection = 8.0e6 * numerator / normCrossProduct; // experimentally determined scale factor to convert correction to Hz
+    _freqCorrection = 8.0e6 * normCrossProduct; // experimentally determined scale factor to convert correction to Hz
 
     _g0Mag = sqrt(i[0] * i[0] + q[0] * q[0]);
     _g0MagDb = 10 * log10(_g0Mag);
