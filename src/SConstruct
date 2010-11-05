@@ -29,6 +29,7 @@ SConscript("kascope/SConscript")
 SConscript("kaprod/SConscript")
 SConscript("kaarchiver/SConscript")
 SConscript("kaafc/SConscript")
+SConscript("tcpscope/SConscript")
 
 env.Alias('apidocs', env.Dir("apidocs"))
 
