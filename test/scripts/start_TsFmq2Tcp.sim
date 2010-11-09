@@ -7,6 +7,6 @@ running "TsFmq2Tcp -params TsFmq2Tcp.sim"
 if ($status == 1) then
   cd /home/hcr/workspace/ka/test/params
   TsFmq2Tcp -params TsFmq2Tcp.sim \
-    >& /dev/null &
+   >& /dev/null &
 endif
 

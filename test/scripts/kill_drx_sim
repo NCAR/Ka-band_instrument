@@ -1,0 +1,8 @@
+#! /bin/csh
+#
+# Kill DRX simulator for time series data
+#
+
+snuff TsFile2Fmq
+snuff TsFmq2Tcp
+
