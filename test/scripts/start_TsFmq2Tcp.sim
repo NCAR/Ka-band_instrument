@@ -1,0 +1,12 @@
+#! /bin/csh
+#
+# Start TsFmq2Tcp simulator
+# Serves out time series data on a socket, port 12000
+#
+running "TsFmq2Tcp -params TsFmq2Tcp.sim"
+if ($status == 1) then
+  cd /home/hcr/workspace/ka/test/params
+  TsFmq2Tcp -params TsFmq2Tcp.sim \
+    >& /dev/null &
+endif
+

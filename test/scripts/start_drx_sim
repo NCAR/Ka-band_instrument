@@ -1,0 +1,12 @@
+#! /bin/csh
+#
+# Start DRX simulator for time series data
+# Serves out time series data on a socket, port 12000
+#
+
+cd $HOME/workspace/ka/test/scripts
+
+start_TsFile2Fmq.sim
+
+start_TsFmq2Tcp.sim
+

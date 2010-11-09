@@ -1,0 +1,14 @@
+#! /bin/csh
+#
+# Start TsFile2Fmq simulator
+# Repeatedly reads through time series files, writing the
+# IWRF data packets into an FMQ /tmp/fmq/ts_sim
+#
+running "TsFile2Fmq -params TsFile2Fmq.sim"
+if ($status == 1) then
+  cd /home/hcr/workspace/ka/test/params
+  TsFile2Fmq -params TsFile2Fmq.sim \
+    -f $HOME/workspace/data/time_series/spol/pointing/horiz_nw/20101015_153* \
+    >& /dev/null &
+endif
+
