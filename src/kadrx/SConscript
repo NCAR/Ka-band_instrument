@@ -29,3 +29,12 @@ html = env.Apidocs(sources + headers, DOXYFILE_FILE = "Doxyfile")
 
 Default(kadrx, html)
 
+
+footools = Split("""
+pmc730
+""")
+fooenv = Environment(tools = ['default'] + footools)
+fooenv['CCFLAGS'] = ['-g', '-O0']
+foo = fooenv.Program('foo.cpp')
+Default(foo)
+
