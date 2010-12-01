@@ -78,8 +78,9 @@ std::set<std::string> KaDrxConfig::_createIntLegalKeys() {
 std::set<std::string> KaDrxConfig::_BoolLegalKeys(_createBoolLegalKeys());
 std::set<std::string> KaDrxConfig::_createBoolLegalKeys() {
     std::set<std::string> keys;
-    keys.insert("staggered_prt");
+    keys.insert("external_start_trigger");
     keys.insert("pdpp");
+    keys.insert("staggered_prt");
     return keys;
 }
 
@@ -358,7 +359,12 @@ KaDrxConfig::isValid(bool verbose) const {
             std::cerr << "'burst_sample_width' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    
+    if (external_start_trigger() == UNSET_BOOL) {
+        if (verbose)
+            std::cerr << "'external_start_trigger' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+        
     return valid;
 }
 

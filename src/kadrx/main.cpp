@@ -283,7 +283,7 @@ main(int argc, char** argv)
     Pentek::p7142sd3c sd3c(_devRoot, _simulate, kaConfig.tx_delay(),
         kaConfig.tx_pulse_width(), kaConfig.prt1(), kaConfig.prt2(),
         kaConfig.staggered_prt(), kaConfig.gates(), 1, false,
-        Pentek::p7142sd3c::DDC10DECIMATE);
+        Pentek::p7142sd3c::DDC10DECIMATE, kaConfig.external_start_trigger());
     
     // We use SD3C's first general purpose timer for transmit pulse modulation
     sd3c.setGPTimer0(kaConfig.tx_pulse_mod_delay(), kaConfig.tx_pulse_mod_width());
