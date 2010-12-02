@@ -217,7 +217,7 @@ void startUpConverter(Pentek::p7142Up& upConverter,
 
 	// create the signal
 	unsigned int n = pulsewidth_counts * 2;
-	long IQ[n];
+	int32_t IQ[n];
 
 	for (unsigned int i = 0; i < n/2; i++) {
 		IQ[i]   = 0x8000 << 16 | 0x8000;
