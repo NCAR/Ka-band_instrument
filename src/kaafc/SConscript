@@ -7,13 +7,13 @@ doxygen
 
 sources = Split("""
 Adf4001.cpp
-KaAdf4001.cpp
+KaOscillator3.cpp
 KaAfc.cpp
 """)
 
 headers = Split("""
 Adf4001.h
-KaAdf4001.h
+KaOscillator3.h
 """)
 
 env = Environment(tools = ['default'] + tools)
