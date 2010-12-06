@@ -7,8 +7,14 @@
 
 #include <iostream>
 #include <Pmc730.h>
+#include "KaOscillator3.h"
+#include <logx/Logging.h>
+
+LOGGING("KaAfc")
 
 int
 main(int argc, char *argv[]) {
+    logx::ParseLogArgs(argc, argv);
     Pmc730 card(0);
+    KaOscillator3 osc3(card);
 }

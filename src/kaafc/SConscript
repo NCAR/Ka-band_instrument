@@ -2,6 +2,7 @@
 
 tools = Split("""
 pmc730
+logx
 doxygen
 """)
 
