@@ -25,8 +25,8 @@ KaOscillator3::KaOscillator3(Pmc730 & pmc730) :
             _pmc730.getDioDirection(DIO_LEINV) != 1) {
         ELOG << __PRETTY_FUNCTION__ << ": PMC-730 DIO lines " << 
                 DIO_CLOCK << ", " << DIO_CLOCKINV << ", " << 
-                DIO_LE << ", " << DIO_LEINV << ", " << 
-                DIO_DATA << ", and " << DIO_DATAINV << 
+                DIO_DATA << ", " << DIO_DATAINV << 
+                DIO_LE << ", and " << DIO_LEINV << ", " << 
                 " are not all set for output!";
         abort();
     }
