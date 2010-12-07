@@ -16,5 +16,6 @@ int
 main(int argc, char *argv[]) {
     logx::ParseLogArgs(argc, argv);
     Pmc730 card(0);
+    card.setDioDirection8_15(1);
     KaOscillator3 osc3(card);
 }
