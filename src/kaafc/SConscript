@@ -10,11 +10,13 @@ sources = Split("""
 Adf4001.cpp
 KaOscillator3.cpp
 KaAfc.cpp
+TtyOscillator.cpp
 """)
 
 headers = Split("""
 Adf4001.h
 KaOscillator3.h
+TtyOscillator.h
 """)
 
 env = Environment(tools = ['default'] + tools)
