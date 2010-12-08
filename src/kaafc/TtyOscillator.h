@@ -41,12 +41,32 @@
  */
 class TtyOscillator {
 public:
-    TtyOscillator(std::string devName, unsigned int defaultFreq,
-            unsigned int freqStep);
+    /**
+     * Construct an object for controlling one of Ka's 3 serial-connected 
+     * oscillators.
+     * @param devName the name of the tty device connected to the oscillator
+     * @param oscillatorNum the number of the oscillator, in range [0,2]
+     * @param defaultFreq the default frequency for the oscillator
+     * @param freqStep the step increment for oscillator frequencies
+     */
+    TtyOscillator(std::string devName, unsigned int oscillatorNum, 
+            unsigned int defaultFreq, unsigned int freqStep);
     virtual ~TtyOscillator();
+    
+    void setFrequency(unsigned int frequency);
+    
+    unsigned int getFrequency() const { return _currentFreq; }
 private:
+    /**
+     * Get the current status from the oscillator, which will be used to update 
+     * _currentFreq.
+     * @return 0 if status is read successfully, or 1 if status read times out
+     */
+    int _getStatus();
+    
     std::string _devName;
     int _fd;
+    unsigned int _oscillatorNum;
     unsigned int _freqStep;
     unsigned int _currentFreq;
 };
