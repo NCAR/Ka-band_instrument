@@ -155,7 +155,7 @@ TtyOscillator::_getStatus() {
         unsigned int scaledFreq;
         sscanf(reply + 8, "%5u", &scaledFreq);
         _currentFreq = scaledFreq * _freqStep;
-        ILOG << "Current freq is " << _currentFreq << " Hz";
+        DLOG << "Current freq is " << _currentFreq << " Hz";
 
         return 0;
     }
