@@ -64,11 +64,26 @@ private:
      */
     int _getStatus();
     
+    /**
+     * Send a command string to the oscillator. The command string must be
+     * NULL-terminated, and the NULL character will be sent as part of the
+     * command.
+     * @param cmd the NULL-terminated string containing the command
+     * @param timeNeeded the time needed for the oscillator to process the
+     *      command, in seconds. No succeeding command will be sent until
+     *      this amount of time has elapsed.
+     */
+    void _sendCmd(char *cmd, unsigned int timeNeeded);
+
+    void _handleTimeout(int signum);
+
     std::string _devName;
     int _fd;
     unsigned int _oscillatorNum;
     unsigned int _freqStep;
     unsigned int _currentFreq;
+    int _nextWrite; // wait until this time before sending next cmd, seconds since 1970/1/1 00:00 UTC
+
 };
 
 #endif /* TTYOSCILLATOR_H_ */
