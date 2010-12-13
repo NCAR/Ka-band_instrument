@@ -18,20 +18,12 @@
 LOGGING("TtyOscillator")
 
 TtyOscillator::TtyOscillator(std::string devName, unsigned int oscillatorNum, 
-        unsigned int startFreq, unsigned int freqStep) :
+        unsigned int freqStep, unsigned int scaledStartFreq) :
         _devName(devName), 
         _oscillatorNum(oscillatorNum), 
         _freqStep(freqStep),
-        _currentFreq(0),
+        _currentScaledFreq(0),
         _nextWrite(0) {
-    // Verify that startFreq is a multiple of _freqStep
-    if ((startFreq % _freqStep) != 0) {
-        ELOG << __PRETTY_FUNCTION__ << ": for oscillator " << _oscillatorNum <<
-                ", start freq " << startFreq <<
-                " Hz is not a multiple of the step (" << _freqStep << " Hz)";
-        abort();
-    }
-    
     // Open the serial port
     if ((_fd = open(_devName.c_str(), O_RDWR)) == -1) {
         ELOG << __PRETTY_FUNCTION__ << ": error opening " << _devName << ": " <<
@@ -59,28 +51,20 @@ TtyOscillator::TtyOscillator(std::string devName, unsigned int oscillatorNum,
     }
     
     // Set the initial oscillator frequency
-    setFrequency(startFreq);
+    setFrequency(scaledStartFreq);
 }
 
 TtyOscillator::~TtyOscillator() {
 }
 
 void
-TtyOscillator::setFrequency(unsigned int freq) {
-    if (freq == _currentFreq)
+TtyOscillator::setFrequency(unsigned int scaledFreq) {
+    if (scaledFreq == _currentScaledFreq)
         return;
 
-    // Scale frequency into units of _freqStep
-    unsigned int scaledFreq = (freq / _freqStep);
-    // Complain if frequency is not a multiple of _freqStep
-    if ((freq % _freqStep) != 0) {
-        freq = scaledFreq * _freqStep; // here's what we'll really get
-        WLOG << __PRETTY_FUNCTION__ << ": for oscillator " << _oscillatorNum <<
-                ", frequency " << freq << 
-                " Hz is not a multiple of the step (" << _freqStep << " Hz)" <<
-                "\n    Using " << freq << " Hz instead.";
-    }
-    
+    DLOG << __PRETTY_FUNCTION__ << ": requested frequency (" << scaledFreq <<
+            " x " << _freqStep << ") Hz";
+
     int maxattempts = 5;
     for (int attempt = 0; attempt < maxattempts; attempt++) {
         // Set frequency command is 8 bytes:
@@ -104,13 +88,13 @@ TtyOscillator::setFrequency(unsigned int freq) {
             ELOG << __PRETTY_FUNCTION__ <<
                     ": status read error for oscillator " << _oscillatorNum;
         }
-        if (_currentFreq == freq)
+        if (_currentScaledFreq == scaledFreq)
             return;
     }
     // If we get here, we got no status reply after many attempts
     ELOG << __PRETTY_FUNCTION__ << ": Failed for oscillator " <<
             _oscillatorNum << " after " << maxattempts <<
-            "attempts. Command wait time may be too short.";
+            " attempts. Command wait time may be too short.";
     abort();
 }
 
@@ -131,13 +115,14 @@ TtyOscillator::_getStatus() {
         _sendCmd(statusCmd, 0);
 
         // Get the full 13-byte reply
-        char reply[13];
+        char reply[14];
         int nread = 0;
         bool timeout = false;
         while (nread < 13) {
             int status = read(_fd, reply + nread, 13 - nread);
             if (status == 0) {
-                WLOG << __PRETTY_FUNCTION__ << ": read timeout";
+                WLOG << __PRETTY_FUNCTION__ << ": oscillator " <<
+                        _oscillatorNum << " status read timeout";
                 timeout = true;
                 break;
             } else if (status < 0) {
@@ -152,17 +137,17 @@ TtyOscillator::_getStatus() {
             continue;
 
         // Read frequency from the status message and set _currentFreq
-        unsigned int scaledFreq;
-        sscanf(reply + 8, "%5u", &scaledFreq);
-        _currentFreq = scaledFreq * _freqStep;
-        DLOG << "Current freq is " << _currentFreq << " Hz";
+        sscanf(reply + 8, "%5u", &_currentScaledFreq);
+        DLOG << "Oscillator " << _oscillatorNum << " status '" << reply << "'";
+        DLOG << "Oscillator " << _oscillatorNum << " freq is (" <<
+                _currentScaledFreq << " x " << _freqStep << ") Hz";
 
         return 0;
     }
     // If we get here, we got no status reply after many attempts
     ELOG << __PRETTY_FUNCTION__ << ": No status reply from oscillator " <<
             _oscillatorNum << " after " << maxattempts <<
-            "attempts. Is the serial line connected?";
+            "attempts. Is the serial line connected? Is the oscillator num wrong?";
     abort();
 }
 

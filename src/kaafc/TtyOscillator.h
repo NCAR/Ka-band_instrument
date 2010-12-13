@@ -55,7 +55,7 @@ public:
      *      units of freqStep
      */
     TtyOscillator(std::string devName, unsigned int oscillatorNum, 
-            unsigned int freqStep, unsigned int scaledtartFreq);
+            unsigned int freqStep, unsigned int scaledStartFreq);
     virtual ~TtyOscillator();
     
     /**
