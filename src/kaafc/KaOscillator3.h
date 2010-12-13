@@ -17,8 +17,8 @@ class Pmc730;
  * 
  * Six DIO lines from the DRX computer's Acromag PMC730 multi-IO card are used 
  * to send three differential signals to the Ka downconversion card which relays 
- * them as single-ended signals to oscillator 3's ADF4001 PLL CLOCK, DATA, and 
- * LE input lines.
+ * them as single-ended signals to CLOCK, DATA, and LE lines of oscillator 3's 
+ * Analog Devices ADF4001 PLL. Programming this chip controls the oscillator.
  * <table border>
  *   <tr>
  *     <td><b>PMC730 DIO line</b></td>
