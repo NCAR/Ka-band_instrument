@@ -16,7 +16,7 @@
  * oscillators:
  * 
  *      1) Set frequency - an 8-byte string
- *          byte 0:     oscillator number (ASCII '0', 1', or '2')
+ *          byte 0:     oscillator number (ASCII '0', '1', or '2')
  *          byte 1:     ASCII 'm'
  *          bytes 2-6:  5-digit frequency string, in units of the oscillator's 
  *                      frequency step.
@@ -26,13 +26,16 @@
  *          requested frequency.
  * 
  *      2) Send status - a 3-byte string
- *          byte 0:     oscillator number (ASCII '0', 1', or '2')
+ *          byte 0:     oscillator number (ASCII '0', '1', or '2')
  *          byte 1:     ASCII 's'
  *          byte 2:     ASCII NUL
  *  
  * The oscillator writes to the serial port only in response to a 'Send 
  * status' command. Its response is a 13-byte string:
- * 		bytes 0-6:	unknown
+ *      byte 0:     ASCII 's'
+ *      byte 1:     oscillator number (ASCII '0', '1', or '2')
+ *      byte 2:     ASCII 'd'
+ * 		bytes 3-6:	4-digit string (use unknown)
  *      byte 7:		ASCII 'm'
  *      bytes 8-12: 5-digit frequency string, in units of the oscillator's
  *                  frequency step.
@@ -47,16 +50,24 @@ public:
      * oscillators.
      * @param devName the name of the tty device connected to the oscillator
      * @param oscillatorNum the number of the oscillator, in range [0,2]
-     * @param defaultFreq the default frequency for the oscillator
-     * @param freqStep the step increment for oscillator frequencies
+     * @param freqStep the step increment for oscillator frequencies, in Hz
+     * @param scaledStartFreq the starting frequency for the oscillator, in
+     *      units of freqStep
      */
     TtyOscillator(std::string devName, unsigned int oscillatorNum, 
-            unsigned int defaultFreq, unsigned int freqStep);
+            unsigned int freqStep, unsigned int scaledtartFreq);
     virtual ~TtyOscillator();
     
-    void setFrequency(unsigned int frequency);
+    /**
+     * Set the frequency of the oscillator, in units of its frequency step.
+     */
+    void setFrequency(unsigned int scaledFreq);
     
-    unsigned int getFrequency() const { return _currentFreq; }
+    /**
+     * Get the current frequency of the oscillator, in units of its frequency
+     * step.
+     */
+    unsigned int getFrequency() const { return _currentScaledFreq; }
 private:
     /**
      * Get the current status from the oscillator, which will be used to update 
@@ -82,7 +93,7 @@ private:
     int _fd;
     unsigned int _oscillatorNum;
     unsigned int _freqStep;
-    unsigned int _currentFreq;
+    unsigned int _currentScaledFreq;
     int _nextWrite; // wait until this time before sending next cmd, seconds since 1970/1/1 00:00 UTC
 
 };
