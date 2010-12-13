@@ -30,9 +30,10 @@
  *          byte 1:     ASCII 's'
  *          byte 2:     ASCII NUL
  *  
- * The oscillator writes to the serial port only when prompted by receiving
- * a 'Send status' command. Its response is a 13-byte string:
- *      bytes 0-7:  unknown
+ * The oscillator writes to the serial port only in response to a 'Send 
+ * status' command. Its response is a 13-byte string:
+ * 		bytes 0-6:	unknown
+ *      byte 7:		ASCII 'm'
  *      bytes 8-12: 5-digit frequency string, in units of the oscillator's
  *                  frequency step.
  *                  
