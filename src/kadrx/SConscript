@@ -2,23 +2,35 @@
 
 tools = Split("""
 kadds
+logx
 pentek
 qtt_qtconfig
 boost_date_time
 boost_program_options
 doxygen
 qt4
+pmc730
 """)
 
 sources = Split("""
+Adf4001.cpp
+KaAfc.cpp
 KaDrxConfig.cpp
 KaDrxPub.cpp
+KaOscillator3.cpp
+KaPmc730.cpp
+TtyOscillator.cpp
 main.cpp
 """)
 
 headers = Split("""
+Adf4001.h
+KaAfc.h
 KaDrxConfig.h
 KaDrxPub.h
+KaOscillator3.h
+KaPmc730.h
+TtyOscillator.h
 """)
 
 env = Environment(tools = ['default'] + tools)
