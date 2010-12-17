@@ -17,16 +17,16 @@ LOGGING("KaOscillator3");
 KaOscillator3::KaOscillator3(Pmc730 & pmc730) :
     _pmc730(pmc730) {
     // Verify that the DIO lines we use to program the PLL are all set to output
-    if (_pmc730.getDioDirection(DIO_CLOCK) != 1 ||
-            _pmc730.getDioDirection(DIO_CLOCKINV) != 1 ||
-            _pmc730.getDioDirection(DIO_DATA) != 1 ||
-            _pmc730.getDioDirection(DIO_DATAINV) != 1 ||
-            _pmc730.getDioDirection(DIO_LE) != 1 ||
-            _pmc730.getDioDirection(DIO_LEINV) != 1) {
+    if (_pmc730.getDioDirection(DIO_CLOCK) != Pmc730::DIO_OUTPUT ||
+            _pmc730.getDioDirection(DIO_CLOCKINV) != Pmc730::DIO_OUTPUT ||
+            _pmc730.getDioDirection(DIO_DATA) != Pmc730::DIO_OUTPUT ||
+            _pmc730.getDioDirection(DIO_DATAINV) != Pmc730::DIO_OUTPUT ||
+            _pmc730.getDioDirection(DIO_LE) != Pmc730::DIO_OUTPUT ||
+            _pmc730.getDioDirection(DIO_LEINV) != Pmc730::DIO_OUTPUT) {
         ELOG << __PRETTY_FUNCTION__ << ": PMC-730 DIO lines " << 
                 DIO_CLOCK << ", " << DIO_CLOCKINV << ", " << 
-                DIO_DATA << ", " << DIO_DATAINV << 
-                DIO_LE << ", and " << DIO_LEINV << ", " << 
+                DIO_DATA << ", " << DIO_DATAINV << ", " <<
+                DIO_LE << ", and " << DIO_LEINV << 
                 " are not all set for output!";
         abort();
     }
