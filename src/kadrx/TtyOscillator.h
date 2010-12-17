@@ -51,30 +51,97 @@ public:
      * @param devName the name of the tty device connected to the oscillator
      * @param oscillatorNum the number of the oscillator, in range [0,2]
      * @param freqStep the step increment for oscillator frequencies, in Hz
+     * @param scaledMinFreq minimum frequency for the oscillator, in
+     *      units of freqStep
+     * @param scaledMaxFreq maximum frequency for the oscillator, in
+     *      units of freqStep
      * @param scaledStartFreq the starting frequency for the oscillator, in
      *      units of freqStep
      */
     TtyOscillator(std::string devName, unsigned int oscillatorNum, 
-            unsigned int freqStep, unsigned int scaledStartFreq);
+            unsigned int freqStep, unsigned int scaledMinFreq, 
+            unsigned int scaledMaxFreq, unsigned int scaledStartFreq);
     virtual ~TtyOscillator();
     
     /**
      * Set the frequency of the oscillator, in units of its frequency step.
+     * This is a synchronous call, and will take at least a few seconds to return.
+     * Upon return, the oscillator is running at the requested frequency.
+     * @param scaledFreq the desired frequency, in units of the oscillator's
+     *      frequency step (@see getFreqStep()).
      */
-    void setFrequency(unsigned int scaledFreq);
+    void setScaledFreq(unsigned int scaledFreq);
+    
+    /**
+     * Set the frequency of the oscillator, in units of its frequency step.
+     * This an asynchronous call and will return immediately; it must be 
+     * followed by a call to freqAttained() to test if frequency has been
+     * set successfully.
+     */
+    void setScaledFreqAsync(unsigned int scaledFreq);
+    
+    /**
+     * Test if a frequency requested via setScaledFreqAsync() has been set
+     * successfully. This call may take up to a few seconds to return.
+     * If true is returned, the desired frequency is set.
+     * Otherwise, the frequency has not been changed, and another call to 
+     * setScaledFreqAsync() or setScaledFreq() will be required to set the 
+     * desired frequency.
+     * @return true iff the oscillator is running at the requested frequency
+     */
+    bool freqAttained();
     
     /**
      * Get the current frequency of the oscillator, in units of its frequency
-     * step.
+     * step (i.e., true frequency = scaled frequency x frequency step).
+     * @return the frequency of the oscillator, in units of the frequency step   
      */
-    unsigned int getFrequency() const { return _currentScaledFreq; }
+    unsigned int getScaledFreq() const { return _scaledCurrentFreq; }
+    
+    /**
+     * Get the scaled minimum frequency of the oscillator, in units of its
+     * frequency step (i.e., true frequency = scaled frequency x frequency step).
+     * @return the minimum frequency of the oscillator, in units of the 
+     *      frequency step
+     */
+    unsigned int getScaledMinFreq() const { return _scaledMinFreq; }
+
+    /**
+     * Get the scaled maximum frequency of the oscillator, in units of its
+     * frequency step (i.e., true frequency = scaled frequency x frequency step).
+     * @return the maximum frequency of the oscillator, in units of the 
+     *      frequency step
+     */
+    unsigned int getScaledMaxFreq() const { return _scaledMinFreq; }
+
+    /**
+     * Get the frequency step for the oscillator.
+     * @return the frequency step for the oscillator, in Hz
+     */
+    unsigned int getFreqStep() const { return _freqStep; }
+    
+    /**
+     * Device name to use when creating a simulation TtyOscillator.
+     */
+    static const std::string SIM_OSCILLATOR;
+        
 private:
     /**
      * Get the current status from the oscillator, which will be used to update 
      * _currentFreq.
-     * @return 0 if status is read successfully, or 1 if status read times out
+     * @return true if status is read successfully, or false if status read times out
      */
-    int _getStatus();
+    bool _getStatus();
+    
+    /**
+     * Command wait time after sending frequency change request, in seconds
+     */
+    static const unsigned int _FREQCHANGE_WAIT = 3;
+    
+    /**
+     * Command wait time after sending status request, in seconds
+     */
+    static const unsigned int _STATUS_WAIT = 0;
     
     /**
      * Send a command string to the oscillator. The command string must be
@@ -93,9 +160,19 @@ private:
     int _fd;
     unsigned int _oscillatorNum;
     unsigned int _freqStep;
-    unsigned int _currentScaledFreq;
+    /// requested frequency, set to non-zero while waiting for results of 
+    /// a set frequency request
+    unsigned int _scaledRequestedFreq;
+    /// _scaledCurrentFreq = current frequency / _freqStep
+    unsigned int _scaledCurrentFreq;
+    /// _scaledMinFreq = minimum frequency / _freqStep
+    unsigned int _scaledMinFreq;
+    /// _scaledMaxFreq = maximum frequency / _freqStep
+    unsigned int _scaledMaxFreq;
     int _nextWrite; // wait until this time before sending next cmd, seconds since 1970/1/1 00:00 UTC
-
+    
+    // Is this a simulated oscillator?
+    bool _simulate;
 };
 
 #endif /* TTYOSCILLATOR_H_ */
