@@ -124,11 +124,11 @@ KaAfc::newXmitSample(double g0Mag, double freqOffset) {
 
 KaAfcPrivate::KaAfcPrivate() :
     QThread(),
-    _mutex(QMutex::Recursive),
+    _mutex(QMutex::NonRecursive),   // must be non-recursive for QWaitCondition!
     _afcMode(AFC_SEARCHING),
-    _osc0(TtyOscillator::SIM_OSCILLATOR, 0, 100000, 14000, 14400, 15000),
-    _osc1(TtyOscillator::SIM_OSCILLATOR, 1, 10000, 13250, 12750, 13750), 
-    _osc2(TtyOscillator::SIM_OSCILLATOR, 2, 1000000, 16500, 16000, 17000),
+    _osc0(TtyOscillator::SIM_OSCILLATOR, 0, 100000, 14000, 15000, 14400),
+    _osc1(TtyOscillator::SIM_OSCILLATOR, 1, 10000, 12750, 13750, 13250), 
+    _osc2(TtyOscillator::SIM_OSCILLATOR, 2, 1000000, 16000, 17000, 16500),
     _osc3(KaPmc730::thePmc730()),
     _nToSum(10),
     _nSummed(0),
@@ -179,6 +179,8 @@ KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset) {
 void
 KaAfcPrivate::_processXmitAverage() {
     QMutexLocker locker(&_mutex);
+    
+    DLOG << "New averages: G0 " << _g0MagAvg << ", freq offset " << _freqOffsetAvg;
 
     static const double G0MAG_DB_THRESHOLD = -25.0;
     double g0MagDb = 10.0 * log10(_g0MagAvg);
