@@ -17,12 +17,8 @@
 /// input on the downconverter board).
 class KaPmc730 {
 public:
-    static Pmc730 & thePmc730() {
-        if (! _thePmc730) {
-            _thePmc730 = new Pmc730(0);
-        }
-        return(*_thePmc730);
-    }
+    /// Return a reference to Ka's singleton Pmc730 instance.
+    static Pmc730 & thePmc730();
 protected:
     static Pmc730 * _thePmc730;
 };
