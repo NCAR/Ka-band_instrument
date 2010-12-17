@@ -14,6 +14,7 @@
 #include <boost/program_options.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <csignal>
+#include <logx/Logging.h>
 
 // For configuration management
 #include <QtConfig.h>
@@ -239,7 +240,10 @@ main(int argc, char** argv)
 {
 	// try to change scheduling to real-time
 	makeRealTime();
-
+    
+    // Let logx get and strip out its arguments
+    logx::ParseLogArgs(argc, argv);
+    
 	// get the configuration parameters from the configuration file
 	getConfigParams();
 
