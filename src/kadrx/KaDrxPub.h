@@ -73,9 +73,9 @@ class KaDrxPub : public QThread {
 		/// since the last time this function was called.
 		unsigned long tsDiscards();
 		
-		/// @ return a pointer to our downconverter object
+		/// @return a pointer to our downconverter object
 		Pentek::p7142sd3cDn* downconverter() { return _down; }
-
+		
 	private:
 		/// Return the current time in seconds since 1970/01/01 00:00:00 UTC.
 		/// Returned value has 1 ms precision.
@@ -130,19 +130,8 @@ class KaDrxPub : public QThread {
 		/// downconverter.
 		RadarDDS::SysHousekeeping _baseDdsHskp;
 		
-		//
-		// Burst frequency calculation stuff. This should be removed when
-		// burst calculations are moved elsewhere.
-		//
-		double _freqCorrection;
-		double _g0Mag;
-		double _g0MagDb;
-		
+		// Burst frequency and phase calculation
         void _handleBurst(int16_t *iq_data, long long timetag);
-        
-        double _getFreqCorrection() const  { return _freqCorrection; }
-        double _getG0Mag() const { return _g0Mag; }
-        double _getG0MagDb() const { return _g0MagDb; }
 };
 
 #endif /*KADRXPUB_H_*/

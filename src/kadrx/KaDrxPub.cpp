@@ -1,4 +1,6 @@
 #include "KaDrxPub.h"
+#include "KaAfc.h"
+#include <logx/Logging.h>
 #include <sys/timeb.h>
 #include <cmath>
 #include <cstdlib>
@@ -6,6 +8,9 @@
 #include <iomanip>
 
 using namespace boost::posix_time;
+
+LOGGING("KaDrxPub")
+
 
 ////////////////////////////////////////////////////////////////////////////////
 KaDrxPub::KaDrxPub(
@@ -155,15 +160,8 @@ KaDrxPub::_publishDDS(char* buf, unsigned int pulsenum) {
 
 		// @TODO remove this
 		// Perform some burst-related calculations and dump burst data
-	    if (_chanId == KA_BURST_CHANNEL) {
+	    if (_chanId == KA_BURST_CHANNEL)
 	        _handleBurst(reinterpret_cast<int16_t*>(buf), ts.hskp.timetag);
-            if (! (pulsenum % 1000)) {
-                std::cout << "At pulse " << pulsenum << ": freq corr. " <<
-                    _freqCorrection << " Hz, g0 magnitude " << _g0Mag << " (" <<
-                    _g0MagDb << " dB)" << std::endl;
-                std::cout << std::flush;
-            }
-	    }
 	}
 }
 
@@ -217,8 +215,8 @@ KaDrxPub::_configIsValid() const {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-// @TODO remove this when we're done with the temporary burst stuff below
-static FILE* BurstFile = 0;
+// @TODO remove this when we're done with the temporary BurstFile stuff below
+//static FILE* BurstFile = 0;
 
 void
 KaDrxPub::_handleBurst(int16_t * iqData, long long timetag) {
@@ -261,10 +259,19 @@ KaDrxPub::_handleBurst(int16_t * iqData, long long timetag) {
     }
 
     double normCrossProduct = numerator / denominator;  // normalized cross product proportional to frequency change
-    _freqCorrection = 8.0e6 * normCrossProduct; // experimentally determined scale factor to convert correction to Hz
+    double freqCorrection = 8.0e6 * normCrossProduct; // experimentally determined scale factor to convert correction to Hz
 
-    _g0Mag = sqrt(i[0] * i[0] + q[0] * q[0]);
-    _g0MagDb = 10 * log10(_g0Mag);
+    double g0Mag = sqrt(i[0] * i[0] + q[0] * q[0]) / 65536.;
+    double g0MagDb = 10 * log10(g0Mag);
+    
+    if (! (timetag % 5000000)) {
+        ILOG << "At time " << timetag / 1000000 << ": freq corr. " <<
+            freqCorrection << " Hz, g0 magnitude " << g0Mag << " (" <<
+            g0MagDb << " dB)";
+    }
+    
+    // Ship the G0 power and frequency offset values to the AFC
+    KaAfc::theAfc().newXmitSample(g0Mag, freqCorrection);
 
 //    -----------------------------------------------------------------------------------
 //
@@ -285,22 +292,22 @@ KaDrxPub::_handleBurst(int16_t * iqData, long long timetag) {
 //
 //    end
     
-    // Write data directly to a simple CSV text file
-    if (! BurstFile) {
-        char ofilename[80];
-        sprintf(ofilename, "Ka_burst_%lld.csv", timetag / 1000000);
-        BurstFile = fopen(ofilename, "a");
-        if (! BurstFile) {
-            std::cerr << "Error opening burst CSV file: " << ofilename <<
-                    std::endl;
-            exit(1);
-        }
-    }
-    double dtime = timetag * 1.0e-6;
-    fprintf(BurstFile, "%.6f", dtime);
-    for (unsigned int g = 0; g < _gates; g++) {
-        fprintf(BurstFile, ",%d,%d", iqData[2 * g], iqData[2 * g + 1]);
-    }
-    fprintf(BurstFile, "\n");
-    fflush(BurstFile);
+//    // Write data directly to a simple CSV text file
+//    if (! BurstFile) {
+//        char ofilename[80];
+//        sprintf(ofilename, "Ka_burst_%lld.csv", timetag / 1000000);
+//        BurstFile = fopen(ofilename, "a");
+//        if (! BurstFile) {
+//            std::cerr << "Error opening burst CSV file: " << ofilename <<
+//                    std::endl;
+//            exit(1);
+//        }
+//    }
+//    double dtime = timetag * 1.0e-6;
+//    fprintf(BurstFile, "%.6f", dtime);
+//    for (unsigned int g = 0; g < _gates; g++) {
+//        fprintf(BurstFile, ",%d,%d", iqData[2 * g], iqData[2 * g + 1]);
+//    }
+//    fprintf(BurstFile, "\n");
+//    fflush(BurstFile);
 }
