@@ -31,6 +31,18 @@ TtyOscillator::TtyOscillator(std::string devName, unsigned int oscillatorNum,
         _scaledMaxFreq(scaledMaxFreq),
         _nextWrite(0),
         _simulate(devName == SIM_OSCILLATOR) {
+    // Test that min <= start <= max
+    if (scaledStartFreq < scaledMinFreq) {
+        ELOG << "Oscillator " << _oscillatorNum << " scaled start freq " << 
+            scaledStartFreq << " is less than scaled min freq " << scaledMinFreq;
+        abort();
+    }
+    if (scaledStartFreq > scaledMaxFreq) {
+        ELOG << "Oscillator " << _oscillatorNum << " scaled start freq " << 
+            scaledStartFreq << " is greater than scaled max freq " << 
+            scaledMaxFreq;
+        abort();
+    }
     // Set up the serial port if we're not simulating
     if (! _simulate) {
         // Open the serial port
