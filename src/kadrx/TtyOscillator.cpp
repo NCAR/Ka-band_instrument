@@ -101,6 +101,12 @@ TtyOscillator::setScaledFreq(unsigned int scaledFreq) {
 
 void
 TtyOscillator::setScaledFreqAsync(unsigned int scaledFreq) {
+    if (_scaledRequestedFreq) {
+        ELOG << "Previous call to setScaledFreqAsync() not was not " <<
+            "completed with a call to freqAttained(). New call is being " <<
+            "ignored!";
+        return;
+    }
     // min/max checking
     if (scaledFreq > _scaledMaxFreq) {
         WLOG << __PRETTY_FUNCTION__ << ": requested scaled frequency " << 
