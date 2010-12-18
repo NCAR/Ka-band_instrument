@@ -23,6 +23,7 @@ TtyOscillator::TtyOscillator(std::string devName, unsigned int oscillatorNum,
         unsigned int freqStep, unsigned int scaledMinFreq, 
         unsigned int scaledMaxFreq, unsigned int scaledStartFreq) :
         _devName(devName), 
+        _fd(-1),
         _oscillatorNum(oscillatorNum), 
         _freqStep(freqStep),
         _scaledRequestedFreq(0),
@@ -148,9 +149,13 @@ TtyOscillator::freqAttained() {
     if (! _scaledRequestedFreq)
         return(true);
     // Get the status and see if the frequency matches the requested frequency.
-    if (! _getStatus()) {
+    if (_getStatus()) {
         ELOG << __PRETTY_FUNCTION__ <<
                 ": status read error for oscillator " << _oscillatorNum;
+    } else {
+        DLOG << __PRETTY_FUNCTION__ << ": oscillator " << _oscillatorNum <<
+                " now at (" << _scaledCurrentFreq << " x " << _freqStep <<
+                ") Hz";
     }
     bool attained = (_scaledCurrentFreq == _scaledRequestedFreq);
     _scaledRequestedFreq = 0;   // request completed
@@ -160,7 +165,8 @@ TtyOscillator::freqAttained() {
 bool
 TtyOscillator::_getStatus() {
     // Get rid of any unread input from the oscillator
-    tcflush(_fd, TCIFLUSH);
+    if (! _simulate)
+        tcflush(_fd, TCIFLUSH);
     
     int maxattempts = 10;
     for (int attempt = 0; attempt < maxattempts; attempt++) {
@@ -209,7 +215,7 @@ TtyOscillator::_getStatus() {
         DLOG << "Oscillator " << _oscillatorNum << " freq is (" <<
                 _scaledCurrentFreq << " x " << _freqStep << ") Hz";
 
-        return 0;
+        return(0);
     }
     // If we get here, we got no status reply after many attempts
     ELOG << __PRETTY_FUNCTION__ << ": No status reply from oscillator " <<
