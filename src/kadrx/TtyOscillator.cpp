@@ -134,8 +134,11 @@ TtyOscillator::setScaledFreqAsync(unsigned int scaledFreq) {
     }
     
     // Nothing to do if they requested the current frequency...
-    if (scaledFreq == _scaledCurrentFreq)
+    if (scaledFreq == _scaledCurrentFreq) {
+        ILOG << __PRETTY_FUNCTION__ << ": oscillator " << _oscillatorNum <<
+            " already at (" << scaledFreq << " x " << _freqStep << ") Hz";
         return;
+    }
 
     DLOG << __PRETTY_FUNCTION__ << ": setting oscillator " << _oscillatorNum <<
         " frequency to (" << scaledFreq << " x " << _freqStep << ") Hz";
