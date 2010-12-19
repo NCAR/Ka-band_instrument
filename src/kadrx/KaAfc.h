@@ -11,8 +11,8 @@
 class KaAfcPrivate;
 
 /// Singleton object to handle Ka-band AFC, controlling three adjustable 
-/// oscillators. It merely needs pulse-by-pulse estimates of G0 power and
-/// frequency offset, and handles programming of three adjustable 
+/// oscillators, historically labeled 0, 1, and 3. It merely needs per-pulse 
+/// estimates of G0 power and frequency offset, and handles programming of the
 /// oscillators based on those values.
 class KaAfc {
 public:
@@ -23,6 +23,20 @@ public:
         }
         return(*_theAfc);
     }
+    
+    /// Set the G0 threshold power for reliable calculated frequencies. 
+    /// Value is in dB relative to maximum receiver output.
+    /// @param thresh G0 threshold power, in dB relative to maximum receiver 
+    ///     output
+    static void setG0ThresholdDb(double thresh);
+    
+    /// Set the AFC fine step in Hz. 
+    /// @param step AFC fine step in Hz
+    static void setFineStep(unsigned int step);
+
+    /// Set the AFC coarse step in Hz. 
+    /// @param step AFC coarse step in Hz
+    static void setCoarseStep(unsigned int step);
 
     /// Accept an incoming set of averaged transmit pulse information comprising
     /// relative g0 power, and calculated frequency offset. This information 
