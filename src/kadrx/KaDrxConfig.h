@@ -94,8 +94,21 @@ public:
      * Are we using an external start trigger? 
      * @ return 0 if false, 1 if true, or UNSET_BOOL if unset
      */
-    bool external_start_trigger() const {
+    int external_start_trigger() const {
         return _getBoolVal("external_start_trigger");
+    }
+    /// AFC G0 threshold power for reliable calculated frequencies, in dB
+    /// relative to maximum receiver output
+    double afc_g0_threshold_db() const {
+        return _getDoubleVal("afc_g0_threshold_db");
+    }
+    /// AFC coarse step, Hz
+    int afc_coarse_step() const {
+        return _getIntVal("afc_coarse_step");
+    }
+    /// AFC fine step, Hz
+    int afc_fine_step() const {
+        return _getIntVal("afc_fine_step");
     }
     // @TODO End-of-line comments below are not working correctly in doxygen. Change to pre-comments.
     double tx_switching_network_loss() const { return _getDoubleVal("tx_switching_network_loss"); }  /// dB

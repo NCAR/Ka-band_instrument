@@ -25,6 +25,7 @@
 // with OpenDDS 2.0/2.1
 #include <dds/Version.h>
 
+#include "KaAfc.h"
 #include "KaDrxPub.h"
 #include "p7142sd3c.h"
 #include "DDSPublisher.h"
@@ -282,6 +283,11 @@ main(int argc, char** argv)
 	// create the dds services
 	if (_publish)
 		createDDSservices();
+        
+    // set up AFC from the configuration
+    KaAfc::theAfc().setG0ThresholdDb(kaConfig.afc_g0_threshold_db());
+    KaAfc::theAfc().setCoarseStep(kaConfig.afc_coarse_step());
+    KaAfc::theAfc().setFineStep(kaConfig.afc_fine_step());
 	
     // Instantiate our p7142sd3c
     Pentek::p7142sd3c sd3c(_devRoot, _simulate, kaConfig.tx_delay(),

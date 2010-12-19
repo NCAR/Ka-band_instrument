@@ -61,6 +61,7 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("altitude");
     keys.insert("burst_sample_delay");
     keys.insert("burst_sample_width");
+    keys.insert("afc_g0_threshold_db");
     return keys;
 }
 
@@ -71,6 +72,8 @@ std::set<std::string> KaDrxConfig::_createIntLegalKeys() {
     keys.insert("gates");
     keys.insert("actual_num_rcvrs");
     keys.insert("ddc_type");
+    keys.insert("afc_coarse_step");
+    keys.insert("afc_fine_step");
     return keys;
 }
 
@@ -364,7 +367,21 @@ KaDrxConfig::isValid(bool verbose) const {
             std::cerr << "'external_start_trigger' unset in DRX configuration" << std::endl;
         valid = false;
     }
-        
+    if (afc_g0_threshold_db() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'afc_g0_threshold_db' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (afc_coarse_step() == UNSET_INT) {
+        if (verbose)
+            std::cerr << "'afc_coarse_step' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (afc_fine_step() == UNSET_INT) {
+        if (verbose)
+            std::cerr << "'afc_fine_step' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
     return valid;
 }
 
