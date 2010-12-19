@@ -21,7 +21,7 @@ const std::string TtyOscillator::SIM_OSCILLATOR("<SimTtyOscillator>");
 
 TtyOscillator::TtyOscillator(std::string devName, unsigned int oscillatorNum, 
         unsigned int freqStep, unsigned int scaledMinFreq, 
-        unsigned int scaledMaxFreq, unsigned int scaledStartFreq) :
+        unsigned int scaledMaxFreq) :
         _devName(devName), 
         _fd(-1),
         _oscillatorNum(oscillatorNum), 
@@ -32,16 +32,11 @@ TtyOscillator::TtyOscillator(std::string devName, unsigned int oscillatorNum,
         _scaledMaxFreq(scaledMaxFreq),
         _nextWrite(0),
         _simulate(devName == SIM_OSCILLATOR) {
-    // Test that min <= start <= max
-    if (scaledStartFreq < scaledMinFreq) {
-        ELOG << "Oscillator " << _oscillatorNum << " scaled start freq " << 
-            scaledStartFreq << " is less than scaled min freq " << scaledMinFreq;
-        abort();
-    }
-    if (scaledStartFreq > scaledMaxFreq) {
-        ELOG << "Oscillator " << _oscillatorNum << " scaled start freq " << 
-            scaledStartFreq << " is greater than scaled max freq " << 
-            scaledMaxFreq;
+    // Test that min <= max
+    if (_scaledMinFreq > _scaledMaxFreq) {
+        ELOG << "Oscillator " << _oscillatorNum << " scaled min freq " << 
+            _scaledMinFreq << " is greater than scaled max freq " << 
+            _scaledMaxFreq;
         abort();
     }
     // Set up the serial port if we're not simulating
@@ -73,8 +68,25 @@ TtyOscillator::TtyOscillator(std::string devName, unsigned int oscillatorNum,
         }
     }
     
-    // Set the initial oscillator frequency
-    setScaledFreq(scaledStartFreq);
+    // Find out the current frequency
+    if (_getStatus()) {
+        ELOG << __PRETTY_FUNCTION__ <<
+                ": status read error for oscillator " << _oscillatorNum;
+    } else {
+        DLOG << __PRETTY_FUNCTION__ << ": oscillator " << _oscillatorNum <<
+                " started at (" << _scaledCurrentFreq << " x " << _freqStep <<
+                ") Hz";
+    }
+    
+    // Note if the oscillator's startup frequency is not between the specified
+    // min and max.
+    if ((_scaledCurrentFreq < _scaledMinFreq) || 
+        (_scaledCurrentFreq > _scaledMaxFreq)) {
+        WLOG << __PRETTY_FUNCTION__ << ": oscillator " << _oscillatorNum <<
+            " startup scaled freq (" << _scaledCurrentFreq << 
+            ") is not between given min (" << _scaledMinFreq << ") and max (" <<
+            _scaledMaxFreq;
+    }
 }
 
 TtyOscillator::~TtyOscillator() {
@@ -125,8 +137,8 @@ TtyOscillator::setScaledFreqAsync(unsigned int scaledFreq) {
     if (scaledFreq == _scaledCurrentFreq)
         return;
 
-    DLOG << __PRETTY_FUNCTION__ << ": setting frequency to (" << scaledFreq <<
-            " x " << _freqStep << ") Hz";
+    DLOG << __PRETTY_FUNCTION__ << ": setting oscillator " << _oscillatorNum <<
+        " frequency to (" << scaledFreq << " x " << _freqStep << ") Hz";
     
     // Set _scaledRequestedFreq to non-zero while the request is in progress.
     // It will be set back to zero by the freqAttained() test.
@@ -159,7 +171,7 @@ TtyOscillator::freqAttained() {
         ELOG << __PRETTY_FUNCTION__ <<
                 ": status read error for oscillator " << _oscillatorNum;
     } else {
-        DLOG << __PRETTY_FUNCTION__ << ": oscillator " << _oscillatorNum <<
+        ILOG << __PRETTY_FUNCTION__ << ": oscillator " << _oscillatorNum <<
                 " now at (" << _scaledCurrentFreq << " x " << _freqStep <<
                 ") Hz";
     }
@@ -215,9 +227,12 @@ TtyOscillator::_getStatus() {
         if (timeout)
             continue;
 
+        // Log the raw status
+        reply[13] = '\0';   // NULL terminate before printing...
+        DLOG << "Oscillator " << _oscillatorNum << " status '" << reply << "'";
+        
         // Read frequency from the status message and set _currentFreq
         sscanf(reply + 8, "%5u", &_scaledCurrentFreq);
-        DLOG << "Oscillator " << _oscillatorNum << " status '" << reply << "'";
         DLOG << "Oscillator " << _oscillatorNum << " freq is (" <<
                 _scaledCurrentFreq << " x " << _freqStep << ") Hz";
 

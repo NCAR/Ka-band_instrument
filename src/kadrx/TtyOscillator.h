@@ -50,17 +50,15 @@ public:
      * oscillators.
      * @param devName the name of the tty device connected to the oscillator
      * @param oscillatorNum the number of the oscillator, in range [0,2]
-     * @param freqStep the step increment for oscillator frequencies, in Hz
+     * @param freqStep the step increment for oscillator frequency, in Hz
      * @param scaledMinFreq minimum frequency for the oscillator, in
      *      units of freqStep
      * @param scaledMaxFreq maximum frequency for the oscillator, in
      *      units of freqStep
-     * @param scaledStartFreq the starting frequency for the oscillator, in
-     *      units of freqStep
      */
     TtyOscillator(std::string devName, unsigned int oscillatorNum, 
             unsigned int freqStep, unsigned int scaledMinFreq, 
-            unsigned int scaledMaxFreq, unsigned int scaledStartFreq);
+            unsigned int scaledMaxFreq);
     virtual ~TtyOscillator();
     
     /**
@@ -87,6 +85,8 @@ public:
      * Otherwise, the frequency has not been changed, and another call to 
      * setScaledFreqAsync() or setScaledFreq() will be required to set the 
      * desired frequency.
+     * If called when no asynchronous frequency setting is in process, it will
+     * immediately return true.
      * @return true iff the oscillator is running at the requested frequency
      */
     bool freqAttained();
