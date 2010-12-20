@@ -112,7 +112,7 @@ public:
      * @return the maximum frequency of the oscillator, in units of the 
      *      frequency step
      */
-    unsigned int getScaledMaxFreq() const { return _scaledMinFreq; }
+    unsigned int getScaledMaxFreq() const { return _scaledMaxFreq; }
 
     /**
      * Get the frequency step for the oscillator.
