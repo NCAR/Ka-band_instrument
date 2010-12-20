@@ -78,9 +78,16 @@ public:
     /**
      * Set oscillator 3 frequency. The selected frequency must be a multiple
      * of OSC3_FREQ_STEP, and must be in the range [OSC3_MIN_FREQ, OSC3_MAX_FREQ]
-     * @param freq the desired oscillator 3 frequency
+     * @param freq the desired oscillator 3 frequency, in Hz
      */
     void setFrequency(unsigned int freq);
+    
+    /**
+     * Set oscillator 3 frequency in units of its frequency step.
+     * @param scaledFreq the desired oscillator 3 frequency, in units of the
+     *     frequency step
+     */
+    void setScaledFreq(unsigned int scaledFreq) { setFrequency(scaledFreq * OSC3_FREQ_STEP); }
     
     /**
      * Get oscillator 3 frequency in Hz.
