@@ -45,7 +45,8 @@ public:
     /// the given sample will be ignored. @see adjustmentInProgress()
     /// @param g0Mag relative g0 power magnitude, in range [0.0,1.0]
     /// @param freqOffset measured frequency offset, in Hz
-    void newXmitSample(double g0Mag, double freqOffset);
+    /// @param pulsenum pulse number, counted since transmitter startup
+    void newXmitSample(double g0Mag, double freqOffset, unsigned int pulsenum);
 protected:
     /// constructor for the singleton instance
     KaAfc();

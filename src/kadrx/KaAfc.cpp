@@ -45,7 +45,8 @@ public:
     /// the given sample will be ignored. @see adjustmentInProgress()
     /// @param g0Mag relative g0 power magnitude, in range [0.0,1.0]
     /// @param freqOffset measured frequency offset, in Hz
-    void newXmitSample(double g0Mag, double freqOffset);
+    /// @param pulsenum pulse number, counted since transmitter startup
+    void newXmitSample(double g0Mag, double freqOffset, unsigned int pulsenum);
     
     /// Set the G0 threshold power for reliable calculated frequencies. 
     /// Value is in dB relative to maximum receiver output.
@@ -139,6 +140,15 @@ private:
     
     /// offset frequency averaged over _nToSum samples
     double _freqOffsetAvg;
+    
+    /// last pulse received by newXmitSample()
+    unsigned int _lastRcvdPulse;
+    
+    /// number of pulses received by newXmitSample()
+    unsigned int _pulsesRcvd;
+    
+    /// number of pulses dropped by newXmitSample()
+    unsigned int _pulsesDropped;
 };
 
 KaAfc::KaAfc() {
@@ -155,8 +165,8 @@ KaAfc::~KaAfc() {
 }
 
 void
-KaAfc::newXmitSample(double g0Mag, double freqOffset) {
-    _afcPrivate->newXmitSample(g0Mag, freqOffset);
+KaAfc::newXmitSample(double g0Mag, double freqOffset, unsigned int pulsenum) {
+    _afcPrivate->newXmitSample(g0Mag, freqOffset, pulsenum);
 }
 
 void
@@ -189,7 +199,10 @@ KaAfcPrivate::KaAfcPrivate() :
     _g0MagSum(0.0),
     _freqOffsetSum(0.0),
     _g0MagAvg(0.0),
-    _freqOffsetAvg(0.0) {
+    _freqOffsetAvg(0.0),
+    _lastRcvdPulse(0),
+    _pulsesRcvd(0),
+    _pulsesDropped(0) {
     // Set the initial oscillator frequencies
     unsigned int osc0ScaledFreq = (_osc0.getScaledMinFreq());   // 1.4400 GHz
     unsigned int osc1ScaledFreq = (132500000 / _osc1.getFreqStep());    // 132.50 MHz
@@ -288,16 +301,30 @@ KaAfcPrivate::setFineStep(unsigned int step) {
 }
 
 void
-KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset) {
+KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset, 
+    unsigned int pulsenum) {
+    if (!(_pulsesRcvd % 5000))
+        ILOG << _pulsesRcvd << " pulses received, " << _pulsesDropped << " dropped";
+    _pulsesRcvd++;
     // If a frequency adjustment is in progress, just drop this sample
-    if (! _mutex.tryLock())
+    if (! _mutex.tryLock()) {
+        _pulsesDropped++;
         return;
+    }
     
     assert(_nSummed < _nToSum);
     
+    // Look for pulse gaps
+    int pulseGap = pulsenum - _lastRcvdPulse - 1;
+    if (pulseGap && (_nSummed > 0)) {
+        WLOG << __PRETTY_FUNCTION__ << ": " << pulseGap << 
+            " pulse gap in mid-sum (_nSummed = " << _nSummed << ")";
+    }
+    _lastRcvdPulse = pulsenum;
+    
     // Add to our sums
     _g0MagSum += g0Mag;
-    _freqOffsetSum += freqOffset;
+    _freqOffsetSum += freqOffset;   
     _nSummed++;
     
     // If we've summed the required number of pulses, calculate the averages
@@ -323,7 +350,7 @@ void
 KaAfcPrivate::_processXmitAverage() {
     double g0MagDb = 10.0 * log10(_g0MagAvg);
 
-    DLOG << "New averages: G0 " << g0MagDb << " dB, freq offset " << _freqOffsetAvg;
+    ILOG << "New averages: G0 " << g0MagDb << " dB, freq offset " << _freqOffsetAvg;
 
     // Set mode based on whether g0MagDb is less than our threshold
     AfcMode_t newMode = (g0MagDb < _g0ThreshDb) ? AFC_SEARCHING : AFC_TRACKING;
@@ -375,7 +402,7 @@ KaAfcPrivate::_processXmitAverage() {
           }
           // If the frequency offset is less than our threshold, return now
           if (fabs(_freqOffsetAvg) < 6.0e4) {
-              DLOG << "Frequency offset < 60 kHz, nothing to do!";
+              ILOG << "Frequency offset < 60 kHz, nothing to do!";
               return;
           }
           
@@ -398,18 +425,17 @@ KaAfcPrivate::_processXmitAverage() {
               unsigned int osc3ScaledCenter = 
                   (_osc3.getScaledMinFreq() + _osc3.getScaledMaxFreq()) / 2;
               osc3Steps = osc3ScaledCenter - _osc3.getScaledFreq();
-              osc1Steps = osc3Steps * (_osc3.getFreqStep() / _osc1.getFreqStep());
+              osc1Steps = osc3Steps * int(_osc3.getFreqStep() / _osc1.getFreqStep());
               
-              double freqRemainder = _freqOffsetAvg - (osc3Steps * _osc3.getFreqStep());
+              double freqRemainder = _freqOffsetAvg - (osc3Steps * int(_osc3.getFreqStep()));
               afcFineSteps = int(round(freqRemainder / _fineStep));
-              osc0Steps = afcFineSteps * (_fineStep / _osc0.getFreqStep());
+              osc0Steps = afcFineSteps * int(_fineStep / _osc0.getFreqStep());
           }
           
-          int freqChange0 = osc0Steps * _osc0.getFreqStep();
-          int freqChange3 = osc3Steps * _osc3.getFreqStep();
+          int freqChange0 = osc0Steps * int(_osc0.getFreqStep());
+          int freqChange3 = osc3Steps * int(_osc3.getFreqStep());
           ILOG << __PRETTY_FUNCTION__ << "TRACKING: Changing 0 by " <<
-              freqChange0 << " Hz and changing 1 and 3 by " <<
-              freqChange3 << " Hz";
+              freqChange0 << " Hz, 1 and 3 by " << freqChange3 << " Hz";
           
           _setOscillators(_osc0.getScaledFreq() + osc0Steps,
               _osc1.getScaledFreq() + osc1Steps, 

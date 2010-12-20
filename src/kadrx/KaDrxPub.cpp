@@ -161,7 +161,7 @@ KaDrxPub::_publishDDS(char* buf, unsigned int pulsenum) {
 		// @TODO remove this
 		// Perform some burst-related calculations and dump burst data
 	    if (_chanId == KA_BURST_CHANNEL)
-	        _handleBurst(reinterpret_cast<int16_t*>(buf), ts.hskp.timetag);
+	        _handleBurst(reinterpret_cast<int16_t*>(buf), pulsenum);
 	}
 }
 
@@ -219,7 +219,7 @@ KaDrxPub::_configIsValid() const {
 //static FILE* BurstFile = 0;
 
 void
-KaDrxPub::_handleBurst(int16_t * iqData, long long timetag) {
+KaDrxPub::_handleBurst(int16_t * iqData, unsigned int pulsenum) {
     // initialize variables
     double numerator = 0;
     double denominator = 0;
@@ -264,14 +264,14 @@ KaDrxPub::_handleBurst(int16_t * iqData, long long timetag) {
     double g0Mag = sqrt(i[0] * i[0] + q[0] * q[0]) / 65536.;
     double g0MagDb = 10 * log10(g0Mag);
     
-    if (! (timetag % 5000000)) {
-        ILOG << "At time " << timetag / 1000000 << ": freq corr. " <<
+    if (! (pulsenum % 5000)) {
+        ILOG << "At pulse " << pulsenum << ": freq corr. " <<
             freqCorrection << " Hz, g0 magnitude " << g0Mag << " (" <<
             g0MagDb << " dB)";
     }
     
     // Ship the G0 power and frequency offset values to the AFC
-    KaAfc::theAfc().newXmitSample(g0Mag, freqCorrection);
+    KaAfc::theAfc().newXmitSample(g0Mag, freqCorrection, pulsenum);
 
 //    -----------------------------------------------------------------------------------
 //

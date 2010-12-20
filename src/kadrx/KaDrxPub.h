@@ -131,7 +131,7 @@ class KaDrxPub : public QThread {
 		RadarDDS::SysHousekeeping _baseDdsHskp;
 		
 		// Burst frequency and phase calculation
-        void _handleBurst(int16_t *iq_data, long long timetag);
+        void _handleBurst(int16_t *iq_data, unsigned int pulsenum);
 };
 
 #endif /*KADRXPUB_H_*/
