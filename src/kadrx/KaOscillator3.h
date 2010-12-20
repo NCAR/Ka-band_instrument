@@ -82,6 +82,39 @@ public:
      */
     void setFrequency(unsigned int freq);
     
+    /**
+     * Get oscillator 3 frequency in Hz.
+     */
+    unsigned int getFrequency() const {
+        return((OSC3_REF_FREQ / _rDivider) * _nDivider);
+    }
+    
+    /**
+     * Get oscillator 3 frequency in units of the frequency step.
+     */
+    unsigned int getScaledFreq() const {
+        return(getFrequency() / OSC3_FREQ_STEP);
+    }
+    
+    /**
+     * Get oscillator 3 frequency step, in Hz.
+     */
+    static unsigned int getFreqStep() { return(OSC3_FREQ_STEP); }
+    
+    /**
+     * Get oscillator 3 max frequency in units of the frequency step.
+     */
+    static unsigned int getScaledMaxFreq() {
+        return(OSC3_MAX_FREQ / OSC3_FREQ_STEP);
+    }
+    
+    /**
+     * Get oscillator 3 min frequency in units of the frequency step.
+     */
+    static unsigned int getScaledMinFreq() {
+        return(OSC3_MIN_FREQ / OSC3_FREQ_STEP);
+    }
+    
 private:
     /**
      * Reference oscillator frequency, Hz
