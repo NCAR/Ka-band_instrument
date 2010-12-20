@@ -63,12 +63,16 @@ public:
 
 private:
     /// Actually process averaged xmit info to perform the AFC for three 
-    /// oscillators.
+    /// oscillators. Note that the caller must hold a lock on _mutex when this
+    /// method is called!
     /// @param timetag  long long time of the pulse average, in microseconds 
     ///     since 1970-01-01 00:00:00 UTC
     /// @param g0MagDb  relative g0 power magnitude
     /// @param freqOffset   measured frequency offset, in Hz
     void _processXmitAverage();
+    
+    /// Clear our sums
+    void _clearSums();
     
     /// Thread access mutex
     QMutex _mutex;
@@ -197,7 +201,7 @@ KaAfcPrivate::KaAfcPrivate() :
             
         if (! osc3_OK) {
             _osc3.setFrequency(107500000);    // 107.5 MHz
-            osc3_OK = true; // setFrequency() is synchronous for oscillator 3
+            osc3_OK = true; // KaOscillator3::setFrequency() always works!
         }
         
         // Now complete the asynchronous process for the two serial oscillators
@@ -240,7 +244,7 @@ KaAfcPrivate::setCoarseStep(unsigned int step) {
             " Hz!";
         abort();
     }
-    ILOG << "Setting AFC coarse step at " << step << " Hz";
+    ILOG << "Setting AFC coarse step to " << step << " Hz";
     _coarseStep = step;
 }
 
@@ -258,7 +262,7 @@ KaAfcPrivate::setFineStep(unsigned int step) {
             " Hz!";
         abort();
     }
-    ILOG << "Setting AFC fine step at " << step << " Hz";
+    ILOG << "Setting AFC fine step to " << step << " Hz";
     _fineStep = step;
 }
 
@@ -276,13 +280,11 @@ KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset) {
     _nSummed++;
     
     // If we've summed the required number of pulses, calculate the averages
-    // and wake thread(s) waiting for them
+    // and wake our thread waiting for the new averages
     if (_nSummed == _nToSum) {
         _g0MagAvg = _g0MagSum / _nToSum;
         _freqOffsetAvg = _freqOffsetSum / _nToSum;
-        _g0MagSum = 0.0;
-        _freqOffsetSum = 0.0;
-        _nSummed = 0;
+        _clearSums();
         _newAverage.wakeAll();
     }
 
@@ -290,8 +292,14 @@ KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset) {
 }
 
 void
+KaAfcPrivate::_clearSums() {
+    _g0MagSum = 0.0;
+    _freqOffsetSum = 0.0;
+    _nSummed = 0;
+}
+
+void
 KaAfcPrivate::_processXmitAverage() {
-    // We already have the mutex, obtained in run()...
     DLOG << "New averages: G0 " << _g0MagAvg << ", freq offset " << _freqOffsetAvg;
 
     double g0MagDb = 10.0 * log10(_g0MagAvg);
@@ -341,11 +349,34 @@ KaAfcPrivate::_processXmitAverage() {
               _afcMode = AFC_TRACKING;
               _nToSum = 50;
               // Return now to go get a new average over more pulses
+              _clearSums();
               return;
           }
-          // Change just oscillator 3 if possible, otherwise change both 0
-          // and 3.  Oscillator 1 tracks changes in oscillator 3 regardless.
-          ILOG << "TRACKING...";
+          // If the frequency offset is less than our threshold, return now
+          if (fabs(_freqOffsetAvg) < 6.0e4) {
+              DLOG << "Frequency offset < 60 kHz, nothing to do!";
+              return;
+          }
+          
+          // How many AFC fine steps to correct?
+          int afcFineSteps = int(round(_freqOffsetAvg / _fineStep));
+          
+          // Change just oscillators 3 and 1 if possible...
+          int osc3Steps = afcFineSteps * (_fineStep / _osc3.getFreqStep());
+          int osc3StepsAvail = (_freqOffsetAvg < 0) ?
+              (_osc3.getScaledMinFreq() - _osc3.getScaledFreq()) :
+              (_osc3.getScaledMaxFreq() - _osc3.getScaledFreq());
+          if (abs(osc3Steps) <= abs(osc3StepsAvail)) {
+              ILOG << __PRETTY_FUNCTION__ << "TRACKING: Changing 1 and 3 by " <<
+                  (osc3Steps * KaOscillator3::OSC3_FREQ_STEP) << " Hz";
+              _osc3.setFrequency(_osc3.getFrequency() + 
+                osc3Steps * KaOscillator3::OSC3_FREQ_STEP);
+              int osc1Steps = afcFineSteps * (_fineStep / _osc1.getFreqStep());
+              _osc1.setScaledFreq(_osc1.getScaledFreq() + osc1Steps);
+              
+              break;
+          }
+//          DLOG << "TRACKING: Need 2-adjust";
           break;
       }
     }
