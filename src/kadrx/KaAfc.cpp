@@ -74,6 +74,17 @@ private:
     /// Clear our sums
     void _clearSums();
     
+    /// Set frequencies for all three oscillators. Frequencies are in units
+    /// of the oscillators' frequency steps.
+    /// @param osc1ScaledFreq frequency for oscillator 1 in units of its 
+    ///     frequency step
+    /// @param osc2ScaledFreq frequency for oscillator 2 in units of its 
+    ///     frequency step
+    /// @param osc3ScaledFreq frequency for oscillator 3 in units of its 
+    ///     frequency step
+    void _setOscillators(unsigned int osc1ScaledFreq, 
+        unsigned int osc2ScaledFreq, unsigned int osc3ScaledFreq);
+    
     /// Thread access mutex
     QMutex _mutex;
     
@@ -167,8 +178,8 @@ KaAfcPrivate::KaAfcPrivate() :
     QThread(),
     _mutex(QMutex::NonRecursive),   // must be non-recursive for QWaitCondition!
     _afcMode(AFC_SEARCHING),
-    _osc0(TtyOscillator::SIM_OSCILLATOR, 0, 100000, 14000, 15000),
-    _osc1("/dev/ttyS0", 1, 10000, 12750, 13750), 
+    _osc0("/dev/ttyS0", 0, 100000, 14400, 15000),
+    _osc1(TtyOscillator::SIM_OSCILLATOR, 1, 10000, 12750, 13750), 
     _osc3(KaPmc730::thePmc730()),
     _g0ThreshDb(-25.0),     // -25.0 dB G0 threshold relative power
     _coarseStep(500000),    // 500 kHz coarse step (SEARCHING)
@@ -179,9 +190,19 @@ KaAfcPrivate::KaAfcPrivate() :
     _freqOffsetSum(0.0),
     _g0MagAvg(0.0),
     _freqOffsetAvg(0.0) {
+    // Set the initial oscillator frequencies
+    unsigned int osc0ScaledFreq = (_osc0.getScaledMinFreq());   // 1.4400 GHz
+    unsigned int osc1ScaledFreq = (132500000 / _osc1.getFreqStep());    // 132.50 MHz
+    unsigned int osc3ScaledFreq = (107500000 / _osc3.getFreqStep());    // 107.50 MHz
+    _setOscillators(osc0ScaledFreq, osc1ScaledFreq, osc3ScaledFreq);
+}
+
+void
+KaAfcPrivate::_setOscillators(unsigned int osc0ScaledFreq, 
+    unsigned int osc1ScaledFreq, unsigned int osc3ScaledFreq) {
     bool osc0_OK = false;
     bool osc1_OK = false;
-    bool osc3_OK = true;
+    bool osc3_OK = false;
     // Set starting frequencies for all three oscillators. We try as many times
     // as necessary...
     for (int attempt = 0; !(osc0_OK && osc1_OK && osc3_OK); attempt++) {
@@ -189,19 +210,19 @@ KaAfcPrivate::KaAfcPrivate() :
         // since it's a slow asynchronous process...
         if (! osc0_OK) {
             if (attempt > 0)
-                WLOG << "...try again to set oscillator 0 initial frequency";
-            _osc0.setScaledFreqAsync(14400);    // 1.4400 GHz
+                WLOG << "...try again to set oscillator 0 frequency";
+            _osc0.setScaledFreqAsync(osc0ScaledFreq);
         }
             
         if (! osc1_OK) {
             if (attempt > 0)
-                WLOG << "...try again to set oscillator 1 initial frequency";
-            _osc1.setScaledFreqAsync(13250);    // 132.50 MHz
+                WLOG << "...try again to set oscillator 1 frequency";
+            _osc1.setScaledFreqAsync(osc1ScaledFreq);
         }
             
         if (! osc3_OK) {
-            _osc3.setFrequency(107500000);    // 107.5 MHz
-            osc3_OK = true; // KaOscillator3::setFrequency() always works!
+            _osc3.setScaledFreq(osc3ScaledFreq);
+            osc3_OK = true; // KaOscillator3::setScaledFreq() always works!
         }
         
         // Now complete the asynchronous process for the two serial oscillators
@@ -237,10 +258,10 @@ KaAfcPrivate::setCoarseStep(unsigned int step) {
     // all oscillators we're controlling
     if ((step % _osc0.getFreqStep()) ||
         (step % _osc1.getFreqStep()) ||
-        (step % KaOscillator3::OSC3_FREQ_STEP)) {
+        (step % _osc3.getFreqStep())) {
         ELOG << "Ignoring requested AFC coarse step of " << step << " Hz";
         ELOG << "It must be a multiple of " << _osc0.getFreqStep() << ", " <<
-            _osc1.getFreqStep() << ", and " << KaOscillator3::OSC3_FREQ_STEP <<
+            _osc1.getFreqStep() << ", and " << _osc3.getFreqStep() <<
             " Hz!";
         abort();
     }
@@ -255,10 +276,10 @@ KaAfcPrivate::setFineStep(unsigned int step) {
     // all oscillators we're controlling
     if ((step % _osc0.getFreqStep()) ||
         (step % _osc1.getFreqStep()) ||
-        (step % KaOscillator3::OSC3_FREQ_STEP)) {
+        (step % _osc3.getFreqStep())) {
         ELOG << "Ignoring requested AFC coarse step of " << step << " Hz";
         ELOG << "It must be a multiple of " << _osc0.getFreqStep() << ", " <<
-            _osc1.getFreqStep() << ", and " << KaOscillator3::OSC3_FREQ_STEP <<
+            _osc1.getFreqStep() << ", and " << _osc3.getFreqStep() <<
             " Hz!";
         abort();
     }
@@ -300,16 +321,16 @@ KaAfcPrivate::_clearSums() {
 
 void
 KaAfcPrivate::_processXmitAverage() {
-    DLOG << "New averages: G0 " << _g0MagAvg << ", freq offset " << _freqOffsetAvg;
-
     double g0MagDb = 10.0 * log10(_g0MagAvg);
+
+    DLOG << "New averages: G0 " << g0MagDb << " dB, freq offset " << _freqOffsetAvg;
 
     // Set mode based on whether g0MagDb is less than our threshold
     AfcMode_t newMode = (g0MagDb < _g0ThreshDb) ? AFC_SEARCHING : AFC_TRACKING;
     
     switch (newMode) {
-      // In AFC_SEARCHING mode, step upward quickly through frequencies for 
-      // oscillator 0 until we find sufficient G0 power.
+      // In AFC_SEARCHING mode, step upward in coarse steps through frequencies 
+      // for oscillator 0 until we find sufficient G0 power.
       case AFC_SEARCHING:
       {
           // If mode just changed to searching, log it and apply the change
@@ -358,45 +379,42 @@ KaAfcPrivate::_processXmitAverage() {
               return;
           }
           
-          // How many AFC fine steps to correct?
+          // How many AFC fine steps to correct? How many steps is that for
+          // each oscillator?
           int afcFineSteps = int(round(_freqOffsetAvg / _fineStep));
-          
-          // Change just oscillators 3 and 1 if possible...
+          int osc0Steps = 0;
+          int osc1Steps = afcFineSteps * (_fineStep / _osc1.getFreqStep());
           int osc3Steps = afcFineSteps * (_fineStep / _osc3.getFreqStep());
-          int osc3StepsAvail = (_freqOffsetAvg < 0) ?
-              (_osc3.getScaledMinFreq() - _osc3.getScaledFreq()) :
-              (_osc3.getScaledMaxFreq() - _osc3.getScaledFreq());
-          if (abs(osc3Steps) <= abs(osc3StepsAvail)) {
-              ILOG << __PRETTY_FUNCTION__ << "TRACKING: Changing 1 and 3 by " <<
-                  (osc3Steps * KaOscillator3::OSC3_FREQ_STEP) << " Hz";
-              _osc3.setFrequency(_osc3.getFrequency() + 
-                osc3Steps * KaOscillator3::OSC3_FREQ_STEP);
-              int osc1Steps = afcFineSteps * (_fineStep / _osc1.getFreqStep());
-              _osc1.setScaledFreq(_osc1.getScaledFreq() + osc1Steps);
+          
+          // If possible without exceeding oscillator 3's frequency range,
+          // change just oscillator 3 (and 1 which tracks it)... Otherwise, we
+          // have to change all three oscillators.
+          unsigned int osc3NewScaledFreq = _osc3.getScaledFreq() + osc3Steps;
+          if ((osc3NewScaledFreq < _osc3.getScaledMinFreq()) ||
+              (osc3NewScaledFreq > _osc3.getScaledMaxFreq())) {
+              // We have to adjust oscillator 0. So, let's set oscillators 3
+              // and 1 back to their center frequencies and take up the 
+              // remaining adjustment in oscillator 0.
+              unsigned int osc3ScaledCenter = 
+                  (_osc3.getScaledMinFreq() + _osc3.getScaledMaxFreq()) / 2;
+              osc3Steps = osc3ScaledCenter - _osc3.getScaledFreq();
+              osc1Steps = osc3Steps * (_osc3.getFreqStep() / _osc1.getFreqStep());
               
-              break;
+              double freqRemainder = _freqOffsetAvg - (osc3Steps * _osc3.getFreqStep());
+              afcFineSteps = int(round(freqRemainder / _fineStep));
+              osc0Steps = afcFineSteps * (_fineStep / _osc0.getFreqStep());
           }
-//          DLOG << "TRACKING: Need 2-adjust";
+          
+          int freqChange0 = osc0Steps * _osc0.getFreqStep();
+          int freqChange3 = osc3Steps * _osc3.getFreqStep();
+          ILOG << __PRETTY_FUNCTION__ << "TRACKING: Changing 0 by " <<
+              freqChange0 << " Hz and changing 1 and 3 by " <<
+              freqChange3 << " Hz";
+          
+          _setOscillators(_osc0.getScaledFreq() + osc0Steps,
+              _osc1.getScaledFreq() + osc1Steps, 
+              _osc3.getScaledFreq() + osc3Steps);
           break;
       }
     }
-
-//    -----------------------------------------------------------------------------------
-//
-//    // Phase correction -- runs every hit
-//    // Correct Phase of original signal by normalized initial vector
-//    // Ih and Qh contain Horizontally received data; Iv and Qv contained vertically received data
-//
-//    for(i=1:1:ngates)
-//    // Correct Horizontal Channel    
-//
-//        ibcorrh(i) = ib(1)*invg0mag*Ih(i) - qb(1)*invg0mag*Qh(i);
-//        qbcorrh(i) = qb(1)*invg0mag*Ih(i) + ib(1)*invg0mag*Qh(i);
-//
-//    // Correct Vertical Channel  
-//
-//        ibcorrv(i) = ib(1)*invg0mag*Iv(i) - qb(1)*invg0mag*Qv(i);
-//        qbcorrv(i) = qb(1)*invg0mag*Iv(i) + ib(1)*invg0mag*Qv(i);
-//
-//    end
 }
