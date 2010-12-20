@@ -1,4 +1,4 @@
-# Test config file for Ka
+# Example config file for Ka
 radar_id                Ka
 
 gates                   980
@@ -29,6 +29,10 @@ tx_pulse_width          5.0e-7	# s
 tx_pulse_mod_delay      8.0e-8  # s
 tx_pulse_mod_width      7.5e-7  # s
 tx_delay                0.0     # s
+
+afc_g0_threshold_db		-25.0	# dB, relative to max. rcvr output
+afc_coarse_step			500000	# Hz
+afc_fine_step			100000	# Hz
 
 # FL1 location
 latitude            40.03794
