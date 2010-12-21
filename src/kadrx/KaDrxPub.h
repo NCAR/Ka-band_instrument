@@ -130,6 +130,11 @@ class KaDrxPub : public QThread {
 		/// downconverter.
 		RadarDDS::SysHousekeeping _baseDdsHskp;
 		
+        // Keep numerator and denominator so that our burst frequency 
+        // calculation performs a weighted average over time
+        double _numerator;
+        double _denominator;
+        
 		// Burst frequency and phase calculation
         void _handleBurst(int16_t *iq_data, unsigned int pulsenum);
 };

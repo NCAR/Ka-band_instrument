@@ -34,7 +34,11 @@ KaDrxPub::KaDrxPub(
      _tsDiscards(0),
      _ddsSamplePulses(tsLength),    // for now, set to the # of pulses we get from the 7142
      _ddsSeqInProgress(0),
-     _ndxInDdsSample(0)
+     _ndxInDdsSample(0),
+     _sampleNumber(0),
+     _baseDdsHskp(),
+     _numerator(0),
+     _denominator(0)
 {
     // Bail out if we're not configured legally.
     if (! _configIsValid())
@@ -105,7 +109,6 @@ static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1), time_duration(0
 void
 KaDrxPub::_publishDDS(char* buf, unsigned int pulsenum) {
     
-
 	// bufPos is now pointing to the pulse data
 	// data length in bytes: 2-byte I and 2-byte Q for each gate
 	int datalen = 4 * _gates;
@@ -221,13 +224,13 @@ KaDrxPub::_configIsValid() const {
 void
 KaDrxPub::_handleBurst(int16_t * iqData, unsigned int pulsenum) {
     // initialize variables
-    double numerator = 0;
-    double denominator = 0;
     const double DIS_WT = 0.01;
 
     // Separate I and Q data
     double i[_gates];
     double q[_gates];
+    double num = 0;
+    double den = 0;
     for (unsigned int g = 0; g < _gates; g++) {
         i[g] = iqData[2 * g];
         q[g] = iqData[2 * g + 1];
@@ -238,34 +241,31 @@ KaDrxPub::_handleBurst(int16_t * iqData, unsigned int pulsenum) {
     // using moving coherent average to reduce variance
     // i contains inphase samples; q contains quadrature samples
     for (unsigned int g = 2; g <= 20; g++) {
-        
-        int a = i[g] + i[g + 1];
-        int b = q[g] + q[g + 1];
-        int c = i[g + 2] + i[g + 1];
-        int d = q[g + 2] + q[g + 1];
+        double a = i[g] + i[g + 1];
+        double b = q[g] + q[g + 1];
+        double c = i[g + 2] + i[g + 1];
+        double d = q[g + 2] + q[g + 1];
 
-        if (a < 0) {
-            a = -a;
-            b = -b;
-            c = -c;
-            d = -d;
-        }
-
-        numerator *= (1 - DIS_WT);
-        numerator += DIS_WT * (a * d - b * c); // cross product
-        
-        denominator *= (1 - DIS_WT);
-        denominator += DIS_WT * (a * c + b * d); // normalization factor proportional to G0 magnitude
+        num += a * d - b * c; // cross product
+        den += a * c + b * d; // normalization factor proportional to G0 magnitude
     }
+    
+    // _numerator and _denominator are weighted averages over time, with
+    // recent data weighted highest
+    _numerator *= (1 - DIS_WT);
+    _numerator += DIS_WT * num;
+    
+    _denominator *= (1 - DIS_WT);
+    _denominator += DIS_WT * den;
 
-    double normCrossProduct = numerator / denominator;  // normalized cross product proportional to frequency change
+    double normCrossProduct = _numerator / _denominator;  // normalized cross product proportional to frequency change
     double freqCorrection = 8.0e6 * normCrossProduct; // experimentally determined scale factor to convert correction to Hz
 
-    double g0Mag = sqrt(i[0] * i[0] + q[0] * q[0]) / 65536.;
+    double g0Mag = (i[0] * i[0] + q[0] * q[0]) / (65536. * 65536.); // units of V^2
     double g0MagDb = 10 * log10(g0Mag);
     
     if (! (pulsenum % 5000)) {
-        ILOG << "At pulse " << pulsenum << ": freq corr. " <<
+        DLOG << "At pulse " << pulsenum << ": freq corr. " <<
             freqCorrection << " Hz, g0 magnitude " << g0Mag << " (" <<
             g0MagDb << " dB)";
     }
