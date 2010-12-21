@@ -73,7 +73,7 @@ private:
     void _processXmitAverage();
     
     /// Clear our sums
-    void _clearSums();
+    void _clearSum();
     
     /// Set frequencies for all three oscillators. Frequencies are in units
     /// of the oscillators' frequency steps.
@@ -123,23 +123,20 @@ private:
     /// Fine AFC adjustment step, Hz
     unsigned int _fineStep;
     
-    /// Number of xmit samples to sum before passing average for application
+    /// Number of g0 powers to sum before passing average for application
     unsigned int _nToSum;
     
-    /// Number of xmit samples currently summed
+    /// Number of g0 powers currently summed
     unsigned int _nSummed;
     
     /// g0 relative power sum
     double _g0MagSum;
     
-    /// offset frequency sum
-    double _freqOffsetSum;
-    
     /// g0 relative power averaged over _nToSum samples
     double _g0MagAvg;
     
-    /// offset frequency averaged over _nToSum samples
-    double _freqOffsetAvg;
+    /// offset frequency
+    double _freqOffset;
     
     /// last pulse received by newXmitSample()
     unsigned int _lastRcvdPulse;
@@ -197,9 +194,8 @@ KaAfcPrivate::KaAfcPrivate() :
     _nToSum(10),
     _nSummed(0),
     _g0MagSum(0.0),
-    _freqOffsetSum(0.0),
     _g0MagAvg(0.0),
-    _freqOffsetAvg(0.0),
+    _freqOffset(0.0),
     _lastRcvdPulse(0),
     _pulsesRcvd(0),
     _pulsesDropped(0) {
@@ -316,23 +312,22 @@ KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset,
     
     // Look for pulse gaps
     int pulseGap = pulsenum - _lastRcvdPulse - 1;
-    if (pulseGap && (_nSummed > 0)) {
+    if (pulseGap) {
         WLOG << __PRETTY_FUNCTION__ << ": " << pulseGap << 
-            " pulse gap in mid-sum (_nSummed = " << _nSummed << ")";
+            " pulse gap (_nSummed = " << _nSummed << ")";
     }
     _lastRcvdPulse = pulsenum;
     
     // Add to our sums
     _g0MagSum += g0Mag;
-    _freqOffsetSum += freqOffset;   
     _nSummed++;
     
     // If we've summed the required number of pulses, calculate the averages
     // and wake our thread waiting for the new averages
     if (_nSummed == _nToSum) {
         _g0MagAvg = _g0MagSum / _nToSum;
-        _freqOffsetAvg = _freqOffsetSum / _nToSum;
-        _clearSums();
+        _freqOffset = freqOffset;
+        _clearSum();
         _newAverage.wakeAll();
     }
 
@@ -340,9 +335,8 @@ KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset,
 }
 
 void
-KaAfcPrivate::_clearSums() {
+KaAfcPrivate::_clearSum() {
     _g0MagSum = 0.0;
-    _freqOffsetSum = 0.0;
     _nSummed = 0;
 }
 
@@ -350,7 +344,8 @@ void
 KaAfcPrivate::_processXmitAverage() {
     double g0MagDb = 10.0 * log10(_g0MagAvg);
 
-    ILOG << "New averages: G0 " << g0MagDb << " dB, freq offset " << _freqOffsetAvg;
+    ILOG << "New " << _nToSum << "-pulse average: G0 " << g0MagDb << 
+        " dB, freq offset " << _freqOffset;
 
     // Set mode based on whether g0MagDb is less than our threshold
     AfcMode_t newMode = (g0MagDb < _g0ThreshDb) ? AFC_SEARCHING : AFC_TRACKING;
@@ -363,11 +358,17 @@ KaAfcPrivate::_processXmitAverage() {
           // If mode just changed to searching, log it and apply the change
           if (newMode != _afcMode) {
               WLOG << "G0 relative power " << g0MagDb <<
-                      " dB has dropped below minimum threshold of " << 
-                      _g0ThreshDb << ", so entering AFC_SEARCHING mode.";
+                      " dB has dropped below min of " << 
+                      _g0ThreshDb << " db. Returning to SEARCH mode.";
               // Only sum 10 pulses at a time when in searching mode
               _afcMode = AFC_SEARCHING;
               _nToSum = 10;
+              // Start searching at minimum oscillator 0 frequency
+              DLOG << "SEARCH starting oscillator 0 frequency at (" << 
+                   _osc0.getScaledMinFreq() << " x " << _osc0.getFreqStep() << 
+                   ") Hz";
+              _osc0.setScaledFreq(_osc0.getScaledMinFreq());
+              break;
           }
           // If we can, increase oscillator 0 frequency by our coarse step, 
           // otherwise go back to minimum oscillator 0 frequency.
@@ -397,18 +398,18 @@ KaAfcPrivate::_processXmitAverage() {
               _afcMode = AFC_TRACKING;
               _nToSum = 50;
               // Return now to go get a new average over more pulses
-              _clearSums();
+              _clearSum();
               return;
           }
           // If the frequency offset is less than our threshold, return now
-          if (fabs(_freqOffsetAvg) < 6.0e4) {
+          if (fabs(_freqOffset) < 6.0e4) {
               ILOG << "Frequency offset < 60 kHz, nothing to do!";
               return;
           }
           
           // How many AFC fine steps to correct? How many steps is that for
           // each oscillator?
-          int afcFineSteps = int(round(_freqOffsetAvg / _fineStep));
+          int afcFineSteps = int(round(_freqOffset / _fineStep));
           int osc0Steps = 0;
           int osc1Steps = afcFineSteps * (_fineStep / _osc1.getFreqStep());
           int osc3Steps = afcFineSteps * (_fineStep / _osc3.getFreqStep());
@@ -427,15 +428,15 @@ KaAfcPrivate::_processXmitAverage() {
               osc3Steps = osc3ScaledCenter - _osc3.getScaledFreq();
               osc1Steps = osc3Steps * int(_osc3.getFreqStep() / _osc1.getFreqStep());
               
-              double freqRemainder = _freqOffsetAvg - (osc3Steps * int(_osc3.getFreqStep()));
+              double freqRemainder = _freqOffset - (osc3Steps * int(_osc3.getFreqStep()));
               afcFineSteps = int(round(freqRemainder / _fineStep));
               osc0Steps = afcFineSteps * int(_fineStep / _osc0.getFreqStep());
           }
           
           int freqChange0 = osc0Steps * int(_osc0.getFreqStep());
           int freqChange3 = osc3Steps * int(_osc3.getFreqStep());
-          ILOG << __PRETTY_FUNCTION__ << "TRACKING: Changing 0 by " <<
-              freqChange0 << " Hz, 1 and 3 by " << freqChange3 << " Hz";
+          ILOG << "TRACKING: Changing 0 by " << freqChange0 << 
+              " Hz, 1 and 3 by " << freqChange3 << " Hz";
           
           _setOscillators(_osc0.getScaledFreq() + osc0Steps,
               _osc1.getScaledFreq() + osc1Steps, 
