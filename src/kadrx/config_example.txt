@@ -30,8 +30,8 @@ tx_pulse_mod_delay      8.0e-8  # s
 tx_pulse_mod_width      7.5e-7  # s
 tx_delay                0.0     # s
 
-afc_g0_threshold_db		-25.0	# dB, relative to max. rcvr output
-afc_coarse_step			500000	# Hz
+afc_g0_threshold_db		-50.0	# dB, relative to max. rcvr output
+afc_coarse_step			5000000	# Hz
 afc_fine_step			100000	# Hz
 
 # FL1 location
