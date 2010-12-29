@@ -90,6 +90,14 @@ public:
     double tx_pulse_mod_width() const {
         return _getDoubleVal("tx_pulse_mod_width");
     }
+    /// gate spacing in meters
+    double gate_spacing_m() const {
+        return _getDoubleVal("gate_spacing_m");
+    }
+    /// range to center of first gate in meters
+    double range_to_center_of_first_gate_m() const {
+        return _getDoubleVal("range_to_center_of_first_gate_m");
+    }
     /** 
      * Are we using an external start trigger? 
      * @ return 0 if false, 1 if true, or UNSET_BOOL if unset
@@ -109,6 +117,13 @@ public:
     /// AFC fine step, Hz
     int afc_fine_step() const {
         return _getIntVal("afc_fine_step");
+    }
+    /** 
+     * Are we using LDR mode? (If not, we are in ZDR mode)
+     * @ return 0 if false, 1 if true, or UNSET_BOOL if unset
+     */
+    int ldr_mode() const {
+        return _getBoolVal("ldr_mode");
     }
     // @TODO End-of-line comments below are not working correctly in doxygen. Change to pre-comments.
     double tx_switching_network_loss() const { return _getDoubleVal("tx_switching_network_loss"); }  /// dB
