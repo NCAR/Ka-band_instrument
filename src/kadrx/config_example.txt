@@ -3,6 +3,8 @@ radar_id                Ka
 
 gates                   980
 
+ldr_mode                1       # if 0, then ZDR mode is active
+
 ant_gain                46.2    # dB
 ant_hbeam_width         0.75    # deg
 ant_vbeam_width         0.68    # deg
@@ -38,3 +40,17 @@ afc_fine_step			100000	# Hz
 latitude            40.03794
 longitude           -105.24127
 altitude            1609
+
+# beam geometry
+
+gate_spacing_m                   75.0      # meters
+range_to_center_of_first_gate_m  37.5      # meters
+
+# merge queue sizes
+
+merge_queue_size       128       # size of queue which acts as buffer
+                                 # for the merge
+
+# IWRF export - TCP port
+
+iwrf_server_tcp_port   9000

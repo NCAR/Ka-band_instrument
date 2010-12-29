@@ -105,6 +105,13 @@ public:
     int external_start_trigger() const {
         return _getBoolVal("external_start_trigger");
     }
+    /** 
+     * Are we using LDR mode? (If not, we are in ZDR mode)
+     * @ return 0 if false, 1 if true, or UNSET_BOOL if unset
+     */
+    int ldr_mode() const {
+        return _getBoolVal("ldr_mode");
+    }
     /// AFC G0 threshold power for reliable calculated frequencies, in dB
     /// relative to maximum receiver output
     double afc_g0_threshold_db() const {
@@ -118,12 +125,13 @@ public:
     int afc_fine_step() const {
         return _getIntVal("afc_fine_step");
     }
-    /** 
-     * Are we using LDR mode? (If not, we are in ZDR mode)
-     * @ return 0 if false, 1 if true, or UNSET_BOOL if unset
-     */
-    int ldr_mode() const {
-        return _getBoolVal("ldr_mode");
+    /// size of queue buffers for merge
+    int merge_queue_size() const {
+        return _getIntVal("merge_queue_size");
+    }
+    /// TCP port for IWRF data server
+    int iwrf_server_tcp_port() const {
+        return _getIntVal("iwrf_server_tcp_port");
     }
     // @TODO End-of-line comments below are not working correctly in doxygen. Change to pre-comments.
     double tx_switching_network_loss() const { return _getDoubleVal("tx_switching_network_loss"); }  /// dB

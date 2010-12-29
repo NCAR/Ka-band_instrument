@@ -76,6 +76,8 @@ std::set<std::string> KaDrxConfig::_createIntLegalKeys() {
     keys.insert("ddc_type");
     keys.insert("afc_coarse_step");
     keys.insert("afc_fine_step");
+    keys.insert("merge_queue_size");
+    keys.insert("iwrf_server_tcp_port");
     return keys;
 }
 
@@ -398,6 +400,16 @@ KaDrxConfig::isValid(bool verbose) const {
     if (ldr_mode() == UNSET_BOOL) {
         if (verbose)
             std::cerr << "'ldr_mode' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (merge_queue_size() == UNSET_INT) {
+        if (verbose)
+            std::cerr << "'merge_queue_size' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (iwrf_server_tcp_port() == UNSET_INT) {
+        if (verbose)
+            std::cerr << "'iwrf_server_tcp_port' unset in DRX configuration" << std::endl;
         valid = false;
     }
     return valid;
