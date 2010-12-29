@@ -46,7 +46,7 @@ public:
     /// @param g0Mag relative g0 power magnitude, in range [0.0,1.0]
     /// @param freqOffset measured frequency offset, in Hz
     /// @param pulsenum pulse number, counted since transmitter startup
-    void newXmitSample(double g0Mag, double freqOffset, unsigned int pulsenum);
+    void newXmitSample(double g0Mag, double freqOffset, long long pulsenum);
     
     /// Set the G0 threshold power for reliable calculated frequencies. 
     /// Value is in dB relative to maximum receiver output.
@@ -139,13 +139,13 @@ private:
     double _freqOffset;
     
     /// last pulse received by newXmitSample()
-    unsigned int _lastRcvdPulse;
+    long long _lastRcvdPulse;
     
     /// number of pulses received by newXmitSample()
-    unsigned int _pulsesRcvd;
+    long long _pulsesRcvd;
     
     /// number of pulses dropped by newXmitSample()
-    unsigned int _pulsesDropped;
+    long long _pulsesDropped;
 };
 
 KaAfc::KaAfc() {
@@ -162,7 +162,7 @@ KaAfc::~KaAfc() {
 }
 
 void
-KaAfc::newXmitSample(double g0Mag, double freqOffset, unsigned int pulsenum) {
+KaAfc::newXmitSample(double g0Mag, double freqOffset, long long pulsenum) {
     _afcPrivate->newXmitSample(g0Mag, freqOffset, pulsenum);
 }
 
@@ -298,7 +298,7 @@ KaAfcPrivate::setFineStep(unsigned int step) {
 
 void
 KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset, 
-    unsigned int pulsenum) {
+    long long pulsenum) {
     if (!(_pulsesRcvd % 5000))
         ILOG << _pulsesRcvd << " pulses received, " << _pulsesDropped << " dropped";
     _pulsesRcvd++;
@@ -444,4 +444,8 @@ KaAfcPrivate::_processXmitAverage() {
           break;
       }
     }
+    // (Temporary) data latency sleep. The sleep time should be longer than the
+    // expected data latency for the burst channel, which is related to the 
+    // p7142 channel intbufsize.
+    sleep(1);
 }

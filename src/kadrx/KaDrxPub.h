@@ -136,7 +136,7 @@ class KaDrxPub : public QThread {
         double _denominator;
         
 		// Burst frequency and phase calculation
-        void _handleBurst(int16_t *iq_data, unsigned int pulsenum);
+        void _handleBurst(int16_t *iq_data, long long pulsenum);
 };
 
 #endif /*KADRXPUB_H_*/

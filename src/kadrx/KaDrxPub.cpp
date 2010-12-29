@@ -222,7 +222,7 @@ KaDrxPub::_configIsValid() const {
 //static FILE* BurstFile = 0;
 
 void
-KaDrxPub::_handleBurst(int16_t * iqData, unsigned int pulsenum) {
+KaDrxPub::_handleBurst(int16_t * iqData, long long pulsenum) {
     // initialize variables
     const double DIS_WT = 0.01;
 
