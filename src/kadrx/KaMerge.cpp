@@ -14,11 +14,9 @@ LOGGING("KaMerge")
 
 ///////////////////////////////////////////////////////////////////////////
 
-KaMerge::KaMerge(const KaDrxConfig& config,
-                bool publish) :
+KaMerge::KaMerge(const KaDrxConfig& config) :
         QThread(),
-        _config(config),
-        _publish(publish)
+        _config(config)
 {
 
 

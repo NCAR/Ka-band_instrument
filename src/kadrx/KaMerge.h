@@ -33,8 +33,7 @@ public:
    * @param config KaDrxConfig defining the desired configuration.
    * @param publish should we publish data via DDS?
    */
-    KaMerge(const KaDrxConfig& config,
-            bool publish);
+  KaMerge(const KaDrxConfig& config);
   
   /// Destructor
   virtual ~KaMerge();
@@ -57,9 +56,6 @@ private:
    */
   unsigned int _gates;
   
-  /// Set true if we are going to publish the data
-  bool _publish;
-
 };
 
 #endif /*KADRXPUB_H_*/
