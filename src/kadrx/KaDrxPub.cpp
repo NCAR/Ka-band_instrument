@@ -87,7 +87,7 @@ void KaDrxPub::run() {
   
   // start the loop. The thread will block on getBeam()
   while (1) {
-	unsigned int pulsenum;
+	long long pulsenum;
 	char* buf = _down->getBeam(pulsenum);
     _publishDDS(buf, pulsenum); 
   }
@@ -107,7 +107,7 @@ static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1), time_duration(0
 
 ////////////////////////////////////////////////////////////////////////////////
 void
-KaDrxPub::_publishDDS(char* buf, unsigned int pulsenum) {
+KaDrxPub::_publishDDS(char* buf, long long pulsenum) {
     
 	// bufPos is now pointing to the pulse data
 	// data length in bytes: 2-byte I and 2-byte Q for each gate
