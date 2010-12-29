@@ -17,6 +17,7 @@ Adf4001.cpp
 KaAfc.cpp
 KaDrxConfig.cpp
 KaDrxPub.cpp
+KaMerge.cpp
 KaOscillator3.cpp
 KaPmc730.cpp
 TtyOscillator.cpp
@@ -28,6 +29,7 @@ Adf4001.h
 KaAfc.h
 KaDrxConfig.h
 KaDrxPub.h
+KaMerge.h
 KaOscillator3.h
 KaPmc730.h
 TtyOscillator.h
