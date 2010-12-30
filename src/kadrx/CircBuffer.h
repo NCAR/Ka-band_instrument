@@ -51,7 +51,7 @@ public:
   // should be re-used for the next write.
   // The caller is responsible for allocating the element passed
   // in on the initial write.
-
+  
   T *write(T *element);
 
   // Read (retrieve) an element from the buffer.
@@ -66,7 +66,7 @@ public:
   
 private:
 
-  T *_buf;
+  T **_buf;
   size_t _size;
   mutable boost::mutex _mutex;
   int _writeIndex;
@@ -86,7 +86,10 @@ private:
 template <class T>
 CircBuffer<T>::CircBuffer(size_t size)
 {
-  _buf = new T[size];
+  _buf = new T*[size];
+  for (size_t ii = 0; ii < size; ii++) {
+    _buf[ii] = new T;
+  }
   _size = size;
   _writeIndex = -1;
   _readIndex = -1;
@@ -109,7 +112,10 @@ T *CircBuffer<T>::_alloc(size_t size)
     return _buf;
   }
   _free();
-  _buf = new T[size];
+  _buf = new T*[size];
+  for (size_t ii = 0; ii < size; ii++) {
+    _buf[ii] = new T;
+  }
   _size = size;
   return _buf;
 }
@@ -138,6 +144,9 @@ template <class T>
 void CircBuffer<T>::_free()
 {
   if (_buf != NULL) {
+    for (size_t ii = 0; ii < _size; ii++) {
+      delete _buf[ii];
+    }
     delete[] _buf;
   }
   _buf = NULL;
