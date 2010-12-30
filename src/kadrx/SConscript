@@ -29,6 +29,7 @@ main.cpp
 headers = Split("""
 Adf4001.h
 BurstData.h
+CircBuffer.h
 KaAfc.h
 KaDrxConfig.h
 KaDrxPub.h

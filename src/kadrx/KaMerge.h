@@ -2,6 +2,7 @@
 #define KA_MERGE_H_
 
 #include "KaDrxConfig.h"
+#include "CircBuffer.h"
 #include <boost/thread/mutex.hpp>
 #include <QThread>
 #include <deque>
