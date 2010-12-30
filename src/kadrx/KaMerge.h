@@ -52,9 +52,14 @@ private:
   double _nowTime();
   
   /**
-   * The number of gates being collected by the downconverter
+   * The queue size - for buffering IQ data
    */
-  unsigned int _gates;
+  int _queueSize;
+  
+  /**
+   * Port for IWRF TCP server
+   */
+  int _iwrfServerTcpPort;
   
 };
 

@@ -19,6 +19,8 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
         _config(config)
 {
 
+  _queueSize = _config.merge_queue_size();
+  _iwrfServerTcpPort = _config.iwrf_server_tcp_port();
 
 }
 
