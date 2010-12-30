@@ -45,26 +45,32 @@ public:
 
   size_t size() const { return _size; }
 
-  // Insert an element to the buffer.
-  // You pass in a pointer to the object you want to insert.
+  // Write (insert) an element to the buffer.
+  // You pass in a pointer to the object you want to write.
   // The method returns a pointer to the replaced object. This
-  // should be re-used for the next insert.
+  // should be re-used for the next write.
+  // The caller is responsible for allocating the element passed
+  // in on the initial write.
 
-  T *insert(T *val);
+  T *write(T *element);
 
-  // Retrieve an element to the buffer.
-  // You pass in a pointer to and object which will replace the
+  // Read (retrieve) an element from the buffer.
+  // You pass in a pointer to an object which will replace the
   // retrieved object.
   // The method returns a pointer to the retrieved object, or NULL
-  // if no object is availalable for retrieval.
+  // if no object is available for retrieval.
+  // The caller is responsible for allocating the element passed
+  // in on the initial read.
 
-  T *retrieve(T *val);
-
+  T *read(T *element);
+  
 private:
 
   T *_buf;
   size_t _size;
   mutable boost::mutex _mutex;
+  int _writeIndex;
+  int _readIndex;
   
   T *_alloc(size_t size);
   CircBuffer &_copy(const CircBuffer &rhs);
@@ -82,6 +88,8 @@ CircBuffer<T>::CircBuffer(size_t size)
 {
   _buf = new T[size];
   _size = size;
+  _writeIndex = -1;
+  _readIndex = -1;
 }
 
 // destructor
@@ -157,6 +165,36 @@ CircBuffer<T> &CircBuffer<T>::_copy(const CircBuffer<T> &rhs)
 
   return *this;
 
+}
+
+// write
+
+template <class T>
+T *CircBuffer<T>::write(T *element)
+{
+  boost::mutex::scoped_lock guard(_mutex);
+  int newIndex = (_writeIndex + 1) % _size;
+  T *retVal = _buf[newIndex];
+  _buf[newIndex] = element;
+  _writeIndex = newIndex;
+  return retVal;
+}
+
+// read
+
+template <class T>
+T *CircBuffer<T>::read(T *element)
+{
+  boost::mutex::scoped_lock guard(_mutex);
+  if (_writeIndex == _readIndex) {
+    // no new data available
+    return NULL;
+  }
+  int newIndex = (_readIndex + 1) % _size;
+  T *retVal = _buf[newIndex];
+  _buf[newIndex] = element;
+  _readIndex = newIndex;
+  return retVal;
 }
 
 #endif
