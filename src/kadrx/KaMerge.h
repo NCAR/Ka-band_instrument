@@ -3,11 +3,9 @@
 
 #include "KaDrxConfig.h"
 #include "CircBuffer.h"
-#include <boost/thread/mutex.hpp>
+#include "PulseData.h"
+#include "BurstData.h"
 #include <QThread>
-#include <deque>
-class PulseData;
-class BurstData;
 
 /// KaMerge merges data from the H and V channels, and the burst channel,
 /// converts to IWRF time series format and writes the IWRF data to a client
@@ -38,28 +36,27 @@ public:
    * @param config KaDrxConfig defining the desired configuration.
    * @param publish should we publish data via DDS?
    */
-  KaMerge(const KaDrxConfig& config);
+
+    KaMerge(const KaDrxConfig& config);
   
   /// Destructor
+
   virtual ~KaMerge();
 
   /// thread run method
+
   void run();
-
-  /////////////////////////////////////////////////////////////////////////////
-  // pop an H pulse data from queue
-  // returns NULL if none available (queue too small)
-
-  PulseData *popPulseDataH();
 
 private:
 
   /// configuration
+
   const KaDrxConfig& _config;
 
   /// Return the current time in seconds since 1970/01/01 00:00:00 UTC.
   /// Returned value has 1 ms precision.
   /// @return the current time in seconds since 1970/01/01 00:00:00 UTC
+
   double _nowTime();
   
   /**
@@ -76,15 +73,9 @@ private:
    * Queues for data from channels
    */
 
-  std::deque<PulseData *> _qH;
-  std::deque<PulseData *> _qV;
-  std::deque<BurstData *> _qB;
-
-  /// Mutexes for thread safety
-
-  mutable boost::mutex _mutexH;
-  mutable boost::mutex _mutexV;
-  mutable boost::mutex _mutexB;
+  CircBuffer<PulseData> *_qH;
+  CircBuffer<PulseData> *_qV;
+  CircBuffer<BurstData> *_qB;
 
 };
 
