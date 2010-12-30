@@ -1,14 +1,14 @@
-#ifndef PULSE_DATA_H_
-#define PULSE_DATA_H_
+#ifndef BURST_DATA_H_
+#define BURST_DATA_H_
 
-/// PulseData objects hold the IQ data for one pulse and one channel.
+/// BurstData objects hold the IQ samples data for one burst.
 /// 
 /// These are used to transfer data from a KaDrxPub object to the
 /// KaMerge object.
 
 #include <sys/time.h>
 
-class PulseData {
+class BurstData {
 
 public:
     
@@ -16,19 +16,22 @@ public:
    * Constructor.
    */
 
-  PulseData();
+  BurstData();
   
   /// Destructor
 
-  virtual ~PulseData();
-
+  virtual ~BurstData();
+  
   // set the data
   
   void set(long long pulseSeqNum,
            time_t timeSecs,
            int nanoSecs,
-           int channel,
-           int gates,
+           double g0MagnitudeV,
+           double g0PhaseDeg,
+           double freqHz,
+           double freqCorrHz,
+           int samples,
            const unsigned short *iq);
     
 private:
@@ -47,17 +50,25 @@ private:
   int _nanoSecs;
   
   /**
-   * channel number
+   * burst magnitude and phase
    */
 
-  int _channel;
-  
+  double _g0MagnitudeV;
+  double _g0PhaseDeg;
+
   /**
-   * number of gates
+   * frequency and frequency correction
    */
 
-  int _gates;
-  int _gatesAlloc;
+  double _freqHz;
+  double _freqCorrHz;
+
+  /**
+   * number of samples
+   */
+
+  int _samples;
+  int _samplesAlloc;
 
   /**
    * IQ data
@@ -71,4 +82,5 @@ private:
   
 };
 
-#endif /*KADRXPUB_H_*/
+#endif
+

@@ -14,6 +14,7 @@ pmc730
 
 sources = Split("""
 Adf4001.cpp
+BurstData.cpp
 KaAfc.cpp
 KaDrxConfig.cpp
 KaDrxPub.cpp
@@ -27,6 +28,7 @@ main.cpp
 
 headers = Split("""
 Adf4001.h
+BurstData.h
 KaAfc.h
 KaDrxConfig.h
 KaDrxPub.h

@@ -1,24 +1,27 @@
-#include "PulseData.h"
+#include "BurstData.h"
 #include <cstdio>
 #include <cstring>
 
 ///////////////////////////////////////////////////////////////////////////
 
-PulseData::PulseData()
+BurstData::BurstData()
 {
 
   _pulseSeqNum = -9999;
   _timeSecs = 0;
   _nanoSecs = 0;
-  _channel = -9999;
-  _gates = 0;
-  _gatesAlloc = 0;
+  _g0MagnitudeV = -9999.0;
+  _g0PhaseDeg = -9999.0;
+  _freqHz = -9999.0;
+  _freqCorrHz = -9999.0;
+  _samples = 0;
+  _samplesAlloc = 0;
   _iq = NULL;
 
 }
 
 /////////////////////////////////////////////////////////////////////////////
-PulseData::~PulseData()
+BurstData::~BurstData()
 
 {
 
@@ -31,11 +34,14 @@ PulseData::~PulseData()
 /////////////////////////////////////////////////////////////////////////////
 // set the data
 
-void PulseData::set(long long pulseSeqNum,
+void BurstData::set(long long pulseSeqNum,
                     time_t timeSecs,
                     int nanoSecs,
-                    int channel,
-                    int gates,
+                    double g0MagnitudeV,
+                    double g0PhaseDeg,
+                    double freqHz,
+                    double freqCorrHz,
+                    int samples,
                     const unsigned short *iq)
 
 {
@@ -44,21 +50,25 @@ void PulseData::set(long long pulseSeqNum,
   _timeSecs = timeSecs;
   _nanoSecs = nanoSecs;
 
-  _channel = channel;
-  _gates = gates;
+  _g0MagnitudeV = g0MagnitudeV;
+  _g0PhaseDeg = g0PhaseDeg;
+  _freqHz = freqHz;
+  _freqCorrHz = freqCorrHz;
+
+  _samples = samples;
   _allocIq();
-  memcpy(_iq, iq, _gates * 2 * sizeof(unsigned short));
+  memcpy(_iq, iq, _samples * 2 * sizeof(unsigned short));
 
 }
 
 /////////////////////////////////////////////////////////////////////////////
-// alloc or realloc space for the iq data
+// alloc the iq data
 
-void PulseData::_allocIq()
+void BurstData::_allocIq()
 
 {
 
-  if (_gatesAlloc >= _gates) {
+  if (_samplesAlloc >= _samples) {
     return;
   }
 
@@ -66,7 +76,7 @@ void PulseData::_allocIq()
     delete[] _iq;
   }
 
-  _iq = new unsigned short[_gates * 2];
+  _iq = new unsigned short[_samples * 2];
 
 }
 
