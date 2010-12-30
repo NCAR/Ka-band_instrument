@@ -90,14 +90,6 @@ public:
     double tx_pulse_mod_width() const {
         return _getDoubleVal("tx_pulse_mod_width");
     }
-    /// gate spacing in meters
-    double gate_spacing_m() const {
-        return _getDoubleVal("gate_spacing_m");
-    }
-    /// range to center of first gate in meters
-    double range_to_center_of_first_gate_m() const {
-        return _getDoubleVal("range_to_center_of_first_gate_m");
-    }
     /** 
      * Are we using an external start trigger? 
      * @ return 0 if false, 1 if true, or UNSET_BOOL if unset

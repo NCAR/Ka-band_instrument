@@ -62,8 +62,6 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("burst_sample_delay");
     keys.insert("burst_sample_width");
     keys.insert("afc_g0_threshold_db");
-    keys.insert("gate_spacing_m");
-    keys.insert("range_to_center_of_first_gate_m");
     return keys;
 }
 
@@ -385,16 +383,6 @@ KaDrxConfig::isValid(bool verbose) const {
     if (afc_fine_step() == UNSET_INT) {
         if (verbose)
             std::cerr << "'afc_fine_step' unset in DRX configuration" << std::endl;
-        valid = false;
-    }
-    if (gate_spacing_m() == UNSET_DOUBLE) {
-        if (verbose)
-            std::cerr << "'gate_spacing_m' unset in DRX configuration" << std::endl;
-        valid = false;
-    }
-    if (range_to_center_of_first_gate_m() == UNSET_DOUBLE) {
-        if (verbose)
-            std::cerr << "'range_to_center_of_first_gate_m' unset in DRX configuration" << std::endl;
         valid = false;
     }
     if (ldr_mode() == UNSET_BOOL) {
