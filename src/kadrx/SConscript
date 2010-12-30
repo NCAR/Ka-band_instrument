@@ -20,6 +20,7 @@ KaDrxPub.cpp
 KaMerge.cpp
 KaOscillator3.cpp
 KaPmc730.cpp
+PulseData.cpp
 TtyOscillator.cpp
 main.cpp
 """)
@@ -32,6 +33,7 @@ KaDrxPub.h
 KaMerge.h
 KaOscillator3.h
 KaPmc730.h
+PulseData.h
 TtyOscillator.h
 """)
 
