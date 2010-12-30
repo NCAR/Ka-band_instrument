@@ -1,4 +1,6 @@
 #include "KaMerge.h"
+#include "PulseData.h"
+#include "BurstData.h"
 #include <logx/Logging.h>
 #include <sys/timeb.h>
 #include <cmath>
@@ -59,4 +61,24 @@ double KaMerge::_nowTime() {
 /////////////////////////////////////////////////////////////////////////////
 // 1970-01-01 00:00:00 UTC
 static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1), time_duration(0, 0, 0));
+
+/////////////////////////////////////////////////////////////////////////////
+// pop an H pulse data from queue
+// returns NULL if none available (queue too small)
+
+PulseData *KaMerge::popPulseDataH()
+
+{
+
+  boost::mutex::scoped_lock guard(_mutexH);
+
+  if (_qH.size() < _queueSize) {
+    return NULL;
+  }
+
+  PulseData *pdata = _qH.back();
+  _qH.pop_back();
+  return pdata;
+
+}
 

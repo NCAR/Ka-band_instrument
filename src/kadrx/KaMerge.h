@@ -2,7 +2,11 @@
 #define KA_MERGE_H_
 
 #include "KaDrxConfig.h"
+#include <boost/thread/mutex.hpp>
 #include <QThread>
+#include <deque>
+class PulseData;
+class BurstData;
 
 /// KaMerge merges data from the H and V channels, and the burst channel,
 /// converts to IWRF time series format and writes the IWRF data to a client
@@ -41,6 +45,12 @@ public:
   /// thread run method
   void run();
 
+  /////////////////////////////////////////////////////////////////////////////
+  // pop an H pulse data from queue
+  // returns NULL if none available (queue too small)
+
+  PulseData *popPulseDataH();
+
 private:
 
   /// configuration
@@ -54,13 +64,27 @@ private:
   /**
    * The queue size - for buffering IQ data
    */
-  int _queueSize;
+  size_t _queueSize;
   
   /**
    * Port for IWRF TCP server
    */
   int _iwrfServerTcpPort;
-  
+
+  /**
+   * Queues for data from channels
+   */
+
+  std::deque<PulseData *> _qH;
+  std::deque<PulseData *> _qV;
+  std::deque<BurstData *> _qB;
+
+  /// Mutexes for thread safety
+
+  mutable boost::mutex _mutexH;
+  mutable boost::mutex _mutexV;
+  mutable boost::mutex _mutexB;
+
 };
 
 #endif /*KADRXPUB_H_*/
