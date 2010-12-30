@@ -27,12 +27,24 @@ public:
   void set(long long pulseSeqNum,
            time_t timeSecs,
            int nanoSecs,
-           double g0MagnitudeV,
+           double g0PowerDbm,
            double g0PhaseDeg,
-           double freqHz,
-           double freqCorrHz,
+           double g0FreqHz,
+           double g0FreqCorrHz,
            int samples,
            const unsigned short *iq);
+    
+  // get methods
+
+  long long getPulseSeqNum() const { return _pulseSeqNum; }
+  time_t getTimeSecs() const { return _timeSecs; }
+  int getNanoSecs() const { return _nanoSecs; }
+  double getG0PowerDbm() const { return _g0PowerDbm; }
+  double getG0PhaseDeg() const { return _g0PhaseDeg; }
+  double getG0FreqHz() const { return _g0FreqHz; }
+  double getG0FreqCorrHz() const { return _g0FreqCorrHz; }
+  int getSamples() const { return _samples; }
+  const unsigned short *getIq() const { return _iq; }
     
 private:
 
@@ -50,18 +62,18 @@ private:
   int _nanoSecs;
   
   /**
-   * burst magnitude and phase
+   * burst power and phase
    */
 
-  double _g0MagnitudeV;
+  double _g0PowerDbm;
   double _g0PhaseDeg;
 
   /**
    * frequency and frequency correction
    */
 
-  double _freqHz;
-  double _freqCorrHz;
+  double _g0FreqHz;
+  double _g0FreqCorrHz;
 
   /**
    * number of samples

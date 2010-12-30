@@ -10,10 +10,10 @@ BurstData::BurstData()
   _pulseSeqNum = -9999;
   _timeSecs = 0;
   _nanoSecs = 0;
-  _g0MagnitudeV = -9999.0;
+  _g0PowerDbm = -9999.0;
   _g0PhaseDeg = -9999.0;
-  _freqHz = -9999.0;
-  _freqCorrHz = -9999.0;
+  _g0FreqHz = -9999.0;
+  _g0FreqCorrHz = -9999.0;
   _samples = 0;
   _samplesAlloc = 0;
   _iq = NULL;
@@ -37,10 +37,10 @@ BurstData::~BurstData()
 void BurstData::set(long long pulseSeqNum,
                     time_t timeSecs,
                     int nanoSecs,
-                    double g0MagnitudeV,
+                    double g0PowerDbm,
                     double g0PhaseDeg,
-                    double freqHz,
-                    double freqCorrHz,
+                    double g0FreqHz,
+                    double g0FreqCorrHz,
                     int samples,
                     const unsigned short *iq)
 
@@ -50,10 +50,10 @@ void BurstData::set(long long pulseSeqNum,
   _timeSecs = timeSecs;
   _nanoSecs = nanoSecs;
 
-  _g0MagnitudeV = g0MagnitudeV;
+  _g0PowerDbm = g0PowerDbm;
   _g0PhaseDeg = g0PhaseDeg;
-  _freqHz = freqHz;
-  _freqCorrHz = freqCorrHz;
+  _g0FreqHz = g0FreqHz;
+  _g0FreqCorrHz = g0FreqCorrHz;
 
   _samples = samples;
   _allocIq();

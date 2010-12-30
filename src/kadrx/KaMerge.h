@@ -47,36 +47,58 @@ public:
 
   void run();
 
+  // write data for next H pulse
+  // called by KaDrxPub threads
+  // Returns pulse object for recycling
+  
+  PulseData *writePulseH(PulseData *val);
+
+  // write data for next V pulse
+  // called by KaDrxPub threads
+  // Returns pulse object for recycling
+  
+  PulseData *writePulseV(PulseData *val);
+
+  // write data for next burst
+  // called by KaDrxPub threads
+  // Returns burst data object for recycling
+
+  BurstData *writeBurst(BurstData *val);
+
 private:
 
   /// configuration
 
   const KaDrxConfig& _config;
 
-  /// Return the current time in seconds since 1970/01/01 00:00:00 UTC.
-  /// Returned value has 1 ms precision.
-  /// @return the current time in seconds since 1970/01/01 00:00:00 UTC
+  /// The queue size - for buffering IQ data
 
-  double _nowTime();
-  
-  /**
-   * The queue size - for buffering IQ data
-   */
   size_t _queueSize;
   
-  /**
-   * Port for IWRF TCP server
-   */
+  ///  Port for IWRF TCP server
+  
   int _iwrfServerTcpPort;
 
-  /**
-   * Queues for data from channels
-   */
-
+  ///  Queues for data from channels
+  
   CircBuffer<PulseData> *_qH;
   CircBuffer<PulseData> *_qV;
   CircBuffer<BurstData> *_qB;
 
+  /// objects for reading the buffered data
+  
+  PulseData *_pulseH;
+  PulseData *_pulseV;
+  BurstData *_burst;
+  
+  /// methods
+
+  void _readNextPulse();
+  void _readNextH();
+  void _readNextV();
+  void _readNextB();
+  double _nowTime();
+  
 };
 
 #endif /*KADRXPUB_H_*/

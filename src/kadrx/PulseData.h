@@ -30,6 +30,15 @@ public:
            int channel,
            int gates,
            const unsigned short *iq);
+
+  // get methods
+
+  long long getPulseSeqNum() const { return _pulseSeqNum; }
+  time_t getTimeSecs() const { return _timeSecs; }
+  int getNanoSecs() const { return _nanoSecs; }
+  int getChannel() const { return _channel; }
+  int getGates() const { return _gates; }
+  const unsigned short *getIq() const { return _iq; }
     
 private:
 
