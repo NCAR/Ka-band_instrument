@@ -1,5 +1,8 @@
 #include "KaDrxPub.h"
 #include "KaAfc.h"
+#include "KaMerge.h"
+#include "PulseData.h"
+#include "BurstData.h"
 #include <logx/Logging.h>
 #include <sys/timeb.h>
 #include <cmath>
@@ -17,6 +20,7 @@ KaDrxPub::KaDrxPub(
                 Pentek::p7142sd3c& sd3c,
                 KaChannel chanId,
                 const KaDrxConfig& config,
+                KaMerge *merge,
                 KaTSWriter* tsWriter,
                 bool publish,
                 int tsLength,
@@ -29,6 +33,9 @@ KaDrxPub::KaDrxPub(
      _chanId(chanId),
      _down(0),
      _gates(config.gates()),
+     _merge(merge),
+     _pulseData(0),
+     _burstData(0),
      _publish(publish),
      _tsWriter(tsWriter),
      _tsDiscards(0),
@@ -53,6 +60,9 @@ KaDrxPub::KaDrxPub(
     if (burstSampling) {
         delay = config.burst_sample_delay();
         width = config.burst_sample_width();
+        _burstData = new BurstData;
+    } else {
+        _pulseData = new PulseData;
     }
     _down = sd3c.addDownconverter(_chanId, burstSampling, tsLength,
         delay, width, gaussianFile, kaiserFile, simPauseMS, simWavelength);
@@ -86,9 +96,10 @@ void KaDrxPub::run() {
   setTerminationEnabled(true);
   
   // start the loop. The thread will block on getBeam()
-  while (1) {
-	long long pulsenum;
-	char* buf = _down->getBeam(pulsenum);
+  while (true) {
+    long long pulsenum;
+    char* buf = _down->getBeam(pulsenum);
+    _addToMerge(buf, pulsenum);
     _publishDDS(buf, pulsenum); 
   }
 }
@@ -105,6 +116,20 @@ double KaDrxPub::_nowTime() {
 // 1970-01-01 00:00:00 UTC
 static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1), time_duration(0, 0, 0));
 
+////////////////////////////////////////////////////////////////////////////////
+void
+KaDrxPub::_addToMerge(char* buf, long long pulsenum)
+
+{
+
+  if (_chanId == KA_BURST_CHANNEL) {
+
+  } else {
+
+  }
+
+}
+    
 ////////////////////////////////////////////////////////////////////////////////
 void
 KaDrxPub::_publishDDS(char* buf, long long pulsenum) {

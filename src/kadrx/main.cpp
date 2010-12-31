@@ -30,8 +30,8 @@
 #include "p7142sd3c.h"
 #include "DDSPublisher.h"
 #include "KaTSWriter.h"
-
 #include "KaDrxConfig.h"
+#include "KaMerge.h"
 
 using namespace std;
 using namespace boost::posix_time;
@@ -51,7 +51,8 @@ int _tsLength;                   ///< The time series length
 std::string _gaussianFile = "";  ///< gaussian filter coefficient file
 std::string _kaiserFile = "";    ///< kaiser filter coefficient file
 DDSPublisher* _publisher = 0;    ///< The publisher.
-KaTSWriter* _tsWriter = 0;         ///< The time series writer.
+KaTSWriter* _tsWriter = 0;       ///< The time series writer.
+KaMerge* _merge = 0;             ///< The merge object - also IWRF TCP server
 bool _simulate;                  ///< Set true for simulate mode
 int _simWavelength;              ///< The simulated data wavelength, in samples
 int _simPauseMs;                 ///< The number of millisecnds to pause when reading in simulate mode.
@@ -257,6 +258,10 @@ main(int argc, char** argv)
         std::cerr << "Exiting on incomplete configuration!" << std::endl;
         exit(1);
     }
+
+    // create the merge object
+
+    _merge = new KaMerge(kaConfig);
     
     // For OpenDDS 2.1, keep the published sample size less than ~64 KB,
     // since larger samples are a problem...
@@ -301,15 +306,15 @@ main(int argc, char** argv)
 	// Create (but don't yet start) the downconversion threads.
     
     // H channel (0)
-    KaDrxPub hThread(sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, _tsWriter, _publish,
+    KaDrxPub hThread(sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, _merge, _tsWriter, _publish,
         _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength); 
 
     // V channel (1)
-    KaDrxPub vThread(sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, _tsWriter, _publish,
+    KaDrxPub vThread(sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, _merge, _tsWriter, _publish,
         _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength); 
 
     // Burst channel (2)
-    KaDrxPub burstThread(sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig, _tsWriter, 
+    KaDrxPub burstThread(sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig, _merge, _tsWriter, 
         _publish, _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength); 
 
     // Create the upConverter.

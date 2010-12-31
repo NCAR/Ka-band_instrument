@@ -7,6 +7,10 @@
 #include <QThread>
 #include <KaTSWriter.h>
 
+class KaMerge;
+class PulseData;
+class BurstData;
+
 /// KaDrxPub moves data from a downconverter to a data publisher. The 
 /// downconverter is created for one receive channel via the associated 
 /// p7142sd3c object. A TSWriter is passed in by the user, and is used for
@@ -58,6 +62,7 @@ class KaDrxPub : public QThread {
                 Pentek::p7142sd3c & sd3c,
                 KaChannel chanId,
                 const KaDrxConfig& config,
+                KaMerge *merge,
                 KaTSWriter* tsWriter,
                 bool publish,
                 int tsLength,
@@ -82,11 +87,17 @@ class KaDrxPub : public QThread {
 		/// @return the current time in seconds since 1970/01/01 00:00:00 UTC
 		double _nowTime();
 		
-        /// Publish a beam. A DDS sample is built and put into _ddsSeqInProgress.
-		/// When all of the samples have been filled in _ddsSeqInProgress, it is published.
+        /// add data to the merge object
         /// @param buf The raw buffer of data from the downconverter
         /// channel. It contains all Is and Qs
-		/// @param pulsenum The pulse number. Will be zero for raw data.
+        /// @param pulsenum The pulse number. Will be zero for raw data.
+        void _addToMerge(char* buf, long long pulsenum);
+        
+        /// Publish a beam. A DDS sample is built and put into _ddsSeqInProgress.
+	/// When all of the samples have been filled in _ddsSeqInProgress, it is published.
+        /// @param buf The raw buffer of data from the downconverter
+        /// channel. It contains all Is and Qs
+	/// @param pulsenum The pulse number. Will be zero for raw data.
         void _publishDDS(char* buf, long long pulsenum);
         
         /**
@@ -108,6 +119,12 @@ class KaDrxPub : public QThread {
          * The number of gates being collected by the downconverter
          */
         unsigned int _gates;
+
+        /// Merging
+
+        KaMerge *_merge;
+        PulseData *_pulseData;
+        BurstData *_burstData;
         
 		/// Set true if we are going to publish the data
 		bool _publish;
