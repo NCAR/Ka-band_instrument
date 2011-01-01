@@ -350,6 +350,9 @@ main(int argc, char** argv)
 	// DAC memory counters. This must take place before the timers are started.
 	startUpConverter(upConverter, sd3c.txPulseWidthCounts());
 
+    // start the merge
+    _merge->start();
+
 	// Start the timers, which will allow data to flow.
     sd3c.timersStartStop(true);
 
