@@ -31,12 +31,12 @@ PulseData::~PulseData()
 /////////////////////////////////////////////////////////////////////////////
 // set the data
 
-void PulseData::set(long long pulseSeqNum,
+void PulseData::set(int64_t pulseSeqNum,
                     time_t timeSecs,
                     int nanoSecs,
                     int channel,
                     int gates,
-                    const unsigned short *iq)
+                    const int16_t *iq)
 
 {
   
@@ -47,7 +47,7 @@ void PulseData::set(long long pulseSeqNum,
   _channel = channel;
   _gates = gates;
   _allocIq();
-  memcpy(_iq, iq, _gates * 2 * sizeof(unsigned short));
+  memcpy(_iq, iq, _gates * 2 * sizeof(int16_t));
 
 }
 
@@ -66,7 +66,7 @@ void PulseData::_allocIq()
     delete[] _iq;
   }
 
-  _iq = new unsigned short[_gates * 2];
+  _iq = new int16_t[_gates * 2];
 
 }
 

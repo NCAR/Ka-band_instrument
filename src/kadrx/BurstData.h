@@ -7,6 +7,7 @@
 /// KaMerge object.
 
 #include <sys/time.h>
+#include <sys/types.h>
 
 class BurstData {
 
@@ -24,7 +25,7 @@ public:
   
   // set the data
   
-  void set(long long pulseSeqNum,
+  void set(int64_t pulseSeqNum,
            time_t timeSecs,
            int nanoSecs,
            double g0PowerDbm,
@@ -32,11 +33,11 @@ public:
            double g0FreqHz,
            double g0FreqCorrHz,
            int samples,
-           const unsigned short *iq);
+           const int16_t *iq);
     
   // get methods
 
-  long long getPulseSeqNum() const { return _pulseSeqNum; }
+  int64_t getPulseSeqNum() const { return _pulseSeqNum; }
   time_t getTimeSecs() const { return _timeSecs; }
   int getNanoSecs() const { return _nanoSecs; }
   double getG0PowerDbm() const { return _g0PowerDbm; }
@@ -44,7 +45,7 @@ public:
   double getG0FreqHz() const { return _g0FreqHz; }
   double getG0FreqCorrHz() const { return _g0FreqCorrHz; }
   int getSamples() const { return _samples; }
-  const unsigned short *getIq() const { return _iq; }
+  const int16_t *getIq() const { return _iq; }
     
 private:
 
@@ -52,7 +53,7 @@ private:
    * pulse sequence number since start of ops
    */
   
-  long long _pulseSeqNum;
+  int64_t _pulseSeqNum;
   
   /**
    * time of pulse - seconds and nano-secs
@@ -86,7 +87,7 @@ private:
    * IQ data
    */
 
-  unsigned short *_iq;
+  int16_t *_iq;
 
   // functions
 

@@ -45,8 +45,8 @@ public:
     /// the given sample will be ignored. @see adjustmentInProgress()
     /// @param g0Mag relative g0 power magnitude, in range [0.0,1.0]
     /// @param freqOffset measured frequency offset, in Hz
-    /// @param pulsenum pulse number, counted since transmitter startup
-    void newXmitSample(double g0Mag, double freqOffset, long long pulsenum);
+    /// @param pulseSeqNum pulse number, counted since transmitter startup
+    void newXmitSample(double g0Mag, double freqOffset, int64_t pulseSeqNum);
     
     /// Set the G0 threshold power for reliable calculated frequencies. 
     /// Value is in dB relative to maximum receiver output.
@@ -66,7 +66,7 @@ private:
     /// Actually process averaged xmit info to perform the AFC for three 
     /// oscillators. Note that the caller must hold a lock on _mutex when this
     /// method is called!
-    /// @param timetag  long long time of the pulse average, in microseconds 
+    /// @param timetag  int64_t time of the pulse average, in microseconds 
     ///     since 1970-01-01 00:00:00 UTC
     /// @param g0MagDb  relative g0 power magnitude
     /// @param freqOffset   measured frequency offset, in Hz
@@ -139,13 +139,13 @@ private:
     double _freqOffset;
     
     /// last pulse received by newXmitSample()
-    long long _lastRcvdPulse;
+    int64_t _lastRcvdPulse;
     
     /// number of pulses received by newXmitSample()
-    long long _pulsesRcvd;
+    int64_t _pulsesRcvd;
     
     /// number of pulses dropped by newXmitSample()
-    long long _pulsesDropped;
+    int64_t _pulsesDropped;
 };
 
 KaAfc::KaAfc() {
@@ -162,8 +162,8 @@ KaAfc::~KaAfc() {
 }
 
 void
-KaAfc::newXmitSample(double g0Mag, double freqOffset, long long pulsenum) {
-    _afcPrivate->newXmitSample(g0Mag, freqOffset, pulsenum);
+KaAfc::newXmitSample(double g0Mag, double freqOffset, int64_t pulseSeqNum) {
+    _afcPrivate->newXmitSample(g0Mag, freqOffset, pulseSeqNum);
 }
 
 void
@@ -298,7 +298,7 @@ KaAfcPrivate::setFineStep(unsigned int step) {
 
 void
 KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset, 
-    long long pulsenum) {
+    int64_t pulseSeqNum) {
     if (!(_pulsesRcvd % 5000))
         ILOG << _pulsesRcvd << " pulses received, " << _pulsesDropped << " dropped";
     _pulsesRcvd++;
@@ -311,12 +311,12 @@ KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset,
     assert(_nSummed < _nToSum);
     
     // Look for pulse gaps
-    int pulseGap = pulsenum - _lastRcvdPulse - 1;
+    int pulseGap = pulseSeqNum - _lastRcvdPulse - 1;
     if (pulseGap) {
         WLOG << __PRETTY_FUNCTION__ << ": " << pulseGap << 
             " pulse gap (_nSummed = " << _nSummed << ")";
     }
-    _lastRcvdPulse = pulsenum;
+    _lastRcvdPulse = pulseSeqNum;
     
     // Add to our sums
     _g0MagSum += g0Mag;

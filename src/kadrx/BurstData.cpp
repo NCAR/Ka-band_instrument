@@ -34,7 +34,7 @@ BurstData::~BurstData()
 /////////////////////////////////////////////////////////////////////////////
 // set the data
 
-void BurstData::set(long long pulseSeqNum,
+void BurstData::set(int64_t pulseSeqNum,
                     time_t timeSecs,
                     int nanoSecs,
                     double g0PowerDbm,
@@ -42,7 +42,7 @@ void BurstData::set(long long pulseSeqNum,
                     double g0FreqHz,
                     double g0FreqCorrHz,
                     int samples,
-                    const unsigned short *iq)
+                    const int16_t *iq)
 
 {
   
@@ -57,7 +57,7 @@ void BurstData::set(long long pulseSeqNum,
 
   _samples = samples;
   _allocIq();
-  memcpy(_iq, iq, _samples * 2 * sizeof(unsigned short));
+  memcpy(_iq, iq, _samples * 2 * sizeof(int16_t));
 
 }
 
@@ -76,7 +76,7 @@ void BurstData::_allocIq()
     delete[] _iq;
   }
 
-  _iq = new unsigned short[_samples * 2];
+  _iq = new int16_t[_samples * 2];
 
 }
 

@@ -81,10 +81,10 @@ void KaMerge::_readNextPulse()
 
   // compute the max pulse seq num
 
-  long long seqNumH = _pulseH->getPulseSeqNum();
-  long long seqNumV = _pulseV->getPulseSeqNum();
-  long long seqNumB = _burst->getPulseSeqNum();
-  long long maxSeqNum = seqNumH;
+  int64_t seqNumH = _pulseH->getPulseSeqNum();
+  int64_t seqNumV = _pulseV->getPulseSeqNum();
+  int64_t seqNumB = _burst->getPulseSeqNum();
+  int64_t maxSeqNum = seqNumH;
   if (maxSeqNum < seqNumV) {
     maxSeqNum = seqNumV;
   }

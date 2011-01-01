@@ -34,8 +34,8 @@ KaDrxPub::KaDrxPub(
      _down(0),
      _gates(config.gates()),
      _merge(merge),
-     _pulseData(0),
-     _burstData(0),
+     _pulseData(NULL),
+     _burstData(NULL),
      _publish(publish),
      _tsWriter(tsWriter),
      _tsDiscards(0),
@@ -45,7 +45,11 @@ KaDrxPub::KaDrxPub(
      _sampleNumber(0),
      _baseDdsHskp(),
      _numerator(0),
-     _denominator(0)
+     _denominator(0),
+     _g0PowerDbm(-9999.0),
+     _g0PhaseDeg(-9999.0),
+     _g0FreqHz(-9999.0),
+     _g0FreqCorrHz(-9999.0)
 {
     // Bail out if we're not configured legally.
     if (! _configIsValid())
@@ -60,9 +64,6 @@ KaDrxPub::KaDrxPub(
     if (burstSampling) {
         delay = config.burst_sample_delay();
         width = config.burst_sample_width();
-        _burstData = new BurstData;
-    } else {
-        _pulseData = new PulseData;
     }
     _down = sd3c.addDownconverter(_chanId, burstSampling, tsLength,
         delay, width, gaussianFile, kaiserFile, simPauseMS, simWavelength);
@@ -81,6 +82,14 @@ KaDrxPub::KaDrxPub(
 ////////////////////////////////////////////////////////////////////////////////
 KaDrxPub::~KaDrxPub() {
 
+  if (_pulseData) {
+    delete _pulseData;
+  }
+
+  if (_burstData) {
+    delete _burstData;
+  }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -97,11 +106,27 @@ void KaDrxPub::run() {
   
   // start the loop. The thread will block on getBeam()
   while (true) {
-    long long pulsenum;
-    char* buf = _down->getBeam(pulsenum);
-    _addToMerge(buf, pulsenum);
-    _publishDDS(buf, pulsenum); 
+    
+    int64_t pulseSeqNum;
+
+    char* buf = _down->getBeam(pulseSeqNum);
+
+    // derive burst values if this is the burst channel
+    if (_chanId == KA_BURST_CHANNEL) {
+      _handleBurst(reinterpret_cast<const int16_t *>(buf), pulseSeqNum);
+    }
+
+    // add data to the merge queue
+
+    _addToMerge(reinterpret_cast<const int16_t *>(buf), pulseSeqNum);
+
+    // publish to DDS if required
+    if (_publish) {
+      _publishDDS(buf, pulseSeqNum); 
+    }
+
   }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -118,13 +143,60 @@ static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1), time_duration(0
 
 ////////////////////////////////////////////////////////////////////////////////
 void
-KaDrxPub::_addToMerge(char* buf, long long pulsenum)
-
+  KaDrxPub::_addToMerge(const int16_t *iq, int64_t pulseSeqNum)
+  
 {
 
+  time_duration timeFromEpoch = _down->timeOfPulse(pulseSeqNum) - Epoch1970;
+  time_t timeSecs = timeFromEpoch.total_seconds();
+  int nanoSecs = (int) (timeFromEpoch.fractional_seconds() * 1.0e9 + 0.5);
+  
   if (_chanId == KA_BURST_CHANNEL) {
 
+    // allocate on first time
+
+    if (_burstData == NULL) {
+      _burstData = new BurstData;
+    }
+
+    // compute burst values
+
+    _handleBurst(iq, pulseSeqNum);
+
+    // set data in burst object
+
+    _burstData->set(pulseSeqNum, timeSecs, nanoSecs,
+                    _g0PowerDbm, _g0PhaseDeg,
+                    _g0FreqHz, _g0FreqCorrHz,
+                    _gates, iq);
+
+    // we write to the merge queue using one object,
+    // and get back another for reuse
+
+    _burstData = _merge->writeBurst(_burstData);
+
   } else {
+
+    // allocate on first time
+
+    if (_pulseData == NULL) {
+      _pulseData = new PulseData;
+    }
+
+    // set data in pulse object
+
+    _pulseData->set(pulseSeqNum, timeSecs, nanoSecs,
+                    _chanId,
+                    _gates, iq);
+
+    // we write to the merge queue using one object,
+    // and get back another for reuse
+
+    if (_chanId == KA_H_CHANNEL) {
+      _pulseData = _merge->writePulseH(_pulseData);
+    } else if (_chanId == KA_V_CHANNEL) {
+      _pulseData = _merge->writePulseV(_pulseData);
+    }
 
   }
 
@@ -132,65 +204,59 @@ KaDrxPub::_addToMerge(char* buf, long long pulsenum)
     
 ////////////////////////////////////////////////////////////////////////////////
 void
-KaDrxPub::_publishDDS(char* buf, long long pulsenum) {
+KaDrxPub::_publishDDS(char* buf, int64_t pulseSeqNum) {
     
 	// bufPos is now pointing to the pulse data
 	// data length in bytes: 2-byte I and 2-byte Q for each gate
 	int datalen = 4 * _gates;
 
-	// If we're publishing, copy this pulse into our DDS sample-in-progress,
+	// copy this pulse into our DDS sample-in-progress,
 	// and publish it when it's full.
-	if (_publish) {
-		// Make sure we have a DDS sample to fill
-		if (! _ddsSeqInProgress) {
-			// Get a free sample
-			_ddsSeqInProgress = _tsWriter->getEmptyItem();
-			// If no sample was available, discard everything we have and
-			// return.
-			if (! _ddsSeqInProgress) {
-				std::cerr << "Channel " << _chanId <<
-					" dropped data with no DDS samples available!" << std::endl;
-				_tsDiscards++;
-				return;
-			}
-			_ddsSeqInProgress->sampleNumber = _sampleNumber++;
-			_ddsSeqInProgress->chanId = _chanId;
-			_ddsSeqInProgress->tsList.length(_ddsSamplePulses);
-			_ndxInDdsSample = 0;
-		}
-
-		//
-		// Copy this pulse into our DDS sample in progress
-		//
-		RadarDDS::KaTimeSeries & ts = _ddsSeqInProgress->tsList[_ndxInDdsSample++];
-		// Copy our fixed metadata into this pulse
-		ts.hskp = _baseDdsHskp;
-		// Then fill the non-fixed metadata
-		ts.data.length(_gates * 2);   // I and Q for each gate, length is count of shorts
-		ts.hskp.chanId = _chanId;
-		ts.prt_seq_num = 1;   // single-PRT only for now
-		ts.pulseNum = pulsenum;
-		time_duration timeFromEpoch = _down->timeOfPulse(pulsenum) - Epoch1970;
-		// Calculate the timetag, which is usecs since 1970-01-01 00:00:00 UTC
-		ts.hskp.timetag = timeFromEpoch.total_seconds() * 1000000LL +
-				(timeFromEpoch.fractional_seconds() * 1000000LL) /
-				time_duration::ticks_per_second();
-		// Copy the per-gate data from the incoming buffer to the DDS
-		// sample data space.
-		memmove(ts.data.get_buffer(), buf, datalen);
-
-		// Publish _ddsSeqInProgress if it's full
-		if (_ndxInDdsSample == _ddsSamplePulses) {
-			// publish it
-			_tsWriter->publishItem(_ddsSeqInProgress);
-			_ddsSeqInProgress = 0;
-		}
-
-		// @TODO remove this
-		// Perform some burst-related calculations and dump burst data
-	    if (_chanId == KA_BURST_CHANNEL)
-	        _handleBurst(reinterpret_cast<int16_t*>(buf), pulsenum);
-	}
+        // Make sure we have a DDS sample to fill
+        if (! _ddsSeqInProgress) {
+          // Get a free sample
+          _ddsSeqInProgress = _tsWriter->getEmptyItem();
+          // If no sample was available, discard everything we have and
+          // return.
+          if (! _ddsSeqInProgress) {
+            std::cerr << "Channel " << _chanId <<
+              " dropped data with no DDS samples available!" << std::endl;
+            _tsDiscards++;
+            return;
+          }
+          _ddsSeqInProgress->sampleNumber = _sampleNumber++;
+          _ddsSeqInProgress->chanId = _chanId;
+          _ddsSeqInProgress->tsList.length(_ddsSamplePulses);
+          _ndxInDdsSample = 0;
+        }
+        
+        //
+        // Copy this pulse into our DDS sample in progress
+        //
+        RadarDDS::KaTimeSeries & ts = _ddsSeqInProgress->tsList[_ndxInDdsSample++];
+        // Copy our fixed metadata into this pulse
+        ts.hskp = _baseDdsHskp;
+        // Then fill the non-fixed metadata
+        ts.data.length(_gates * 2);   // I and Q for each gate, length is count of shorts
+        ts.hskp.chanId = _chanId;
+        ts.prt_seq_num = 1;   // single-PRT only for now
+        ts.pulseNum = pulseSeqNum;
+        time_duration timeFromEpoch = _down->timeOfPulse(pulseSeqNum) - Epoch1970;
+        // Calculate the timetag, which is usecs since 1970-01-01 00:00:00 UTC
+        ts.hskp.timetag = timeFromEpoch.total_seconds() * 1000000LL +
+          (timeFromEpoch.fractional_seconds() * 1000000LL) /
+          time_duration::ticks_per_second();
+        // Copy the per-gate data from the incoming buffer to the DDS
+        // sample data space.
+        memmove(ts.data.get_buffer(), buf, datalen);
+        
+        // Publish _ddsSeqInProgress if it's full
+        if (_ndxInDdsSample == _ddsSamplePulses) {
+          // publish it
+          _tsWriter->publishItem(_ddsSeqInProgress);
+          _ddsSeqInProgress = 0;
+        }
+        
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -247,7 +313,7 @@ KaDrxPub::_configIsValid() const {
 //static FILE* BurstFile = 0;
 
 void
-KaDrxPub::_handleBurst(int16_t * iqData, long long pulsenum) {
+KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     // initialize variables
     const double DIS_WT = 0.01;
 
@@ -289,14 +355,14 @@ KaDrxPub::_handleBurst(int16_t * iqData, long long pulsenum) {
     double g0Mag = (i[0] * i[0] + q[0] * q[0]) / (65536. * 65536.); // units of V^2
     double g0MagDb = 10 * log10(g0Mag);
     
-    if (! (pulsenum % 5000)) {
-        DLOG << "At pulse " << pulsenum << ": freq corr. " <<
+    if (! (pulseSeqNum % 5000)) {
+        DLOG << "At pulse " << pulseSeqNum << ": freq corr. " <<
             freqCorrection << " Hz, g0 magnitude " << g0Mag << " (" <<
             g0MagDb << " dB)";
     }
     
     // Ship the G0 power and frequency offset values to the AFC
-    KaAfc::theAfc().newXmitSample(g0Mag, freqCorrection, pulsenum);
+    KaAfc::theAfc().newXmitSample(g0Mag, freqCorrection, pulseSeqNum);
 
 //    -----------------------------------------------------------------------------------
 //

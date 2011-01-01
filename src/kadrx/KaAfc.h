@@ -8,6 +8,8 @@
 #ifndef KAAFC_H_
 #define KAAFC_H_
 
+#include <sys/types.h>
+
 class KaAfcPrivate;
 
 /// Singleton object to handle Ka-band AFC, controlling three adjustable 
@@ -45,8 +47,8 @@ public:
     /// the given sample will be ignored. @see adjustmentInProgress()
     /// @param g0Mag relative g0 power magnitude, in range [0.0,1.0]
     /// @param freqOffset measured frequency offset, in Hz
-    /// @param pulsenum pulse number, counted since transmitter startup
-    void newXmitSample(double g0Mag, double freqOffset, long long pulsenum);
+    /// @param pulseSeqNum pulse number, counted since transmitter startup
+    void newXmitSample(double g0Mag, double freqOffset, int64_t pulseSeqNuma);
 protected:
     /// constructor for the singleton instance
     KaAfc();

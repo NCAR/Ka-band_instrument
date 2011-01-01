@@ -90,15 +90,15 @@ class KaDrxPub : public QThread {
         /// add data to the merge object
         /// @param buf The raw buffer of data from the downconverter
         /// channel. It contains all Is and Qs
-        /// @param pulsenum The pulse number. Will be zero for raw data.
-        void _addToMerge(char* buf, long long pulsenum);
+        /// @param pulseSeqNum The pulse number. Will be zero for raw data.
+        void _addToMerge(const int16_t *iq, int64_t pulseSeqNum);
         
         /// Publish a beam. A DDS sample is built and put into _ddsSeqInProgress.
 	/// When all of the samples have been filled in _ddsSeqInProgress, it is published.
         /// @param buf The raw buffer of data from the downconverter
         /// channel. It contains all Is and Qs
-	/// @param pulsenum The pulse number. Will be zero for raw data.
-        void _publishDDS(char* buf, long long pulsenum);
+	/// @param pulseSeqNum The pulse number. Will be zero for raw data.
+        void _publishDDS(char* buf, int64_t pulseSeqNum);
         
         /**
          * Return true iff the current configuration is valid.
@@ -151,9 +151,15 @@ class KaDrxPub : public QThread {
         // calculation performs a weighted average over time
         double _numerator;
         double _denominator;
-        
+
+        // burst properties
+        double _g0PowerDbm;
+        double _g0PhaseDeg;
+        double _g0FreqHz;
+        double _g0FreqCorrHz;
+       
 		// Burst frequency and phase calculation
-        void _handleBurst(int16_t *iq_data, long long pulsenum);
+        void _handleBurst(const int16_t *iq_data, int64_t pulseSeqNum);
 };
 
 #endif /*KADRXPUB_H_*/
