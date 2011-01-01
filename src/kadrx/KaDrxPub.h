@@ -158,8 +158,11 @@ class KaDrxPub : public QThread {
         double _g0FreqHz;
         double _g0FreqCorrHz;
        
-		// Burst frequency and phase calculation
+        // Burst frequency and phase calculation
         void _handleBurst(const int16_t *iq_data, int64_t pulseSeqNum);
+
+        double _argDeg(double ival, double qval);
+  
 };
 
 #endif /*KADRXPUB_H_*/

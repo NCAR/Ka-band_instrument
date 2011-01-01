@@ -14,7 +14,6 @@ using namespace boost::posix_time;
 
 LOGGING("KaDrxPub")
 
-
 ////////////////////////////////////////////////////////////////////////////////
 KaDrxPub::KaDrxPub(
                 Pentek::p7142sd3c& sd3c,
@@ -352,14 +351,20 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     double normCrossProduct = _numerator / _denominator;  // normalized cross product proportional to frequency change
     double freqCorrection = 8.0e6 * normCrossProduct; // experimentally determined scale factor to convert correction to Hz
 
-    double g0Mag = (i[0] * i[0] + q[0] * q[0]) / (65536. * 65536.); // units of V^2
+    double ival = i[0];
+    double qval = q[0];
+    double g0Mag = (ival * ival + qval * qval) / (65536. * 65536.); // units of V^2
     double g0MagDb = 10 * log10(g0Mag);
-    
+    double g0Power = g0Mag * g0Mag;
     if (! (pulseSeqNum % 5000)) {
         DLOG << "At pulse " << pulseSeqNum << ": freq corr. " <<
             freqCorrection << " Hz, g0 magnitude " << g0Mag << " (" <<
             g0MagDb << " dB)";
     }
+    _g0PowerDbm = 10.0 * log10(g0Power);
+    _g0PhaseDeg = _argDeg(ival, qval);
+    _g0FreqCorrHz = freqCorrection;
+    _g0FreqHz = freqCorrection;
     
     // Ship the G0 power and frequency offset values to the AFC
     KaAfc::theAfc().newXmitSample(g0Mag, freqCorrection, pulseSeqNum);
@@ -402,3 +407,37 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
 //    fprintf(BurstFile, "\n");
 //    fflush(BurstFile);
 }
+
+/*
+ * Angle conversions
+ */
+
+#ifndef RAD_TO_DEG
+#define RAD_TO_DEG 57.29577951308092
+#endif
+
+#ifndef DEG_PER_RAD
+#define DEG_PER_RAD 57.29577951308092
+#endif
+
+#ifndef DEG_TO_RAD
+#define DEG_TO_RAD 0.01745329251994372
+#endif
+
+#ifndef RAD_PER_DEG
+#define RAD_PER_DEG 0.01745329251994372
+#endif
+
+// compute arg in degrees
+
+double KaDrxPub::_argDeg(double ival, double qval)
+  
+{
+  double arg = 0.0;
+  if (ival != 0.0 || qval != 0.0) {
+    arg = atan2(qval, ival);
+  }
+  arg *= RAD_TO_DEG;
+  return arg;
+}
+
