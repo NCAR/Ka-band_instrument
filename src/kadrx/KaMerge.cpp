@@ -173,10 +173,10 @@ BurstData *KaMerge::writeBurst(BurstData *val)
 
 void KaMerge::_readNextH()
 {
-
+  
   PulseData *tmp = NULL;
   while (tmp == NULL) {
-    _qH->read(_pulseH);
+    tmp = _qH->read(_pulseH);
     if (tmp == NULL) {
       usleep(50);
     }
@@ -193,7 +193,7 @@ void KaMerge::_readNextV()
 
   PulseData *tmp = NULL;
   while (tmp == NULL) {
-    _qV->read(_pulseV);
+    tmp = _qV->read(_pulseV);
     if (tmp == NULL) {
       usleep(50);
     }
@@ -210,7 +210,7 @@ void KaMerge::_readNextB()
 
   BurstData *tmp = NULL;
   while (tmp == NULL) {
-    _qB->read(_burst);
+    tmp = _qB->read(_burst);
     if (tmp == NULL) {
       usleep(50);
     }
