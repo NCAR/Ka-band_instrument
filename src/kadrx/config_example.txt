@@ -41,11 +41,6 @@ latitude            40.03794
 longitude           -105.24127
 altitude            1609
 
-# beam geometry
-
-gate_spacing_m                   75.0      # meters
-range_to_center_of_first_gate_m  37.5      # meters
-
 # merge queue sizes
 
 merge_queue_size       128       # size of queue which acts as buffer
@@ -54,3 +49,4 @@ merge_queue_size       128       # size of queue which acts as buffer
 # IWRF export - TCP port
 
 iwrf_server_tcp_port   9000
+
