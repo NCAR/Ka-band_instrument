@@ -259,6 +259,11 @@ main(int argc, char** argv)
         exit(1);
     }
 
+    // set to ignore SIGPIPE errors which occur when sockets
+    // are broken between client and server
+
+    signal(SIGPIPE, SIG_IGN);
+
     // create the merge object
 
     _merge = new KaMerge(kaConfig);

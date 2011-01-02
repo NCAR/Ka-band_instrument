@@ -48,5 +48,5 @@ merge_queue_size       128       # size of queue which acts as buffer
 
 # IWRF data export
 
-iwrf_server_tcp_port   9000      # TCP port
-pulse_interval_per_iwrf_meta_data 1000 # how often to send out meta data
+iwrf_server_tcp_port   12000           # TCP port
+pulse_interval_per_iwrf_meta_data 100 # how often to send out meta data

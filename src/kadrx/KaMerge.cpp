@@ -126,6 +126,8 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _calib.power_meas_loss_db_h = _config.tx_peak_pwr_coupling();
   _calib.power_meas_loss_db_v = _config.tx_peak_pwr_coupling();
 
+  iwrf_pulse_header_init(_pulseHdr);
+
   // server
 
   _serverIsOpen = false;
@@ -169,7 +171,6 @@ void KaMerge::run()
   // start the loop
   while (true) {
     _readNextPulse();
-    // usleep(100);
   }
 
 }
@@ -248,7 +249,7 @@ void KaMerge::_readNextPulse()
   _assembleIwrfPulsePacket();
 
   // send out the IWRF pulse packet
-
+  
   _sendIwrfPulsePacket();
 
 }
@@ -449,7 +450,7 @@ void KaMerge::_sendIwrfMetaData()
     _closeSocketToClient();
     return;
   }
-  
+
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -519,6 +520,7 @@ void KaMerge::_assembleIwrfPulsePacket()
 
   // pulse header
 
+  _pulseHdr.packet.len_bytes = _pulseBufLen;
   _pulseHdr.packet.seq_num = _packetSeqNum++;
   _pulseHdr.packet.time_secs_utc = _timeSecs;
   _pulseHdr.packet.time_nano_secs = _nanoSecs;
@@ -562,7 +564,7 @@ void KaMerge::_sendIwrfPulsePacket()
   if (_openSocketToClient()) {
     return;
   }
-
+  
   if (_sock->writeBuffer(_pulseBuf, _pulseBufLen)) {
     cerr << "ERROR - KaMerge::_sendIwrfMetaData()" << endl;
     cerr << "  Writing pulse packet" << endl;
@@ -603,7 +605,7 @@ void KaMerge::_allocPulseBuf()
 int KaMerge::_openServer()
 
 {
-  
+
   if (_serverIsOpen) {
     return 0;
   }
@@ -640,7 +642,8 @@ int KaMerge::_openSocketToClient()
 
   // get a client if one is out there
 
-  _sock = _server.getClient();
+  _sock = _server.getClient(0);
+
   if (_sock == NULL) {
     return -1;
   }
