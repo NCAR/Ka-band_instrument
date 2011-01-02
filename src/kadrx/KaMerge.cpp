@@ -20,10 +20,17 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
         _config(config)
 {
 
-  // params
+  // initialize
 
   _queueSize = _config.merge_queue_size();
   _iwrfServerTcpPort = _config.iwrf_server_tcp_port();
+
+  _nGates = 0;
+  _iq = NULL;
+  _nGatesAlloc = 0;
+  _nPulsesSent = 0;
+  _pulseIntervalPerIwrfMetaData =
+    config.pulse_interval_per_iwrf_meta_data();
 
   // queues
 
@@ -37,7 +44,7 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _pulseV = new PulseData;
   _burst = new BurstData;
 
-  // initialize IWRF radar_info struct
+  // initialize IWRF radar_info struct from config
 
   iwrf_radar_info_init(_radarInfo);
   _radarInfo.latitude_deg = _config.latitude();
@@ -55,7 +62,7 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   strncpy(_radarInfo.radar_name, _config.radar_id().c_str(),
           IWRF_MAX_RADAR_NAME - 1);
 
-  // initialize IWRF ts_processing struct
+  // initialize IWRF ts_processing struct from config
 
   iwrf_ts_processing_init(_tsProc);
   if (_config.ldr_mode()) {
@@ -77,7 +84,7 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
     _config.rcvr_gate0_delay() * 1.5e8;
   _tsProc.pol_mode = IWRF_POL_MODE_HV_SIM;
 
-  // initialize IWRF calibration struct
+  // initialize IWRF calibration struct from config
 
   iwrf_calibration_init(_calib);
   _calib.wavelength_cm = _radarInfo.wavelength_cm;
@@ -113,6 +120,10 @@ KaMerge::~KaMerge()
   delete _pulseV;
   delete _burst;
 
+  if (_iq) {
+    delete[] _iq;
+  }
+
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -130,7 +141,7 @@ void KaMerge::run()
   // start the loop
   while (true) {
     _readNextPulse();
-    usleep(100);
+    // usleep(100);
   }
 
 }
@@ -147,8 +158,58 @@ void KaMerge::_readNextPulse()
   _readNextV();
   _readNextB();
 
-  // compute the max pulse seq num
+  // synchronize the pulses and burst to have same sequence number,
+  // reading extra puses as required
+  
+  _syncPulsesAndBurst();
+  int64_t seqNum = _pulseH->getPulseSeqNum();
+  cerr << "_readNextPulse, seq num: " << seqNum << endl;
 
+  // determine number of gates
+
+  int nGates = _pulseH->getGates();
+  if (nGates < _pulseV->getGates()) {
+    nGates = _pulseV->getGates();
+  }
+
+  // should we send meta-data?
+
+  bool sendMeta = false;
+  if (nGates != _nGates) {
+    sendMeta = true;
+    _nGates = nGates;
+  }
+  if (seqNum % _pulseIntervalPerIwrfMetaData == 0) {
+    sendMeta = true;
+  }
+
+  if (sendMeta) {
+    _sendIwrfMetaData();
+  }
+
+  // cohere the IQ data to the burst phase
+
+  _cohereIqToBurstPhase();
+
+  // assemble the IWRF pulse packet
+
+  _assembleIwrfPulsePacket();
+
+  // send out the IWRF pulse packet
+
+  _sendIwrfPulsePacket();
+
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// synchronize the pulses and burst to have same sequence number,
+// reading extra puses as required
+
+void KaMerge::_syncPulsesAndBurst()
+{
+
+  // compute the max pulse seq num
+  
   int64_t seqNumH = _pulseH->getPulseSeqNum();
   int64_t seqNumV = _pulseV->getPulseSeqNum();
   int64_t seqNumB = _burst->getPulseSeqNum();
@@ -201,8 +262,6 @@ void KaMerge::_readNextPulse()
     }
 
   } // while
-
-  cerr << "_readNextPulse, seq num: " << maxSeqNum << endl;
 
 }
 
@@ -285,6 +344,56 @@ void KaMerge::_readNextB()
   }
   _burst = tmp;
 
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// send the IWRF meta data
+
+void KaMerge::_sendIwrfMetaData()
+{
+
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// cohere the IQ data to the burst phase
+
+void KaMerge::_cohereIqToBurstPhase()
+{
+
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// assemble IWRF pulse packet
+
+void KaMerge::_assembleIwrfPulsePacket()
+{
+
+  // allocate space for IQ data
+
+  _allocIq();
+
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// send out the IWRF pulse packet
+
+void KaMerge::_sendIwrfPulsePacket()
+{
+
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// allocate IQ data buffer
+
+void KaMerge::_allocIq()
+{
+  if (_nGates > _nGatesAlloc) {
+    if (_iq) {
+      delete[] _iq;
+    }
+    _iq = new int16_t[_nGates * 4];
+    _nGatesAlloc = _nGates;
+  }
 }
 
 /////////////////////////////////////////////////////////////////////////////

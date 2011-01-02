@@ -98,13 +98,25 @@ private:
   iwrf_ts_processing_t _tsProc;
   iwrf_calibration_t _calib;
   iwrf_pulse_header_t _pulseHdr;
+  
+  int _nGates;
+  int16_t *_iq;
+  int _nGatesAlloc;
+  int64_t _nPulsesSent;
+  int _pulseIntervalPerIwrfMetaData;
 
   /// methods
 
   void _readNextPulse();
+  void _syncPulsesAndBurst();
   void _readNextH();
   void _readNextV();
   void _readNextB();
+  void _sendIwrfMetaData();
+  void _cohereIqToBurstPhase();
+  void _assembleIwrfPulsePacket();
+  void _sendIwrfPulsePacket();
+  void _allocIq();
   double _nowTime();
   
 };

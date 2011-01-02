@@ -76,6 +76,7 @@ std::set<std::string> KaDrxConfig::_createIntLegalKeys() {
     keys.insert("afc_fine_step");
     keys.insert("merge_queue_size");
     keys.insert("iwrf_server_tcp_port");
+    keys.insert("pulse_interval_per_iwrf_meta_data");
     return keys;
 }
 
@@ -398,6 +399,11 @@ KaDrxConfig::isValid(bool verbose) const {
     if (iwrf_server_tcp_port() == UNSET_INT) {
         if (verbose)
             std::cerr << "'iwrf_server_tcp_port' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (pulse_interval_per_iwrf_meta_data() == UNSET_INT) {
+        if (verbose)
+            std::cerr << "'pulse_interval_per_iwrf_meta_data' unset in DRX configuration" << std::endl;
         valid = false;
     }
     return valid;
