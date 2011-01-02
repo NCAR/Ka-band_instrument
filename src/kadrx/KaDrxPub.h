@@ -112,6 +112,9 @@ class KaDrxPub : public QThread {
         /// Receiver channel
         unsigned int _chanId;
         
+        /// configuration
+        const KaDrxConfig& _config;
+
         /// Our associated Pentek downconverter
         Pentek::p7142sd3cDn* _down;
 

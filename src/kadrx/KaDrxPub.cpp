@@ -30,6 +30,7 @@ KaDrxPub::KaDrxPub(
      QThread(),
      _sd3c(sd3c),
      _chanId(chanId),
+     _config(config),
      _down(0),
      _gates(config.gates()),
      _merge(merge),
@@ -55,14 +56,14 @@ KaDrxPub::KaDrxPub(
         abort();
 
     // Create our associated downconverter.
-    double delay = config.rcvr_gate0_delay();
-    double width = config.rcvr_pulse_width();
+    double delay = _config.rcvr_gate0_delay();
+    double width = _config.rcvr_pulse_width();
     
     // Special handling for the burst channel
     bool burstSampling = (_chanId == KA_BURST_CHANNEL);
     if (burstSampling) {
-        delay = config.burst_sample_delay();
-        width = config.burst_sample_width();
+        delay = _config.burst_sample_delay();
+        width = _config.burst_sample_width();
     }
     _down = sd3c.addDownconverter(_chanId, burstSampling, tsLength,
         delay, width, gaussianFile, kaiserFile, simPauseMS, simWavelength);
@@ -75,7 +76,7 @@ KaDrxPub::KaDrxPub(
     }
 
     // Fill our DDS base housekeeping values from the configuration
-    config.fillDdsSysHousekeeping(_baseDdsHskp);
+    _config.fillDdsSysHousekeeping(_baseDdsHskp);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -364,7 +365,7 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     _g0PowerDbm = 10.0 * log10(g0Power);
     _g0PhaseDeg = _argDeg(ival, qval);
     _g0FreqCorrHz = freqCorrection;
-    _g0FreqHz = freqCorrection;
+    _g0FreqHz = _config.rcvr_cntr_freq() + freqCorrection;
     
     // Ship the G0 power and frequency offset values to the AFC
     KaAfc::theAfc().newXmitSample(g0Mag, freqCorrection, pulseSeqNum);
