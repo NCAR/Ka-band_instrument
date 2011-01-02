@@ -16,8 +16,8 @@ BurstData::BurstData()
   _g0QvalNorm = -9999.0;
   _g0FreqHz = -9999.0;
   _g0FreqCorrHz = -9999.0;
-  _samples = 0;
-  _samplesAlloc = 0;
+  _nSamples = 0;
+  _nSamplesAlloc = 0;
   _iq = NULL;
 
 }
@@ -39,13 +39,14 @@ BurstData::~BurstData()
 void BurstData::set(int64_t pulseSeqNum,
                     time_t timeSecs,
                     int nanoSecs,
+                    double g0Magnitude,
                     double g0PowerDbm,
                     double g0PhaseDeg,
                     double g0IvalNorm,
                     double g0QvalNorm,
                     double g0FreqHz,
                     double g0FreqCorrHz,
-                    int samples,
+                    int nSamples,
                     const int16_t *iq)
 
 {
@@ -54,6 +55,7 @@ void BurstData::set(int64_t pulseSeqNum,
   _timeSecs = timeSecs;
   _nanoSecs = nanoSecs;
 
+  _g0Magnitude = g0Magnitude;
   _g0PowerDbm = g0PowerDbm;
   _g0PhaseDeg = g0PhaseDeg;
   _g0IvalNorm = g0IvalNorm;
@@ -61,9 +63,9 @@ void BurstData::set(int64_t pulseSeqNum,
   _g0FreqHz = g0FreqHz;
   _g0FreqCorrHz = g0FreqCorrHz;
 
-  _samples = samples;
+  _nSamples = nSamples;
   _allocIq();
-  memcpy(_iq, iq, _samples * 2 * sizeof(int16_t));
+  memcpy(_iq, iq, _nSamples * 2 * sizeof(int16_t));
 
 }
 
@@ -74,7 +76,7 @@ void BurstData::_allocIq()
 
 {
 
-  if (_samplesAlloc >= _samples) {
+  if (_nSamplesAlloc >= _nSamples) {
     return;
   }
 
@@ -82,7 +84,7 @@ void BurstData::_allocIq()
     delete[] _iq;
   }
 
-  _iq = new int16_t[_samples * 2];
+  _iq = new int16_t[_nSamples * 2];
 
 }
 

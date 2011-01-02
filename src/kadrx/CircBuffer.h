@@ -43,7 +43,7 @@ public:
   
   // get size
 
-  size_t size() const { return _size; }
+  inline size_t size() const { return _size; }
 
   // Write (insert) an element to the buffer.
   // You pass in a pointer to the object you want to write.

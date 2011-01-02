@@ -92,19 +92,33 @@ private:
   PulseData *_pulseV;
   BurstData *_burst;
 
+  /// IQ data
+
+  int _nGates;
+  int _nGatesAlloc;
+  int64_t _nPulsesSent;
+  int _pulseIntervalPerIwrfMetaData;
+  int16_t *_iq;
+  char *_pulseBuf;
+
+  /// pulse sequence number and times
+  
+  int64_t _pulseSeqNum;
+  time_t _timeSecs;
+  int _nanoSecs;
+
+  int64_t _prevPulseSeqNum;
+  time_t _prevTimeSecs;
+  int _prevNanoSecs;
+  
   /// IWRF data
 
+  int64_t _packetSeqNum;
   iwrf_radar_info_t _radarInfo;
   iwrf_ts_processing_t _tsProc;
   iwrf_calibration_t _calib;
   iwrf_pulse_header_t _pulseHdr;
   
-  int _nGates;
-  int16_t *_iq;
-  int _nGatesAlloc;
-  int64_t _nPulsesSent;
-  int _pulseIntervalPerIwrfMetaData;
-
   /// methods
 
   void _readNextPulse();
@@ -118,7 +132,7 @@ private:
                              const BurstData &burst);
   void _assembleIwrfPulsePacket();
   void _sendIwrfPulsePacket();
-  void _allocIq();
+  void _allocPulseBuf();
   double _nowTime();
   
 };

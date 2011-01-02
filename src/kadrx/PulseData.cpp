@@ -10,9 +10,9 @@ PulseData::PulseData()
   _pulseSeqNum = -9999;
   _timeSecs = 0;
   _nanoSecs = 0;
-  _channel = -9999;
-  _gates = 0;
-  _gatesAlloc = 0;
+  _channelId = -9999;
+  _nGates = 0;
+  _nGatesAlloc = 0;
   _iq = NULL;
 
 }
@@ -34,8 +34,8 @@ PulseData::~PulseData()
 void PulseData::set(int64_t pulseSeqNum,
                     time_t timeSecs,
                     int nanoSecs,
-                    int channel,
-                    int gates,
+                    int channelId,
+                    int nGates,
                     const int16_t *iq)
 
 {
@@ -44,10 +44,10 @@ void PulseData::set(int64_t pulseSeqNum,
   _timeSecs = timeSecs;
   _nanoSecs = nanoSecs;
 
-  _channel = channel;
-  _gates = gates;
+  _channelId = channelId;
+  _nGates = nGates;
   _allocIq();
-  memcpy(_iq, iq, _gates * 2 * sizeof(int16_t));
+  memcpy(_iq, iq, _nGates * 2 * sizeof(int16_t));
 
 }
 
@@ -58,7 +58,7 @@ void PulseData::_allocIq()
 
 {
 
-  if (_gatesAlloc >= _gates) {
+  if (_nGatesAlloc >= _nGates) {
     return;
   }
 
@@ -66,7 +66,7 @@ void PulseData::_allocIq()
     delete[] _iq;
   }
 
-  _iq = new int16_t[_gates * 2];
+  _iq = new int16_t[_nGates * 2];
 
 }
 

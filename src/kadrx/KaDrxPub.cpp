@@ -32,7 +32,7 @@ KaDrxPub::KaDrxPub(
      _chanId(chanId),
      _config(config),
      _down(0),
-     _gates(config.gates()),
+     _nGates(config.gates()),
      _merge(merge),
      _pulseData(NULL),
      _burstData(NULL),
@@ -46,6 +46,7 @@ KaDrxPub::KaDrxPub(
      _baseDdsHskp(),
      _numerator(0),
      _denominator(0),
+     _g0Magnitude(-9999.0),
      _g0PowerDbm(-9999.0),
      _g0PhaseDeg(-9999.0),
      _g0IvalNorm(-9999.0),
@@ -72,8 +73,8 @@ KaDrxPub::KaDrxPub(
 
     if (burstSampling) {
         // Get the burst gate count calculated by the downconverter
-        _gates = _down->gates();
-        std::cout << "Burst channel sampling " << _gates << 
+        _nGates = _down->gates();
+        std::cout << "Burst channel sampling " << _nGates << 
             " gates" << std::endl;
     }
 
@@ -168,10 +169,10 @@ void
     // set data in burst object
 
     _burstData->set(pulseSeqNum, timeSecs, nanoSecs,
-                    _g0PowerDbm, _g0PhaseDeg,
+                    _g0Magnitude, _g0PowerDbm, _g0PhaseDeg,
                     _g0IvalNorm, _g0QvalNorm,
                     _g0FreqHz, _g0FreqCorrHz,
-                    _gates, iq);
+                    _nGates, iq);
 
     // we write to the merge queue using one object,
     // and get back another for reuse
@@ -190,7 +191,7 @@ void
 
     _pulseData->set(pulseSeqNum, timeSecs, nanoSecs,
                     _chanId,
-                    _gates, iq);
+                    _nGates, iq);
 
     // we write to the merge queue using one object,
     // and get back another for reuse
@@ -211,7 +212,7 @@ KaDrxPub::_publishDDS(char* buf, int64_t pulseSeqNum) {
     
 	// bufPos is now pointing to the pulse data
 	// data length in bytes: 2-byte I and 2-byte Q for each gate
-	int datalen = 4 * _gates;
+	int datalen = 4 * _nGates;
 
 	// copy this pulse into our DDS sample-in-progress,
 	// and publish it when it's full.
@@ -240,7 +241,7 @@ KaDrxPub::_publishDDS(char* buf, int64_t pulseSeqNum) {
         // Copy our fixed metadata into this pulse
         ts.hskp = _baseDdsHskp;
         // Then fill the non-fixed metadata
-        ts.data.length(_gates * 2);   // I and Q for each gate, length is count of shorts
+        ts.data.length(_nGates * 2);   // I and Q for each gate, length is count of shorts
         ts.hskp.chanId = _chanId;
         ts.prt_seq_num = 1;   // single-PRT only for now
         ts.pulseNum = pulseSeqNum;
@@ -276,8 +277,8 @@ KaDrxPub::_configIsValid() const {
     bool valid = true;
     
     // gate count must be in the interval [1,1023]
-    if (_gates < 1 || _gates > 1023) {
-        std::cerr << "gates is " << _gates <<
+    if (_nGates < 1 || _nGates > 1023) {
+        std::cerr << "gates is " << _nGates <<
             "; it must be greater than 0 and less than 1024." << std::endl;
         valid = false;
     }
@@ -294,7 +295,7 @@ KaDrxPub::_configIsValid() const {
             valid = false;
         }
         // PRT must be longer than (gates + 1) * pulse width
-        if (_sd3c.prtCounts() <= ((_gates + 1) * _sd3c.txPulseWidthCounts())) {
+        if (_sd3c.prtCounts() <= ((_nGates + 1) * _sd3c.txPulseWidthCounts())) {
             std::cerr << "PRT must be greater than (gates+1)*(pulse width)." <<
                     std::endl;
             valid = false;
@@ -321,11 +322,11 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     const double DIS_WT = 0.01;
 
     // Separate I and Q data
-    double i[_gates];
-    double q[_gates];
+    double i[_nGates];
+    double q[_nGates];
     double num = 0;
     double den = 0;
-    for (unsigned int g = 0; g < _gates; g++) {
+    for (unsigned int g = 0; g < _nGates; g++) {
         i[g] = iqData[2 * g];
         q[g] = iqData[2 * g + 1];
     }
@@ -365,6 +366,7 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
             freqCorrection << " Hz, g0 magnitude " << g0Mag << " (" <<
             g0MagDb << " dB)";
     }
+    _g0Magnitude = g0Mag;
     _g0PowerDbm = 10.0 * log10(g0Power);
     _g0PhaseDeg = _argDeg(ival, qval);
     _g0IvalNorm = ival / g0Mag;
@@ -407,7 +409,7 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
 //    }
 //    double dtime = timetag * 1.0e-6;
 //    fprintf(BurstFile, "%.6f", dtime);
-//    for (unsigned int g = 0; g < _gates; g++) {
+//    for (unsigned int g = 0; g < _nGates; g++) {
 //        fprintf(BurstFile, ",%d,%d", iqData[2 * g], iqData[2 * g + 1]);
 //    }
 //    fprintf(BurstFile, "\n");

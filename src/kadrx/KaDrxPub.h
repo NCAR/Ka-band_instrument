@@ -121,7 +121,7 @@ class KaDrxPub : public QThread {
         /**
          * The number of gates being collected by the downconverter
          */
-        unsigned int _gates;
+        unsigned int _nGates;
 
         /// Merging
 
@@ -156,6 +156,7 @@ class KaDrxPub : public QThread {
         double _denominator;
 
         // burst properties
+        double _g0Magnitude;
         double _g0PowerDbm;
         double _g0PhaseDeg;
         double _g0IvalNorm;

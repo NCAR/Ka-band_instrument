@@ -25,13 +25,6 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _queueSize = _config.merge_queue_size();
   _iwrfServerTcpPort = _config.iwrf_server_tcp_port();
 
-  _nGates = 0;
-  _iq = NULL;
-  _nGatesAlloc = 0;
-  _nPulsesSent = 0;
-  _pulseIntervalPerIwrfMetaData =
-    config.pulse_interval_per_iwrf_meta_data();
-
   // queues
 
   _qH = new CircBuffer<PulseData>(_queueSize);
@@ -44,7 +37,29 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _pulseV = new PulseData;
   _burst = new BurstData;
 
+  // iq data
+
+  _nGates = 0;
+  _pulseBuf = NULL;
+  _iq = NULL;
+  _nGatesAlloc = 0;
+  _nPulsesSent = 0;
+  _pulseIntervalPerIwrfMetaData =
+    config.pulse_interval_per_iwrf_meta_data();
+
+  // pulse seq num and times
+
+  _pulseSeqNum = -1;
+  _timeSecs = 0;
+  _nanoSecs = 0;
+
+  _prevPulseSeqNum = 0;
+  _prevTimeSecs = 0;
+  _prevNanoSecs = 0;
+
   // initialize IWRF radar_info struct from config
+
+  _packetSeqNum = 0;
 
   iwrf_radar_info_init(_radarInfo);
   _radarInfo.latitude_deg = _config.latitude();
@@ -120,8 +135,8 @@ KaMerge::~KaMerge()
   delete _pulseV;
   delete _burst;
 
-  if (_iq) {
-    delete[] _iq;
+  if (_pulseBuf) {
+    delete[] _pulseBuf;
   }
 
 }
@@ -162,14 +177,38 @@ void KaMerge::_readNextPulse()
   // reading extra puses as required
   
   _syncPulsesAndBurst();
-  int64_t seqNum = _pulseH->getPulseSeqNum();
-  cerr << "_readNextPulse, seq num: " << seqNum << endl;
+
+  if (_pulseSeqNum < 0) {
+    // first time
+    _prevPulseSeqNum = _pulseH->getPulseSeqNum() - 1;
+    _prevTimeSecs = _pulseH->getTimeSecs();
+    _prevNanoSecs = _pulseH->getNanoSecs();
+  } else {
+    _prevPulseSeqNum = _pulseSeqNum;
+    _prevTimeSecs = _timeSecs;
+    _prevNanoSecs = _nanoSecs;
+  }
+
+  _pulseSeqNum = _pulseH->getPulseSeqNum();
+  _timeSecs = _pulseH->getTimeSecs();
+  _nanoSecs = _pulseH->getNanoSecs();
+  
+  cerr << "_readNextPulse, seqNum, secs, nanoSecs: "
+       << _pulseSeqNum << ", " << _timeSecs << ", " << _nanoSecs << endl;
+
+  if (_pulseSeqNum != _prevPulseSeqNum + 1) {
+    int nMissing = _prevPulseSeqNum - _pulseSeqNum;
+    cerr << "Missing pulses - nmiss, prevNum, thisNum: "
+         << nMissing << ", "
+         << _prevPulseSeqNum << ", "
+         << _pulseSeqNum << endl;
+  }
 
   // determine number of gates
 
-  int nGates = _pulseH->getGates();
-  if (nGates < _pulseV->getGates()) {
-    nGates = _pulseV->getGates();
+  int nGates = _pulseH->getNGates();
+  if (nGates < _pulseV->getNGates()) {
+    nGates = _pulseV->getNGates();
   }
 
   // should we send meta-data?
@@ -179,7 +218,7 @@ void KaMerge::_readNextPulse()
     sendMeta = true;
     _nGates = nGates;
   }
-  if (seqNum % _pulseIntervalPerIwrfMetaData == 0) {
+  if (_pulseSeqNum % _pulseIntervalPerIwrfMetaData == 0) {
     sendMeta = true;
   }
 
@@ -352,6 +391,20 @@ void KaMerge::_readNextB()
 void KaMerge::_sendIwrfMetaData()
 {
 
+  // set seq num and time in packet headers
+
+  _radarInfo.packet.seq_num = _packetSeqNum++;
+  _radarInfo.packet.time_secs_utc = _timeSecs;
+  _radarInfo.packet.time_nano_secs = _nanoSecs;
+
+  _tsProc.packet.seq_num = _packetSeqNum++;
+  _tsProc.packet.time_secs_utc = _timeSecs;
+  _tsProc.packet.time_nano_secs = _nanoSecs;
+
+  _calib.packet.seq_num = _packetSeqNum++;
+  _calib.packet.time_secs_utc = _timeSecs;
+  _calib.packet.time_nano_secs = _nanoSecs;
+
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -372,7 +425,7 @@ void KaMerge::_cohereIqToBurstPhase(PulseData &pulse,
   double g0IvalNorm = burst.getG0IvalNorm();
   double g0QvalNorm = burst.getG0QvalNorm();
 
-  int nGates = pulse.getGates();
+  int nGates = pulse.getNGates();
   int16_t *II = pulse.getIq();
   int16_t *QQ = pulse.getIq() + 1;
   
@@ -410,9 +463,47 @@ void KaMerge::_assembleIwrfPulsePacket()
 {
 
   // allocate space for IQ data
+  
+  _allocPulseBuf();
 
-  _allocIq();
+  // load up IQ data, H followed by V
 
+  memcpy(_iq, _pulseH->getIq(), _pulseH->getNGates() * 2 * sizeof(int16_t));
+  memcpy(_iq + (_nGates * 2),
+         _pulseV->getIq(), _pulseV->getNGates() * 2 * sizeof(int16_t));
+
+  // pulse header
+
+  _pulseHdr.packet.seq_num = _packetSeqNum++;
+  _pulseHdr.packet.time_secs_utc = _timeSecs;
+  _pulseHdr.packet.time_nano_secs = _nanoSecs;
+
+  _pulseHdr.pulse_seq_num = _pulseSeqNum;
+  _pulseHdr.prt =
+    (double) (_timeSecs - _prevTimeSecs) +
+    (double) (_nanoSecs - _prevNanoSecs) * 1.0e-9;
+
+  _pulseHdr.pulse_width_us = _tsProc.pulse_width_us;
+  _pulseHdr.n_gates = _nGates;
+  _pulseHdr.n_channels = 2;
+  _pulseHdr.iq_encoding = IWRF_IQ_ENCODING_SCALED_SI16;
+  _pulseHdr.hv_flag = 1;
+  _pulseHdr.phase_cohered = 1;
+  _pulseHdr.n_data = _nGates * 4;
+  _pulseHdr.iq_offset[0] = 0;
+  _pulseHdr.iq_offset[1] = _nGates * 2;
+  _pulseHdr.burst_mag[0] = _burst->getG0Magnitude();
+  _pulseHdr.burst_mag[1] = _burst->getG0Magnitude();
+  _pulseHdr.burst_arg[0] = _burst->getG0PhaseDeg();
+  _pulseHdr.burst_arg[1] = _burst->getG0PhaseDeg();
+  _pulseHdr.scale = 1.0 / 65536.0;
+  _pulseHdr.offset = 0.0;
+  _pulseHdr.n_gates_burst = 0;
+  _pulseHdr.start_range_m = _tsProc.start_range_m;
+  _pulseHdr.gate_spacing_m = _tsProc.gate_spacing_m;
+
+  memcpy(_pulseBuf, &_pulseHdr, sizeof(_pulseHdr));
+  
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -424,17 +515,26 @@ void KaMerge::_sendIwrfPulsePacket()
 }
 
 /////////////////////////////////////////////////////////////////////////////
-// allocate IQ data buffer
+// allocate pulse buffer
 
-void KaMerge::_allocIq()
+void KaMerge::_allocPulseBuf()
 {
+
   if (_nGates > _nGatesAlloc) {
-    if (_iq) {
-      delete[] _iq;
+
+    if (_pulseBuf) {
+      delete[] _pulseBuf;
     }
-    _iq = new int16_t[_nGates * 4];
+
+    int nBytes = sizeof(iwrf_pulse_header) + (_nGates * 4 * sizeof(int16_t));
+    _pulseBuf = new char[nBytes];
+    _iq = reinterpret_cast<int16_t *>(_pulseBuf + sizeof(iwrf_pulse_header));
     _nGatesAlloc = _nGates;
+
   }
+
+  memset(_iq, 0, _nGates * 4 * sizeof(int16_t));
+
 }
 
 /////////////////////////////////////////////////////////////////////////////

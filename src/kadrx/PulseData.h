@@ -28,20 +28,20 @@ public:
   void set(int64_t pulseSeqNum,
            time_t timeSecs,
            int nanoSecs,
-           int channel,
-           int gates,
+           int channelId,
+           int nGates,
            const int16_t *iq);
 
   // get methods
 
-  int64_t getPulseSeqNum() const { return _pulseSeqNum; }
-  time_t getTimeSecs() const { return _timeSecs; }
-  int getNanoSecs() const { return _nanoSecs; }
-  int getChannel() const { return _channel; }
-  int getGates() const { return _gates; }
-  const int16_t *getIq() const { return _iq; }
-  int16_t *getIq() { return _iq; }
-    
+  inline int64_t getPulseSeqNum() const { return _pulseSeqNum; }
+  inline time_t getTimeSecs() const { return _timeSecs; }
+  inline int getNanoSecs() const { return _nanoSecs; }
+  inline int getChannelId() const { return _channelId; }
+  inline int getNGates() const { return _nGates; }
+  inline const int16_t *getIq() const { return _iq; }
+  inline int16_t *getIq() { return _iq; }
+  
 private:
 
   /**
@@ -61,14 +61,14 @@ private:
    * channel number
    */
 
-  int _channel;
+  int _channelId;
   
   /**
    * number of gates
    */
 
-  int _gates;
-  int _gatesAlloc;
+  int _nGates;
+  int _nGatesAlloc;
 
   /**
    * IQ data
