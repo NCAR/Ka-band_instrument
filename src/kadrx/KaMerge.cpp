@@ -360,6 +360,47 @@ void KaMerge::_sendIwrfMetaData()
 void KaMerge::_cohereIqToBurstPhase()
 {
 
+  _cohereIqToBurstPhase(*_pulseH, *_burst);
+  _cohereIqToBurstPhase(*_pulseV, *_burst);
+
+}
+
+void KaMerge::_cohereIqToBurstPhase(PulseData &pulse,
+                                    const BurstData &burst)
+{
+
+  double g0IvalNorm = burst.getG0IvalNorm();
+  double g0QvalNorm = burst.getG0QvalNorm();
+
+  int nGates = pulse.getGates();
+  int16_t *II = pulse.getIq();
+  int16_t *QQ = pulse.getIq() + 1;
+  
+  for (int igate = 0; igate < nGates; igate++, II += 2, QQ += 2) {
+    
+    double ival = *II;
+    double qval = *QQ;
+
+    double ivalCohered = ival * g0IvalNorm + qval * g0QvalNorm;
+    double qvalCohered = qval * g0IvalNorm - ival * g0QvalNorm;
+
+    if (ivalCohered < -32767.0) {
+      ivalCohered = -32767.0;
+    } else if (ivalCohered > 32767.0) {
+      ivalCohered = 32767.0;
+    }
+
+    if (qvalCohered < -32767.0) {
+      qvalCohered = -32767.0;
+    } else if (qvalCohered > 32767.0) {
+      qvalCohered = 32767.0;
+    }
+
+    *II = (int16_t) (ivalCohered + 0.5);
+    *QQ = (int16_t) (ivalCohered + 0.5);
+    
+  } // igate
+
 }
 
 /////////////////////////////////////////////////////////////////////////////

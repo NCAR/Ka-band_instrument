@@ -40,6 +40,7 @@ public:
   int getChannel() const { return _channel; }
   int getGates() const { return _gates; }
   const int16_t *getIq() const { return _iq; }
+  int16_t *getIq() { return _iq; }
     
 private:
 

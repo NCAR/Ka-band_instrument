@@ -114,6 +114,8 @@ private:
   void _readNextB();
   void _sendIwrfMetaData();
   void _cohereIqToBurstPhase();
+  void _cohereIqToBurstPhase(PulseData &pulse,
+                             const BurstData &burst);
   void _assembleIwrfPulsePacket();
   void _sendIwrfPulsePacket();
   void _allocIq();

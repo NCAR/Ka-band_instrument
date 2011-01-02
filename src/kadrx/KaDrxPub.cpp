@@ -48,6 +48,8 @@ KaDrxPub::KaDrxPub(
      _denominator(0),
      _g0PowerDbm(-9999.0),
      _g0PhaseDeg(-9999.0),
+     _g0IvalNorm(-9999.0),
+     _g0QvalNorm(-9999.0),
      _g0FreqHz(-9999.0),
      _g0FreqCorrHz(-9999.0)
 {
@@ -167,6 +169,7 @@ void
 
     _burstData->set(pulseSeqNum, timeSecs, nanoSecs,
                     _g0PowerDbm, _g0PhaseDeg,
+                    _g0IvalNorm, _g0QvalNorm,
                     _g0FreqHz, _g0FreqCorrHz,
                     _gates, iq);
 
@@ -364,6 +367,8 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     }
     _g0PowerDbm = 10.0 * log10(g0Power);
     _g0PhaseDeg = _argDeg(ival, qval);
+    _g0IvalNorm = ival / g0Mag;
+    _g0QvalNorm = qval / g0Mag;
     _g0FreqCorrHz = freqCorrection;
     _g0FreqHz = _config.rcvr_cntr_freq() + freqCorrection;
     

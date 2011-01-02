@@ -30,6 +30,8 @@ public:
            int nanoSecs,
            double g0PowerDbm,
            double g0PhaseDeg,
+           double g0IvalNorm,
+           double g0QvalNorm,
            double g0FreqHz,
            double g0FreqCorrHz,
            int samples,
@@ -37,15 +39,17 @@ public:
     
   // get methods
 
-  int64_t getPulseSeqNum() const { return _pulseSeqNum; }
-  time_t getTimeSecs() const { return _timeSecs; }
-  int getNanoSecs() const { return _nanoSecs; }
-  double getG0PowerDbm() const { return _g0PowerDbm; }
-  double getG0PhaseDeg() const { return _g0PhaseDeg; }
-  double getG0FreqHz() const { return _g0FreqHz; }
-  double getG0FreqCorrHz() const { return _g0FreqCorrHz; }
-  int getSamples() const { return _samples; }
-  const int16_t *getIq() const { return _iq; }
+  inline int64_t getPulseSeqNum() const { return _pulseSeqNum; }
+  inline time_t getTimeSecs() const { return _timeSecs; }
+  inline int getNanoSecs() const { return _nanoSecs; }
+  inline double getG0PowerDbm() const { return _g0PowerDbm; }
+  inline double getG0PhaseDeg() const { return _g0PhaseDeg; }
+  inline double getG0IvalNorm() const { return _g0IvalNorm; }
+  inline double getG0QvalNorm() const { return _g0QvalNorm; }
+  inline double getG0FreqHz() const { return _g0FreqHz; }
+  inline double getG0FreqCorrHz() const { return _g0FreqCorrHz; }
+  inline int getSamples() const { return _samples; }
+  inline const int16_t *getIq() const { return _iq; }
     
 private:
 
@@ -68,6 +72,8 @@ private:
 
   double _g0PowerDbm;
   double _g0PhaseDeg;
+  double _g0IvalNorm;
+  double _g0QvalNorm;
 
   /**
    * frequency and frequency correction

@@ -12,6 +12,8 @@ BurstData::BurstData()
   _nanoSecs = 0;
   _g0PowerDbm = -9999.0;
   _g0PhaseDeg = -9999.0;
+  _g0IvalNorm = -9999.0;
+  _g0QvalNorm = -9999.0;
   _g0FreqHz = -9999.0;
   _g0FreqCorrHz = -9999.0;
   _samples = 0;
@@ -39,6 +41,8 @@ void BurstData::set(int64_t pulseSeqNum,
                     int nanoSecs,
                     double g0PowerDbm,
                     double g0PhaseDeg,
+                    double g0IvalNorm,
+                    double g0QvalNorm,
                     double g0FreqHz,
                     double g0FreqCorrHz,
                     int samples,
@@ -52,6 +56,8 @@ void BurstData::set(int64_t pulseSeqNum,
 
   _g0PowerDbm = g0PowerDbm;
   _g0PhaseDeg = g0PhaseDeg;
+  _g0IvalNorm = g0IvalNorm;
+  _g0QvalNorm = g0QvalNorm;
   _g0FreqHz = g0FreqHz;
   _g0FreqCorrHz = g0FreqCorrHz;
 

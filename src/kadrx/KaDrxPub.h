@@ -158,6 +158,8 @@ class KaDrxPub : public QThread {
         // burst properties
         double _g0PowerDbm;
         double _g0PhaseDeg;
+        double _g0IvalNorm;
+        double _g0QvalNorm;
         double _g0FreqHz;
         double _g0FreqCorrHz;
        
