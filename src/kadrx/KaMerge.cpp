@@ -7,6 +7,7 @@
 #include <iostream>
 #include <iomanip>
 #include <boost/date_time/posix_time/posix_time.hpp>
+#include <radar/iwrf_functions.hh>
 
 using namespace boost::posix_time;
 
@@ -19,16 +20,43 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
         _config(config)
 {
 
+  // params
+
   _queueSize = _config.merge_queue_size();
   _iwrfServerTcpPort = _config.iwrf_server_tcp_port();
+
+  // queues
 
   _qH = new CircBuffer<PulseData>(_queueSize);
   _qV = new CircBuffer<PulseData>(_queueSize);
   _qB = new CircBuffer<BurstData>(_queueSize);
 
+  // pulse and burst data for reading from queues
+
   _pulseH = new PulseData;
   _pulseV = new PulseData;
   _burst = new BurstData;
+
+  // initialize IWRF structs
+
+  iwrf_radar_info_init(_radarInfo);
+  iwrf_ts_processing_init(_tsProc);
+  iwrf_calibration_init(_calib);
+
+  _radarInfo.latitude_deg = _config.latitude();
+  _radarInfo.longitude_deg = _config.longitude();
+  _radarInfo.altitude_m = _config.altitude();
+  _radarInfo.platform_type = IWRF_RADAR_PLATFORM_FIXED;
+  _radarInfo.beamwidth_deg_h = _config.ant_hbeam_width();
+  _radarInfo.beamwidth_deg_v = _config.ant_vbeam_width();
+  double freqHz = _config.rcvr_cntr_freq();
+  double lightSpeedMps = 2.99792458e8;
+  double wavelengthM = lightSpeedMps / freqHz;
+  _radarInfo.wavelength_cm = wavelengthM * 100.0;
+  _radarInfo.nominal_gain_ant_db_h = _config.ant_gain();
+  _radarInfo.nominal_gain_ant_db_v = _config.ant_gain();
+  strncpy(_radarInfo.radar_name, _config.radar_id().c_str(),
+          IWRF_MAX_RADAR_NAME - 1);
 
 }
 

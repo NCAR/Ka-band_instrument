@@ -5,6 +5,7 @@
 #include "CircBuffer.h"
 #include "PulseData.h"
 #include "BurstData.h"
+#include <radar/iwrf_data.h>
 #include <QThread>
 
 /// KaMerge merges data from the H and V channels, and the burst channel,
@@ -69,7 +70,7 @@ private:
 
   /// configuration
 
-  const KaDrxConfig& _config;
+  const KaDrxConfig &_config;
 
   /// The queue size - for buffering IQ data
 
@@ -90,7 +91,14 @@ private:
   PulseData *_pulseH;
   PulseData *_pulseV;
   BurstData *_burst;
-  
+
+  /// IWRF data
+
+  iwrf_radar_info_t _radarInfo;
+  iwrf_ts_processing_t _tsProc;
+  iwrf_calibration_t _calib;
+  iwrf_pulse_header_t _pulseHdr;
+
   /// methods
 
   void _readNextPulse();
