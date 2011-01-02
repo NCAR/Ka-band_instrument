@@ -37,19 +37,16 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _pulseV = new PulseData;
   _burst = new BurstData;
 
-  // initialize IWRF structs
+  // initialize IWRF radar_info struct
 
   iwrf_radar_info_init(_radarInfo);
-  iwrf_ts_processing_init(_tsProc);
-  iwrf_calibration_init(_calib);
-
   _radarInfo.latitude_deg = _config.latitude();
   _radarInfo.longitude_deg = _config.longitude();
   _radarInfo.altitude_m = _config.altitude();
   _radarInfo.platform_type = IWRF_RADAR_PLATFORM_FIXED;
   _radarInfo.beamwidth_deg_h = _config.ant_hbeam_width();
   _radarInfo.beamwidth_deg_v = _config.ant_vbeam_width();
-  double freqHz = _config.rcvr_cntr_freq();
+  double freqHz = _config.tx_cntr_freq();
   double lightSpeedMps = 2.99792458e8;
   double wavelengthM = lightSpeedMps / freqHz;
   _radarInfo.wavelength_cm = wavelengthM * 100.0;
@@ -57,6 +54,49 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _radarInfo.nominal_gain_ant_db_v = _config.ant_gain();
   strncpy(_radarInfo.radar_name, _config.radar_id().c_str(),
           IWRF_MAX_RADAR_NAME - 1);
+
+  // initialize IWRF ts_processing struct
+
+  iwrf_ts_processing_init(_tsProc);
+  if (_config.ldr_mode()) {
+    _tsProc.xmit_rcv_mode = IWRF_H_ONLY_FIXED_HV;
+  } else {
+    _tsProc.xmit_rcv_mode = IWRF_SIM_HV_FIXED_HV;
+  }
+  _tsProc.xmit_phase_mode = IWRF_XMIT_PHASE_MODE_FIXED;
+  _tsProc.prf_mode = IWRF_PRF_MODE_FIXED;
+  _tsProc.pulse_type = IWRF_PULSE_TYPE_RECT;
+  _tsProc.prt_usec = _config.prt1() * 1.0e6;
+  _tsProc.prt2_usec = _config.prt2() * 1.0e6;
+  _tsProc.cal_type = IWRF_CAL_TYPE_CW_CAL;
+  _tsProc.burst_range_offset_m =
+    _config.burst_sample_delay() * lightSpeedMps / 2.0;
+  _tsProc.pulse_width_us = _config.tx_pulse_width() * 1.0e6;
+  _tsProc.gate_spacing_m = _config.rcvr_pulse_width() * 1.5e8;
+  _tsProc.start_range_m = (_tsProc.gate_spacing_m / 2.0) +
+    _config.rcvr_gate0_delay() * 1.5e8;
+  _tsProc.pol_mode = IWRF_POL_MODE_HV_SIM;
+
+  // initialize IWRF calibration struct
+
+  iwrf_calibration_init(_calib);
+  _calib.wavelength_cm = _radarInfo.wavelength_cm;
+  _calib.beamwidth_deg_h = _radarInfo.beamwidth_deg_h;
+  _calib.beamwidth_deg_v = _radarInfo.beamwidth_deg_v;
+  _calib.gain_ant_db_h = _radarInfo.nominal_gain_ant_db_h;
+  _calib.gain_ant_db_v = _radarInfo.nominal_gain_ant_db_v;
+  _calib.pulse_width_us = _config.tx_pulse_width() * 1.0e6;
+  if (_config.ldr_mode()) {
+    _calib.xmit_power_dbm_h = _config.tx_peak_power();
+    _calib.xmit_power_dbm_v = 0.0;
+  } else {
+    _calib.xmit_power_dbm_h = _config.tx_peak_power() / 2.0;
+    _calib.xmit_power_dbm_v = _config.tx_peak_power() / 2.0;
+  }
+  _calib.two_way_waveguide_loss_db_h = _config.tx_waveguide_loss() + 3.0;
+  _calib.two_way_waveguide_loss_db_v = _config.tx_waveguide_loss() + 3.0;
+  _calib.power_meas_loss_db_h = _config.tx_peak_pwr_coupling();
+  _calib.power_meas_loss_db_v = _config.tx_peak_pwr_coupling();
 
 }
 
