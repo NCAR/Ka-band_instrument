@@ -6,6 +6,7 @@
 #include "PulseData.h"
 #include "BurstData.h"
 #include <radar/iwrf_data.h>
+#include <toolsa/ServerSocket.hh>
 #include <QThread>
 
 /// KaMerge merges data from the H and V channels, and the burst channel,
@@ -76,10 +77,6 @@ private:
 
   size_t _queueSize;
   
-  ///  Port for IWRF TCP server
-  
-  int _iwrfServerTcpPort;
-
   ///  Queues for data from channels
   
   CircBuffer<PulseData> *_qH;
@@ -100,6 +97,7 @@ private:
   int _pulseIntervalPerIwrfMetaData;
   int16_t *_iq;
   char *_pulseBuf;
+  int _pulseBufLen;
 
   /// pulse sequence number and times
   
@@ -118,6 +116,13 @@ private:
   iwrf_ts_processing_t _tsProc;
   iwrf_calibration_t _calib;
   iwrf_pulse_header_t _pulseHdr;
+
+  /// Server
+
+  int _iwrfServerTcpPort;
+  ServerSocket _server;
+  bool _serverIsOpen;
+  Socket *_sock;
   
   /// methods
 
@@ -133,8 +138,11 @@ private:
   void _assembleIwrfPulsePacket();
   void _sendIwrfPulsePacket();
   void _allocPulseBuf();
-  double _nowTime();
   
+  int _openServer();
+  int _openSocketToClient();
+  void _closeSocketToClient();
+
 };
 
 #endif /*KADRXPUB_H_*/

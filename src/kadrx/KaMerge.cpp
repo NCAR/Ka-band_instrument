@@ -10,8 +10,14 @@
 #include <radar/iwrf_functions.hh>
 
 using namespace boost::posix_time;
+using namespace std;
 
 LOGGING("KaMerge")
+
+/////////////////////////////////////////////////////////////////////////////
+// 1970-01-01 00:00:00 UTC
+static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1),
+                             time_duration(0, 0, 0));
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -120,12 +126,19 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _calib.power_meas_loss_db_h = _config.tx_peak_pwr_coupling();
   _calib.power_meas_loss_db_v = _config.tx_peak_pwr_coupling();
 
+  // server
+
+  _serverIsOpen = false;
+  _sock = NULL;
+
 }
 
 /////////////////////////////////////////////////////////////////////////////
 KaMerge::~KaMerge()
 
 {
+
+  _closeSocketToClient();
 
   delete _qH;
   delete _qV;
@@ -405,6 +418,38 @@ void KaMerge::_sendIwrfMetaData()
   _calib.packet.time_secs_utc = _timeSecs;
   _calib.packet.time_nano_secs = _nanoSecs;
 
+  // check that socket to client is open
+
+  if (_openSocketToClient()) {
+    return;
+  }
+
+  // write individual messages for each struct
+
+  if (_sock->writeBuffer(&_radarInfo, sizeof(_radarInfo))) {
+    cerr << "ERROR - KaMerge::_sendIwrfMetaData()" << endl;
+    cerr << "  Writing IWRF_RADAR_INFO" << endl;
+    cerr << "  " << _sock->getErrStr() << endl;
+    _closeSocketToClient();
+    return;
+  }
+  
+  if (_sock->writeBuffer(&_tsProc, sizeof(_tsProc))) {
+    cerr << "ERROR - KaMerge::_sendIwrfMetaData()" << endl;
+    cerr << "  Writing IWRF_TS_PROCESSING" << endl;
+    cerr << "  " << _sock->getErrStr() << endl;
+    _closeSocketToClient();
+    return;
+  }
+  
+  if (_sock->writeBuffer(&_calib, sizeof(_calib))) {
+    cerr << "ERROR - KaMerge::_sendIwrfMetaData()" << endl;
+    cerr << "  Writing IWRF_CALIBRATION" << endl;
+    cerr << "  " << _sock->getErrStr() << endl;
+    _closeSocketToClient();
+    return;
+  }
+  
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -512,6 +557,20 @@ void KaMerge::_assembleIwrfPulsePacket()
 void KaMerge::_sendIwrfPulsePacket()
 {
 
+  // check that socket to client is open
+
+  if (_openSocketToClient()) {
+    return;
+  }
+
+  if (_sock->writeBuffer(_pulseBuf, _pulseBufLen)) {
+    cerr << "ERROR - KaMerge::_sendIwrfMetaData()" << endl;
+    cerr << "  Writing pulse packet" << endl;
+    cerr << "  " << _sock->getErrStr() << endl;
+    _closeSocketToClient();
+    return;
+  }
+  
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -526,8 +585,8 @@ void KaMerge::_allocPulseBuf()
       delete[] _pulseBuf;
     }
 
-    int nBytes = sizeof(iwrf_pulse_header) + (_nGates * 4 * sizeof(int16_t));
-    _pulseBuf = new char[nBytes];
+    _pulseBufLen = sizeof(iwrf_pulse_header) + (_nGates * 4 * sizeof(int16_t));
+    _pulseBuf = new char[_pulseBufLen];
     _iq = reinterpret_cast<int16_t *>(_pulseBuf + sizeof(iwrf_pulse_header));
     _nGatesAlloc = _nGates;
 
@@ -537,19 +596,75 @@ void KaMerge::_allocPulseBuf()
 
 }
 
-/////////////////////////////////////////////////////////////////////////////
-/// Return the current time in seconds since 1970/01/01 00:00:00 UTC.
-/// Returned value has 1 ms precision.
-/// @return the current time in seconds since 1970/01/01 00:00:00 UTC
+//////////////////////////////////////////////////
+// open server
+// Returns 0 on success, -1 on failure
 
-double KaMerge::_nowTime()
+int KaMerge::_openServer()
+
 {
-  struct timeb timeB;
-  ftime(&timeB);
-  return timeB.time + timeB.millitm/1000.0;
+  
+  if (_serverIsOpen) {
+    return 0;
+  }
+
+  if (_server.openServer(_iwrfServerTcpPort)) {
+    cerr << "ERROR - KaMerge::_openServer" << endl;
+    cerr << "  Cannot open server, port: " << _iwrfServerTcpPort << endl;
+    cerr << "  " << _server.getErrStr() << endl;
+    return -1;
+  }
+
+  _serverIsOpen = true;
+  return 0;
+
 }
 
-/////////////////////////////////////////////////////////////////////////////
-// 1970-01-01 00:00:00 UTC
-static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1), time_duration(0, 0, 0));
+//////////////////////////////////////////////////
+// open socket to client
+// Returns 0 on success, -1 on failure
 
+int KaMerge::_openSocketToClient()
+
+{
+
+  if (_openServer()) {
+    return -1;
+  }
+
+  // check status
+
+  if (_sock && _sock->isOpen()) {
+    return 0;
+  }
+
+  // get a client if one is out there
+
+  _sock = _server.getClient();
+  if (_sock == NULL) {
+    return -1;
+  }
+
+  return 0;
+  
+}
+
+//////////////////////////////////////////////////
+// close socket to client
+
+void KaMerge::_closeSocketToClient()
+
+{
+  
+  if (_sock == NULL) {
+    return;
+  }
+
+  if (_sock->isOpen()) {
+    _sock->close();
+  }
+
+  delete _sock;
+  _sock = NULL;
+
+}
