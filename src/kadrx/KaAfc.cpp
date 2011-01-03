@@ -147,7 +147,7 @@ KaAfc::KaAfc() {
 }
 
 KaAfc::~KaAfc() {
-    _afcPrivate->quit();
+    _afcPrivate->terminate();
     if (! _afcPrivate->wait(5000)) {
         ELOG << "KaAfcPrivate thread failed to stop in 5 seconds. Exiting anyway.";
     }
@@ -191,6 +191,8 @@ KaAfcPrivate::KaAfcPrivate() :
     _lastRcvdPulse(0),
     _pulsesRcvd(0),
     _pulsesDropped(0) {
+    // Enable termination via terminate(), since we don't have a Qt event loop.
+    setTerminationEnabled(true);
     // Set the initial oscillator frequencies
     unsigned int osc0ScaledFreq = (_osc0.getScaledMinFreq());   // 1.4400 GHz
     unsigned int osc1ScaledFreq = (132500000 / _osc1.getFreqStep());    // 132.50 MHz
