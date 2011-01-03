@@ -58,6 +58,10 @@ KaDrxPub::KaDrxPub(
     if (! _configIsValid())
         abort();
 
+    // scaling between A2D counts and volts
+
+    _a2dCountsPerVolt = _config.a2d_counts_per_volt();
+
     // Create our associated downconverter.
     double delay = _config.rcvr_gate0_delay();
     double width = _config.rcvr_pulse_width();
@@ -353,26 +357,25 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     double normCrossProduct = _numerator / _denominator;  // normalized cross product proportional to frequency change
     double freqCorrection = 8.0e6 * normCrossProduct; // experimentally determined scale factor to convert correction to Hz
 
-    double ival = i[0];
-    double qval = q[0];
-    double g0Mag = (ival * ival + qval * qval) / (65536. * 65536.); // units of V^2
-    double g0MagDb = 10 * log10(g0Mag);
-    double g0Power = g0Mag * g0Mag;
+    double ival = i[0] / _a2dCountsPerVolt;
+    double qval = q[0] / _a2dCountsPerVolt;
+    double g0Power = ival * ival + qval * qval; // units of V^2
+    double g0PowerDb = 10 * log10(g0Power);
     if (! (pulseSeqNum % 5000)) {
-        DLOG << "At pulse " << pulseSeqNum << ": freq corr. " <<
-            freqCorrection << " Hz, g0 magnitude " << g0Mag << " (" <<
-            g0MagDb << " dB)";
+      DLOG << "At pulse " << pulseSeqNum << ": freq corr. " <<
+        freqCorrection << " Hz, g0 power " << g0Power << " (" <<
+        g0PowerDb << " dB)";
     }
-    _g0Magnitude = g0Mag;
-    _g0PowerDbm = 10.0 * log10(g0Power);
+    _g0Magnitude = sqrt(g0Power);
+    _g0PowerDbm = g0PowerDb;
     _g0PhaseDeg = _argDeg(ival, qval);
-    _g0IvalNorm = ival / g0Mag;
-    _g0QvalNorm = qval / g0Mag;
+    _g0IvalNorm = ival / _g0Magnitude;
+    _g0QvalNorm = qval / _g0Magnitude;
     _g0FreqCorrHz = freqCorrection;
     _g0FreqHz = _config.rcvr_cntr_freq() + freqCorrection;
     
     // Ship the G0 power and frequency offset values to the AFC
-    KaAfc::theAfc().newXmitSample(g0Mag, freqCorrection, pulseSeqNum);
+    KaAfc::theAfc().newXmitSample(g0Power, freqCorrection, pulseSeqNum);
 
 //    -----------------------------------------------------------------------------------
 //

@@ -108,7 +108,7 @@ class KaDrxPub : public QThread {
         
         /// Our associated p7142sd3c
         Pentek::p7142sd3c& _sd3c;
-        
+       
         /// Receiver channel
         unsigned int _chanId;
         
@@ -117,6 +117,10 @@ class KaDrxPub : public QThread {
 
         /// Our associated Pentek downconverter
         Pentek::p7142sd3cDn* _down;
+
+        /// scaling factor between A2D counts and volts
+
+        double _a2dCountsPerVolt;
 
         /**
          * The number of gates being collected by the downconverter
