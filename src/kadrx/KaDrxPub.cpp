@@ -152,8 +152,8 @@ void
 
   time_duration timeFromEpoch = _down->timeOfPulse(pulseSeqNum) - Epoch1970;
   time_t timeSecs = timeFromEpoch.total_seconds();
-  int nanoSecs = (int) (timeFromEpoch.fractional_seconds() * 1.0e9 + 0.5);
-  
+  int nanoSecs = timeFromEpoch.fractional_seconds() * 1000;
+
   if (_chanId == KA_BURST_CHANNEL) {
 
     // allocate on first time

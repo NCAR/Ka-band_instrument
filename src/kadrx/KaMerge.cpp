@@ -207,8 +207,10 @@ void KaMerge::_readNextPulse()
   _timeSecs = _pulseH->getTimeSecs();
   _nanoSecs = _pulseH->getNanoSecs();
   
-  cerr << "_readNextPulse, seqNum, secs, nanoSecs: "
-       << _pulseSeqNum << ", " << _timeSecs << ", " << _nanoSecs << endl;
+  if (! (_pulseSeqNum % 100)) {
+    DLOG << "got 100 pulses, seqNum, secs, nanoSecs: "
+         << _pulseSeqNum << ", " << _timeSecs << ", " << _nanoSecs;
+  }
 
   if (_pulseSeqNum != _prevPulseSeqNum + 1) {
     int nMissing = _prevPulseSeqNum - _pulseSeqNum;
