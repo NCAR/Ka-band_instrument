@@ -62,6 +62,7 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("burst_sample_delay");
     keys.insert("burst_sample_width");
     keys.insert("afc_g0_threshold_dbm");
+    keys.insert("a2d_counts_per_volt");
     return keys;
 }
 
@@ -88,6 +89,7 @@ std::set<std::string> KaDrxConfig::_createBoolLegalKeys() {
     keys.insert("pdpp");
     keys.insert("staggered_prt");
     keys.insert("ldr_mode");
+    keys.insert("cohere_iq_to_burst");
     return keys;
 }
 
@@ -404,6 +406,16 @@ KaDrxConfig::isValid(bool verbose) const {
     if (pulse_interval_per_iwrf_meta_data() == UNSET_INT) {
         if (verbose)
             std::cerr << "'pulse_interval_per_iwrf_meta_data' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (a2d_counts_per_volt() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'a2d_counts_per_volt' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (cohere_iq_to_burst() == UNSET_BOOL) {
+        if (verbose)
+            std::cerr << "'cohere_iq_to_burst' unset in DRX configuration" << std::endl;
         valid = false;
     }
     return valid;

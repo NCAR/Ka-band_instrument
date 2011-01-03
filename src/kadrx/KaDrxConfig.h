@@ -169,6 +169,15 @@ public:
     
     int ddcType() const { return _getIntVal("ddc_type"); } /// 4 or 8
     
+    /// Scaling factor between A2D counts and volts
+    double a2d_counts_per_volt() const {
+        return _getDoubleVal("a2d_counts_per_volt");
+    }
+
+    /// should we cohere the IQ to the burst?
+    int cohere_iq_to_burst() const {
+      return _getBoolVal("cohere_iq_to_burst");
+    }
     /**
      * Fill the given RadarDDS::SysHousekeeping struct from contents of the
      * configuration. Some or all existing contents may be overwritten.
