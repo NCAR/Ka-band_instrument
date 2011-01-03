@@ -39,20 +39,17 @@ public:
     void run();
     
     /// Accept an incoming set of averaged transmit pulse information comprising
-    /// relative g0 power, and calculated frequency offset. This information 
-    /// will be used to adjust oscillator frequencies.
-    /// If this AfcThread is currently in the process of a frequency adjustment,
-    /// the given sample will be ignored. @see adjustmentInProgress()
-    /// @param g0Mag relative g0 power magnitude, in range [0.0,1.0]
+    /// g0 power, and calculated frequency offset. This information will be used
+    /// to adjust oscillator frequencies. If this AfcThread is currently in the 
+    /// process of a frequency adjustment, the given sample will be ignored.
+    /// @param g0Power g0 power, in dBm
     /// @param freqOffset measured frequency offset, in Hz
     /// @param pulseSeqNum pulse number, counted since transmitter startup
-    void newXmitSample(double g0Mag, double freqOffset, int64_t pulseSeqNum);
+    void newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqNum);
     
-    /// Set the G0 threshold power for reliable calculated frequencies. 
-    /// Value is in dB relative to maximum receiver output.
-    /// @param thresh G0 threshold power, in dB relative to maximum receiver 
-    ///     output
-    void setG0ThresholdDb(double thresh);
+    /// Set the G0 threshold power for reliable calculated frequencies, in dBm
+    /// @param thresh G0 threshold power, in dBm
+    void setG0ThresholdDbm(double thresh);
     
     /// Set the AFC fine step in Hz. 
     /// @param step AFC fine step in Hz
@@ -66,10 +63,6 @@ private:
     /// Actually process averaged xmit info to perform the AFC for three 
     /// oscillators. Note that the caller must hold a lock on _mutex when this
     /// method is called!
-    /// @param timetag  int64_t time of the pulse average, in microseconds 
-    ///     since 1970-01-01 00:00:00 UTC
-    /// @param g0MagDb  relative g0 power magnitude
-    /// @param freqOffset   measured frequency offset, in Hz
     void _processXmitAverage();
     
     /// Clear our sums
@@ -113,9 +106,8 @@ private:
     /// oscillator 3: 107-108 MHz (107.50 MHz nominal), 50 kHz step
     KaOscillator3 _osc3;
     
-    /// G0 threshold power for reliable calculated frequencies, in dB relative
-    /// to maximum receiver output
-    double _g0ThreshDb;
+    /// G0 threshold power for reliable calculated frequencies, in dBm
+    double _g0ThreshDbm;
     
     /// Coarse AFC adjustment step, Hz
     unsigned int _coarseStep;
@@ -129,11 +121,11 @@ private:
     /// Number of g0 powers currently summed
     unsigned int _nSummed;
     
-    /// g0 relative power sum
-    double _g0MagSum;
+    /// g0 power sum
+    double _g0PowerSum;
     
-    /// g0 relative power averaged over _nToSum samples
-    double _g0MagAvg;
+    /// g0 power averaged over _nToSum samples
+    double _g0PowerAvg;
     
     /// offset frequency
     double _freqOffset;
@@ -162,13 +154,13 @@ KaAfc::~KaAfc() {
 }
 
 void
-KaAfc::newXmitSample(double g0Mag, double freqOffset, int64_t pulseSeqNum) {
-    _afcPrivate->newXmitSample(g0Mag, freqOffset, pulseSeqNum);
+KaAfc::newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqNum) {
+    _afcPrivate->newXmitSample(g0Power, freqOffset, pulseSeqNum);
 }
 
 void
-KaAfc::setG0ThresholdDb(double thresh)  { 
-    theAfc()._afcPrivate->setG0ThresholdDb(thresh);
+KaAfc::setG0ThresholdDbm(double thresh)  { 
+    theAfc()._afcPrivate->setG0ThresholdDbm(thresh);
 }
 
 void
@@ -188,13 +180,13 @@ KaAfcPrivate::KaAfcPrivate() :
     _osc0("/dev/ttyS0", 0, 100000, 14400, 15000),
     _osc1(TtyOscillator::SIM_OSCILLATOR, 1, 10000, 12750, 13750), 
     _osc3(KaPmc730::thePmc730()),
-    _g0ThreshDb(-25.0),     // -25.0 dB G0 threshold relative power
+    _g0ThreshDbm(-25.0),     // -25.0 dBm G0 threshold power for good frequencies
     _coarseStep(500000),    // 500 kHz coarse step (SEARCHING)
     _fineStep(100000),      // 100 kHz fine step (TRACKING)
     _nToSum(10),
     _nSummed(0),
-    _g0MagSum(0.0),
-    _g0MagAvg(0.0),
+    _g0PowerSum(0.0),
+    _g0PowerAvg(0.0),
     _freqOffset(0.0),
     _lastRcvdPulse(0),
     _pulsesRcvd(0),
@@ -254,10 +246,10 @@ KaAfcPrivate::run() {
 }
 
 void
-KaAfcPrivate::setG0ThresholdDb(double thresh) {
+KaAfcPrivate::setG0ThresholdDbm(double thresh) {
     QMutexLocker locker(&_mutex);
     ILOG << "Setting AFC G0 threshold at " << thresh << " dB";
-    _g0ThreshDb = thresh;
+    _g0ThreshDbm = thresh;
 }
 
 void
@@ -297,7 +289,7 @@ KaAfcPrivate::setFineStep(unsigned int step) {
 }
 
 void
-KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset, 
+KaAfcPrivate::newXmitSample(double g0Power, double freqOffset, 
     int64_t pulseSeqNum) {
     if (!(_pulsesRcvd % 5000))
         ILOG << _pulsesRcvd << " pulses received, " << _pulsesDropped << " dropped";
@@ -319,13 +311,13 @@ KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset,
     _lastRcvdPulse = pulseSeqNum;
     
     // Add to our sums
-    _g0MagSum += g0Mag;
+    _g0PowerSum += g0Power;
     _nSummed++;
     
     // If we've summed the required number of pulses, calculate the averages
     // and wake our thread waiting for the new averages
     if (_nSummed == _nToSum) {
-        _g0MagAvg = _g0MagSum / _nToSum;
+        _g0PowerAvg = _g0PowerSum / _nToSum;
         _freqOffset = freqOffset;
         _clearSum();
         _newAverage.wakeAll();
@@ -336,19 +328,19 @@ KaAfcPrivate::newXmitSample(double g0Mag, double freqOffset,
 
 void
 KaAfcPrivate::_clearSum() {
-    _g0MagSum = 0.0;
+    _g0PowerSum = 0.0;
     _nSummed = 0;
 }
 
 void
 KaAfcPrivate::_processXmitAverage() {
-    double g0MagDb = 10.0 * log10(_g0MagAvg);
+    double g0PowerDbm = 10.0 * log10(_g0PowerAvg) + 30; // +30 for dBW to dBm
 
-    ILOG << "New " << _nToSum << "-pulse average: G0 " << g0MagDb << 
+    ILOG << "New " << _nToSum << "-pulse average: G0 " << g0PowerDbm << 
         " dB, freq offset " << _freqOffset;
 
-    // Set mode based on whether g0MagDb is less than our threshold
-    AfcMode_t newMode = (g0MagDb < _g0ThreshDb) ? AFC_SEARCHING : AFC_TRACKING;
+    // Set mode based on whether g0PowerDbm is less than our threshold
+    AfcMode_t newMode = (g0PowerDbm < _g0ThreshDbm) ? AFC_SEARCHING : AFC_TRACKING;
     
     switch (newMode) {
       // In AFC_SEARCHING mode, step upward in coarse steps through frequencies 
@@ -357,9 +349,9 @@ KaAfcPrivate::_processXmitAverage() {
       {
           // If mode just changed to searching, log it and apply the change
           if (newMode != _afcMode) {
-              WLOG << "G0 relative power " << g0MagDb <<
-                      " dB has dropped below min of " << 
-                      _g0ThreshDb << " db. Returning to SEARCH mode.";
+              WLOG << "G0 power " << g0PowerDbm <<
+                      " dBm has dropped below min of " << 
+                      _g0ThreshDbm << " dBm. Returning to SEARCH mode.";
               // Only sum 10 pulses at a time when in searching mode
               _afcMode = AFC_SEARCHING;
               _nToSum = 10;
@@ -393,7 +385,7 @@ KaAfcPrivate::_processXmitAverage() {
           // If mode just changed to tracking, log it and return to get the next
           // sample over more pulses
           if (newMode != _afcMode) {
-              ILOG << "G0 relative power is high enough, entering tracking mode";
+              ILOG << "G0 power is high enough, entering tracking mode";
               // Sum 50 pulses at a time while in tracking mode
               _afcMode = AFC_TRACKING;
               _nToSum = 50;

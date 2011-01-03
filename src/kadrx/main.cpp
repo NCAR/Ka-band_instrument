@@ -295,7 +295,7 @@ main(int argc, char** argv)
 		createDDSservices();
         
     // set up AFC from the configuration
-    KaAfc::theAfc().setG0ThresholdDb(kaConfig.afc_g0_threshold_db());
+    KaAfc::theAfc().setG0ThresholdDbm(kaConfig.afc_g0_threshold_dbm());
     KaAfc::theAfc().setCoarseStep(kaConfig.afc_coarse_step());
     KaAfc::theAfc().setFineStep(kaConfig.afc_fine_step());
 	

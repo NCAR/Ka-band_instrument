@@ -61,7 +61,7 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("altitude");
     keys.insert("burst_sample_delay");
     keys.insert("burst_sample_width");
-    keys.insert("afc_g0_threshold_db");
+    keys.insert("afc_g0_threshold_dbm");
     return keys;
 }
 
@@ -371,9 +371,9 @@ KaDrxConfig::isValid(bool verbose) const {
             std::cerr << "'external_start_trigger' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (afc_g0_threshold_db() == UNSET_DOUBLE) {
+    if (afc_g0_threshold_dbm() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'afc_g0_threshold_db' unset in DRX configuration" << std::endl;
+            std::cerr << "'afc_g0_threshold_dbm' unset in DRX configuration" << std::endl;
         valid = false;
     }
     if (afc_coarse_step() == UNSET_INT) {

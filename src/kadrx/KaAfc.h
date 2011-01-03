@@ -26,11 +26,9 @@ public:
         return(*_theAfc);
     }
     
-    /// Set the G0 threshold power for reliable calculated frequencies. 
-    /// Value is in dB relative to maximum receiver output.
-    /// @param thresh G0 threshold power, in dB relative to maximum receiver 
-    ///     output
-    static void setG0ThresholdDb(double thresh);
+    /// Set the G0 threshold power for reliable calculated frequencies, in dBm
+    /// @param thresh G0 threshold power, in dBm
+    static void setG0ThresholdDbm(double thresh);
     
     /// Set the AFC fine step in Hz. 
     /// @param step AFC fine step in Hz
@@ -41,14 +39,13 @@ public:
     static void setCoarseStep(unsigned int step);
 
     /// Accept an incoming set of averaged transmit pulse information comprising
-    /// relative g0 power, and calculated frequency offset. This information 
-    /// will be used to adjust oscillator frequencies.
-    /// If this AfcThread is currently in the process of a frequency adjustment,
-    /// the given sample will be ignored. @see adjustmentInProgress()
-    /// @param g0Mag relative g0 power magnitude, in range [0.0,1.0]
+    /// g0 power, and calculated frequency offset. This information will be used
+    /// to adjust oscillator frequencies. If this AfcThread is currently in the 
+    /// process of a frequency adjustment, the given sample will be ignored.
+    /// @param g0Power g0 power, in W
     /// @param freqOffset measured frequency offset, in Hz
     /// @param pulseSeqNum pulse number, counted since transmitter startup
-    void newXmitSample(double g0Mag, double freqOffset, int64_t pulseSeqNuma);
+    void newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqNum);
 protected:
     /// constructor for the singleton instance
     KaAfc();
