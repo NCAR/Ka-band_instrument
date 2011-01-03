@@ -162,10 +162,6 @@ void
       _burstData = new BurstData;
     }
 
-    // compute burst values
-
-    _handleBurst(iq, pulseSeqNum);
-
     // set data in burst object
 
     _burstData->set(pulseSeqNum, timeSecs, nanoSecs,
