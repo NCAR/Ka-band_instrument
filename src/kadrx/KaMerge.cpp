@@ -164,14 +164,54 @@ void KaMerge::run()
 
 {
 
-  // Since we have no event loop, allow thread termination via the terminate()
-  // method.
+  // Since we have no event loop,
+  // allow thread termination via the terminate() method.
+
   setTerminationEnabled(true);
   
   // start the loop
+
   while (true) {
+
+    // read in next pulse
+
     _readNextPulse();
-  }
+
+    // determine number of gates
+
+    int nGates = _pulseH->getNGates();
+    if (nGates < _pulseV->getNGates()) {
+      nGates = _pulseV->getNGates();
+    }
+    
+    // should we send meta-data?
+    
+    bool sendMeta = false;
+    if (nGates != _nGates) {
+      sendMeta = true;
+      _nGates = nGates;
+    }
+    if (_pulseSeqNum % _pulseIntervalPerIwrfMetaData == 0) {
+      sendMeta = true;
+    }
+    
+    if (sendMeta) {
+      _sendIwrfMetaData();
+    }
+    
+    // cohere the IQ data to the burst phase
+    
+    // _cohereIqToBurstPhase();
+    
+    // assemble the IWRF pulse packet
+    
+    _assembleIwrfPulsePacket();
+    
+    // send out the IWRF pulse packet
+    
+    _sendIwrfPulsePacket();
+    
+  } // while
 
 }
 
@@ -219,40 +259,6 @@ void KaMerge::_readNextPulse()
          << _prevPulseSeqNum << ", "
          << _pulseSeqNum << endl;
   }
-
-  // determine number of gates
-
-  int nGates = _pulseH->getNGates();
-  if (nGates < _pulseV->getNGates()) {
-    nGates = _pulseV->getNGates();
-  }
-
-  // should we send meta-data?
-
-  bool sendMeta = false;
-  if (nGates != _nGates) {
-    sendMeta = true;
-    _nGates = nGates;
-  }
-  if (_pulseSeqNum % _pulseIntervalPerIwrfMetaData == 0) {
-    sendMeta = true;
-  }
-
-  if (sendMeta) {
-    _sendIwrfMetaData();
-  }
-
-  // cohere the IQ data to the burst phase
-
-  _cohereIqToBurstPhase();
-
-  // assemble the IWRF pulse packet
-
-  _assembleIwrfPulsePacket();
-
-  // send out the IWRF pulse packet
-  
-  _sendIwrfPulsePacket();
 
 }
 
@@ -552,7 +558,7 @@ void KaMerge::_assembleIwrfPulsePacket()
   _pulseHdr.gate_spacing_m = _tsProc.gate_spacing_m;
 
   memcpy(_pulseBuf, &_pulseHdr, sizeof(_pulseHdr));
-  
+
 }
 
 /////////////////////////////////////////////////////////////////////////////

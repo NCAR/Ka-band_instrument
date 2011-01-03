@@ -8,6 +8,7 @@
 #include <radar/iwrf_data.h>
 #include <toolsa/ServerSocket.hh>
 #include <QThread>
+#include <boost/thread/mutex.hpp>
 
 /// KaMerge merges data from the H and V channels, and the burst channel,
 /// converts to IWRF time series format and writes the IWRF data to a client
@@ -66,6 +67,8 @@ public:
   // Returns burst data object for recycling
 
   BurstData *writeBurst(BurstData *val);
+
+  boost::mutex printMutex;
 
 private:
 
