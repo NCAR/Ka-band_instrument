@@ -36,16 +36,21 @@ afc_g0_threshold_dbm    -50.0	  # minimum G0 power for good frequency estimates
 afc_coarse_step         5000000	# Hz
 afc_fine_step           100000	# Hz
 
+a2d_counts_per_volt    327670.0 # full scale (32767) = 0.1 V
+
 # FL1 location
 latitude                40.03794
 longitude               -105.24127
 altitude                1609
 
-# merge queue sizes
+# processing the IQ data - should we cohere to the burst?
 
-merge_queue_size        128     # size of queue which acts as buffer
-                                # for the merge
+cohere_iq_to_burst    0
 
+# merge queue size
+
+merge_queue_size       2048      # size of queue which acts as buffer
+                                 # for the merge
 # IWRF data export
 
 iwrf_server_tcp_port    12000   # TCP port
