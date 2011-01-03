@@ -53,6 +53,11 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _pulseIntervalPerIwrfMetaData =
     config.pulse_interval_per_iwrf_meta_data();
 
+  // scaling between A2D counts and volts
+  
+  _a2dCountsPerVolt = _config.a2d_counts_per_volt();
+  _cohereIqToBurst = _config.cohere_iq_to_burst();
+
   // pulse seq num and times
 
   _pulseSeqNum = -1;
@@ -201,7 +206,9 @@ void KaMerge::run()
     
     // cohere the IQ data to the burst phase
     
-    // _cohereIqToBurstPhase();
+    if (_cohereIqToBurst) {
+      _cohereIqToBurstPhase();
+    }
     
     // assemble the IWRF pulse packet
     
@@ -543,7 +550,7 @@ void KaMerge::_assembleIwrfPulsePacket()
   _pulseHdr.n_channels = 2;
   _pulseHdr.iq_encoding = IWRF_IQ_ENCODING_SCALED_SI16;
   _pulseHdr.hv_flag = 1;
-  _pulseHdr.phase_cohered = 1;
+  _pulseHdr.phase_cohered = _cohereIqToBurst;
   _pulseHdr.n_data = _nGates * 4;
   _pulseHdr.iq_offset[0] = 0;
   _pulseHdr.iq_offset[1] = _nGates * 2;
@@ -551,7 +558,7 @@ void KaMerge::_assembleIwrfPulsePacket()
   _pulseHdr.burst_mag[1] = _burst->getG0Magnitude();
   _pulseHdr.burst_arg[0] = _burst->getG0PhaseDeg();
   _pulseHdr.burst_arg[1] = _burst->getG0PhaseDeg();
-  _pulseHdr.scale = 1.0 / 65536.0;
+  _pulseHdr.scale = 1.0 / _a2dCountsPerVolt;
   _pulseHdr.offset = 0.0;
   _pulseHdr.n_gates_burst = 0;
   _pulseHdr.start_range_m = _tsProc.start_range_m;

@@ -101,6 +101,8 @@ private:
   int16_t *_iq;
   char *_pulseBuf;
   int _pulseBufLen;
+  double _a2dCountsPerVolt;
+  bool _cohereIqToBurst;
 
   /// pulse sequence number and times
   
