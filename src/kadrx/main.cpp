@@ -294,11 +294,6 @@ main(int argc, char** argv)
 	if (_publish)
 		createDDSservices();
         
-    // set up AFC from the configuration
-    KaAfc::theAfc().setG0ThresholdDbm(kaConfig.afc_g0_threshold_dbm());
-    KaAfc::theAfc().setCoarseStep(kaConfig.afc_coarse_step());
-    KaAfc::theAfc().setFineStep(kaConfig.afc_fine_step());
-	
     // Instantiate our p7142sd3c
     Pentek::p7142sd3c sd3c(_devRoot, _simulate, kaConfig.tx_delay(),
         kaConfig.tx_pulse_width(), kaConfig.prt1(), kaConfig.prt2(),
@@ -327,6 +322,12 @@ main(int argc, char** argv)
     Pentek::p7142Up & upConverter = *sd3c.addUpconverter("0C", 
         sd3c.adcFrequency(), sd3c.adcFrequency() / 4, 9); 
 
+    // set up AFC from the configuration
+    KaAfc::theAfc().setG0ThresholdDbm(kaConfig.afc_g0_threshold_dbm());
+    KaAfc::theAfc().setCoarseStep(kaConfig.afc_coarse_step());
+    KaAfc::theAfc().setFineStep(kaConfig.afc_fine_step());
+    KaAfc::theAfc().setMaxDataLatency(burstThread.downconverter()->dataInterruptPeriod());
+    
     // catch a control-C
     signal(SIGINT, sigHandler);
 
