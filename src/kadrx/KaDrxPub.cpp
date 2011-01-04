@@ -313,10 +313,6 @@ KaDrxPub::_configIsValid() const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
-// @TODO remove this when we're done with the temporary BurstFile stuff below
-//static FILE* BurstFile = 0;
-
 void
 KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     // initialize variables
@@ -376,44 +372,6 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     
     // Ship the G0 power and frequency offset values to the AFC
     KaAfc::theAfc().newXmitSample(g0Power, freqCorrection, pulseSeqNum);
-
-//    -----------------------------------------------------------------------------------
-//
-//    // Phase correction -- runs every hit
-//    // Correct Phase of original signal by normalized initial vector
-//    // Ih and Qh contain Horizontally received data; Iv and Qv contained vertically received data
-//
-//    for(i=1:1:ngates)
-//    // Correct Horizontal Channel    
-//
-//        ibcorrh(i) = ib(1)*invg0mag*Ih(i) - qb(1)*invg0mag*Qh(i);
-//        qbcorrh(i) = qb(1)*invg0mag*Ih(i) + ib(1)*invg0mag*Qh(i);
-//
-//    // Correct Vertical Channel  
-//
-//        ibcorrv(i) = ib(1)*invg0mag*Iv(i) - qb(1)*invg0mag*Qv(i);
-//        qbcorrv(i) = qb(1)*invg0mag*Iv(i) + ib(1)*invg0mag*Qv(i);
-//
-//    end
-    
-//    // Write data directly to a simple CSV text file
-//    if (! BurstFile) {
-//        char ofilename[80];
-//        sprintf(ofilename, "Ka_burst_%lld.csv", timetag / 1000000);
-//        BurstFile = fopen(ofilename, "a");
-//        if (! BurstFile) {
-//            std::cerr << "Error opening burst CSV file: " << ofilename <<
-//                    std::endl;
-//            exit(1);
-//        }
-//    }
-//    double dtime = timetag * 1.0e-6;
-//    fprintf(BurstFile, "%.6f", dtime);
-//    for (unsigned int g = 0; g < _nGates; g++) {
-//        fprintf(BurstFile, ",%d,%d", iqData[2 * g], iqData[2 * g + 1]);
-//    }
-//    fprintf(BurstFile, "\n");
-//    fflush(BurstFile);
 }
 
 /*
