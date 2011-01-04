@@ -59,6 +59,12 @@ public:
     /// @param step AFC coarse step in Hz
     void setCoarseStep(unsigned int step);
 
+    /// Set the maximum data latency for the burst data, in seconds. After
+    /// an oscillator adjustment is applied, the processing thread sleeps for
+    /// this amount of time so that the next data allowed in will be from after
+    /// the oscillators are at their new frequencies.
+    void setMaxDataLatency(double maxDataLatency);
+
 private:
     /// Actually process averaged xmit info to perform the AFC for three 
     /// oscillators. Note that the caller must hold a lock on _mutex when this
@@ -138,6 +144,9 @@ private:
     
     /// number of pulses dropped by newXmitSample()
     int64_t _pulsesDropped;
+    
+    /// maximum data latency for burst data, in seconds
+    double _maxDataLatency;
 };
 
 KaAfc::KaAfc() {
@@ -173,6 +182,11 @@ KaAfc::setFineStep(unsigned int step)  {
     theAfc()._afcPrivate->setFineStep(step);
 }
 
+void
+KaAfc::setMaxDataLatency(double maxDataLatency) {
+    theAfc()._afcPrivate->setMaxDataLatency(maxDataLatency);
+}
+
 KaAfcPrivate::KaAfcPrivate() :
     QThread(),
     _mutex(QMutex::NonRecursive),   // must be non-recursive for QWaitCondition!
@@ -190,7 +204,8 @@ KaAfcPrivate::KaAfcPrivate() :
     _freqOffset(0.0),
     _lastRcvdPulse(0),
     _pulsesRcvd(0),
-    _pulsesDropped(0) {
+    _pulsesDropped(0),
+    _maxDataLatency(0.0) {
     // Enable termination via terminate(), since we don't have a Qt event loop.
     setTerminationEnabled(true);
     // Set the initial oscillator frequencies
@@ -209,7 +224,7 @@ KaAfcPrivate::_setOscillators(unsigned int osc0ScaledFreq,
     // Set starting frequencies for all three oscillators. We try as many times
     // as necessary...
     for (int attempt = 0; !(osc0_OK && osc1_OK && osc3_OK); attempt++) {
-        // Initiate the frequency settings for the three osillators in parallel,
+        // Initiate the frequency settings for the three oscillators in parallel,
         // since it's a slow asynchronous process...
         if (! osc0_OK) {
             if (attempt > 0)
@@ -288,6 +303,12 @@ KaAfcPrivate::setFineStep(unsigned int step) {
     }
     ILOG << "Setting AFC fine step to " << step << " Hz";
     _fineStep = step;
+}
+
+void
+KaAfcPrivate::setMaxDataLatency(double maxDataLatency) {
+    ILOG << "Setting AFC maximum data latency to " << maxDataLatency << " seconds";
+    _maxDataLatency = maxDataLatency;
 }
 
 void
@@ -438,8 +459,8 @@ KaAfcPrivate::_processXmitAverage() {
           break;
       }
     }
-    // (Temporary) data latency sleep. The sleep time should be longer than the
-    // expected data latency for the burst channel, which is related to the 
-    // p7142 channel intbufsize.
-    sleep(1);
+    // Data latency sleep, with time equal to the expected data latency for the 
+    // burst channel. This assures that the next data we allow to come in 
+    // will be using the new frequencies.
+    usleep(1.0e6 * _maxDataLatency);
 }

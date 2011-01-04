@@ -37,6 +37,12 @@ public:
     /// Set the AFC coarse step in Hz. 
     /// @param step AFC coarse step in Hz
     static void setCoarseStep(unsigned int step);
+    
+    /// Set the maximum data latency for the burst data, in seconds. After
+    /// an oscillator adjustment is applied, the processing thread sleeps for
+    /// this amount of time so that the next data allowed in will be from after
+    /// the oscillators are at their new frequencies.
+    static void setMaxDataLatency(double maxDataLatency);
 
     /// Accept an incoming set of averaged transmit pulse information comprising
     /// g0 power, and calculated frequency offset. This information will be used
