@@ -459,8 +459,8 @@ KaAfcPrivate::_processXmitAverage() {
           break;
       }
     }
-    // Data latency sleep, with time equal to the expected data latency for the 
+    // Sleep for a time equal to the expected data latency for the 
     // burst channel. This assures that the next data we allow to come in 
     // will be using the new frequencies.
-    usleep(1.0e6 * _maxDataLatency);
+    usleep((unsigned int)(1.0e6 * _maxDataLatency));
 }
