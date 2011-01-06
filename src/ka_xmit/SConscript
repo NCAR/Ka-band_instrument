@@ -1,0 +1,27 @@
+# -*- python -*-
+
+tools = Split("""
+logx
+doxygen
+xmlrpc_server_abyss++
+xmlrpc_client++
+""")
+
+env = Environment(tools = ['default'] + tools)
+
+xmitd_sources = Split("""
+ka_xmitd.cpp
+""")
+
+ka_xmitd = env.Program('ka_xmitd', xmitd_sources)
+
+xmitctl_sources = Split("""
+ka_xmitctl.cpp
+""")
+
+ka_xmitctl = env.Program('ka_xmitctl', xmitctl_sources)
+
+html = env.Apidocs(xmitd_sources + xmitctl_sources, DOXYFILE_FILE = "Doxyfile")
+
+Default(ka_xmitd, ka_xmitctl, html)
+
