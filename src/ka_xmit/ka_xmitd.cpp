@@ -19,47 +19,6 @@ LOGGING("ka_xmitd")
 
 KaXmitter xmitter("/dev/ttyS0");
 
-// logical OR of all of the transmitter fault bits
-bool FaultSummary = false;
-// HVPS has been commanded ON
-bool HvpsRunup = false;
-// transmitter ready for HV on
-bool Standby = false;
-// heater 3-minute warmup is in progress
-bool HeaterWarmup = false;
-// 3-minute transmitter cooldown period is in progress
-bool Cooldown = false;
-// transmitter contactor energized and unit not in cooldown
-bool UnitOn = false;
-// magnetron over-current detected
-bool MagnetronCurrentFault = false;
-// blower speed detector indicates that the blower is stopped
-bool BlowerFault = false;
-// all HV power supplies have cleared the preset low limits and HV is on
-bool HvpsOn = false;
-// the unit is ready to accept remote commands
-bool RemoteEnabled = false;
-// power transmitter door/cover is open
-bool SafetyInterlock = false;
-// VSWR greater than 2:1 load mismatch
-bool ReversePowerFault = false;
-// transmitter input pulse has exceeded the duty cycle or PRF limits
-bool PulseInputFault = false;
-// HVPS protection has detected over-current
-bool HvpsCurrentFault = false;
-// waveguide pressure too low
-bool WaveguidePressureFault = false;
-// HVPS voltage too low
-bool HvpsUnderVoltage = false;
-// HVPS voltage too high
-bool HvpsOverVoltage = false;
-// HVPS voltage, kV
-double HvpsVoltage = -99.99;
-// magnetron average current, mA
-double MagnetronCurrent = -99.99;
-// HVPS current, mA
-double HvpsCurrent = -99.99;
-
 // Our RPC server
 using namespace XmlRpc;
 XmlRpcServer RpcServer;
@@ -196,32 +155,31 @@ class GetStatusMethod : public XmlRpcServerMethod {
 public:
     GetStatusMethod(XmlRpcServer *s) : XmlRpcServerMethod("getStatus", s) {}
     void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
-
-        assert(paramList.size() == 0);
-        ILOG << "in getStatus()";
-        XmlRpcValue structData;
-        structData["fault_summary"] = XmlRpcValue(xmitter.getFaultSummary());
-        structData["hvps_runup"] = XmlRpcValue(xmitter.getHvpsRunup());
-        structData["standby"] = XmlRpcValue(xmitter.getStandby());
-        structData["heater_warmup"] = XmlRpcValue(xmitter.getHeaterWarmup());
-        structData["cooldown"] = XmlRpcValue(xmitter.getCooldown());
-        structData["unit_on"] = XmlRpcValue(xmitter.getUnitOn());
-        structData["magnetron_current_fault"] = XmlRpcValue(xmitter.getMagnetronCurrentFault());
-        structData["blower_fault"] = XmlRpcValue(xmitter.getBlowerFault());
-        structData["hvps_on"] = XmlRpcValue(xmitter.getHvpsOn());
-        structData["remote_enabled"] = XmlRpcValue(xmitter.getRemoteEnabled());
-        structData["safety_interlock"] = XmlRpcValue(xmitter.getSafetyInterlock());
-        structData["reverse_power_fault"] = XmlRpcValue(xmitter.getReversePowerFault());
-        structData["pulse_input_fault"] = XmlRpcValue(xmitter.getPulseInputFault());
-        structData["hvps_current_fault"] = XmlRpcValue(xmitter.getHvpsCurrentFault());
-        structData["waveguide_pressure_fault"] = XmlRpcValue(xmitter.getWaveguidePressureFault());
-        structData["hvps_under_voltage"] = XmlRpcValue(xmitter.getHvpsUnderVoltage());
-        structData["hvps_over_voltage"] = XmlRpcValue(xmitter.getHvpsOverVoltage());
-        structData["hvps_voltage"] = XmlRpcValue(xmitter.getHvpsVoltage());
-        structData["magnetron_current"] = XmlRpcValue(xmitter.getMagnetronCurrent());
-        structData["hvps_current"] = XmlRpcValue(xmitter.getHvpsCurrent());
+        // Construct an XML-RPC <struct> (more accurately a dictionary)
+        // containing all of the transmitter status values.
+        XmlRpcValue statusDict;
+        statusDict["fault_summary"] = XmlRpcValue(xmitter.getFaultSummary());
+        statusDict["hvps_runup"] = XmlRpcValue(xmitter.getHvpsRunup());
+        statusDict["standby"] = XmlRpcValue(xmitter.getStandby());
+        statusDict["heater_warmup"] = XmlRpcValue(xmitter.getHeaterWarmup());
+        statusDict["cooldown"] = XmlRpcValue(xmitter.getCooldown());
+        statusDict["unit_on"] = XmlRpcValue(xmitter.getUnitOn());
+        statusDict["magnetron_current_fault"] = XmlRpcValue(xmitter.getMagnetronCurrentFault());
+        statusDict["blower_fault"] = XmlRpcValue(xmitter.getBlowerFault());
+        statusDict["hvps_on"] = XmlRpcValue(xmitter.getHvpsOn());
+        statusDict["remote_enabled"] = XmlRpcValue(xmitter.getRemoteEnabled());
+        statusDict["safety_interlock"] = XmlRpcValue(xmitter.getSafetyInterlock());
+        statusDict["reverse_power_fault"] = XmlRpcValue(xmitter.getReversePowerFault());
+        statusDict["pulse_input_fault"] = XmlRpcValue(xmitter.getPulseInputFault());
+        statusDict["hvps_current_fault"] = XmlRpcValue(xmitter.getHvpsCurrentFault());
+        statusDict["waveguide_pressure_fault"] = XmlRpcValue(xmitter.getWaveguidePressureFault());
+        statusDict["hvps_under_voltage"] = XmlRpcValue(xmitter.getHvpsUnderVoltage());
+        statusDict["hvps_over_voltage"] = XmlRpcValue(xmitter.getHvpsOverVoltage());
+        statusDict["hvps_voltage"] = XmlRpcValue(xmitter.getHvpsVoltage());
+        statusDict["magnetron_current"] = XmlRpcValue(xmitter.getMagnetronCurrent());
+        statusDict["hvps_current"] = XmlRpcValue(xmitter.getHvpsCurrent());
         
-        retvalP = structData;
+        retvalP = statusDict;
     }
 } getStatusMethod(&RpcServer);
 
