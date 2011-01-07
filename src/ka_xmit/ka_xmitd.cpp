@@ -6,15 +6,18 @@
  */
 
 #include <string>
-#include <stdexcept>
-#include <iostream>
+#include <cassert>
 #include <unistd.h>
 
 #include <logx/Logging.h>
 
 #include <XmlRpc.h>
 
+#include "KaXmitter.h"
+
 LOGGING("ka_xmitd")
+
+KaXmitter xmitter("/dev/ttyS0");
 
 // logical OR of all of the transmitter fault bits
 bool FaultSummary = false;
@@ -194,29 +197,29 @@ public:
     GetStatusMethod(XmlRpcServer *s) : XmlRpcServerMethod("getStatus", s) {}
     void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
 
-//        paramList.verifyEnd(0);
+        assert(paramList.size() == 0);
         ILOG << "in getStatus()";
         XmlRpcValue structData;
-        structData["fault_summary"] = XmlRpcValue(FaultSummary);
-        structData["hvps_runup"] = XmlRpcValue(HvpsRunup);
-        structData["standby"] = XmlRpcValue(Standby);
-        structData["heater_warmup"] = XmlRpcValue(HeaterWarmup);
-        structData["cooldown"] = XmlRpcValue(Cooldown);
-        structData["unit_on"] = XmlRpcValue(UnitOn);
-        structData["magnetron_current_fault"] = XmlRpcValue(MagnetronCurrentFault);
-        structData["blower_fault"] = XmlRpcValue(BlowerFault);
-        structData["hvps_on"] = XmlRpcValue(HvpsOn);
-        structData["remote_enabled"] = XmlRpcValue(RemoteEnabled);
-        structData["safety_interlock"] = XmlRpcValue(SafetyInterlock);
-        structData["reverse_power_fault"] = XmlRpcValue(ReversePowerFault);
-        structData["pulse_input_fault"] = XmlRpcValue(PulseInputFault);
-        structData["hvps_current_fault"] = XmlRpcValue(HvpsCurrentFault);
-        structData["waveguide_pressure_fault"] = XmlRpcValue(WaveguidePressureFault);
-        structData["hvps_under_voltage"] = XmlRpcValue(HvpsUnderVoltage);
-        structData["hvps_over_voltage"] = XmlRpcValue(HvpsOverVoltage);
-        structData["hvps_voltage"] = XmlRpcValue(HvpsVoltage);
-        structData["magnetron_current"] = XmlRpcValue(MagnetronCurrent);
-        structData["hvps_current"] = XmlRpcValue(HvpsCurrent);
+        structData["fault_summary"] = XmlRpcValue(xmitter.getFaultSummary());
+        structData["hvps_runup"] = XmlRpcValue(xmitter.getHvpsRunup());
+        structData["standby"] = XmlRpcValue(xmitter.getStandby());
+        structData["heater_warmup"] = XmlRpcValue(xmitter.getHeaterWarmup());
+        structData["cooldown"] = XmlRpcValue(xmitter.getCooldown());
+        structData["unit_on"] = XmlRpcValue(xmitter.getUnitOn());
+        structData["magnetron_current_fault"] = XmlRpcValue(xmitter.getMagnetronCurrentFault());
+        structData["blower_fault"] = XmlRpcValue(xmitter.getBlowerFault());
+        structData["hvps_on"] = XmlRpcValue(xmitter.getHvpsOn());
+        structData["remote_enabled"] = XmlRpcValue(xmitter.getRemoteEnabled());
+        structData["safety_interlock"] = XmlRpcValue(xmitter.getSafetyInterlock());
+        structData["reverse_power_fault"] = XmlRpcValue(xmitter.getReversePowerFault());
+        structData["pulse_input_fault"] = XmlRpcValue(xmitter.getPulseInputFault());
+        structData["hvps_current_fault"] = XmlRpcValue(xmitter.getHvpsCurrentFault());
+        structData["waveguide_pressure_fault"] = XmlRpcValue(xmitter.getWaveguidePressureFault());
+        structData["hvps_under_voltage"] = XmlRpcValue(xmitter.getHvpsUnderVoltage());
+        structData["hvps_over_voltage"] = XmlRpcValue(xmitter.getHvpsOverVoltage());
+        structData["hvps_voltage"] = XmlRpcValue(xmitter.getHvpsVoltage());
+        structData["magnetron_current"] = XmlRpcValue(xmitter.getMagnetronCurrent());
+        structData["hvps_current"] = XmlRpcValue(xmitter.getHvpsCurrent());
         
         retvalP = structData;
     }

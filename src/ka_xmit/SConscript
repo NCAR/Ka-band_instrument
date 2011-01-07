@@ -10,6 +10,7 @@ env = Environment(tools = ['default'] + tools)
 
 xmitd_sources = Split("""
 ka_xmitd.cpp
+KaXmitter.cpp
 """)
 ka_xmitd = env.Program('ka_xmitd', xmitd_sources)
 Default(ka_xmitd)
@@ -20,5 +21,10 @@ ka_xmitctl.cpp
 ka_xmitctl = env.Program('ka_xmitctl', xmitctl_sources)
 Default(ka_xmitctl)
 
-html = env.Apidocs(xmitd_sources + xmitctl_sources, DOXYFILE_FILE = "Doxyfile")
+headers = Split("""
+KaXmitter.h
+""")
+
+html = env.Apidocs(xmitd_sources + xmitctl_sources + headers, 
+                   DOXYFILE_FILE = "Doxyfile")
 Default(html)
