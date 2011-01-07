@@ -5,18 +5,14 @@
  *      Author: burghart
  */
 
-#include <cassert>
 #include <string>
-#include <map>
 #include <stdexcept>
 #include <iostream>
 #include <unistd.h>
 
 #include <logx/Logging.h>
 
-#include <xmlrpc-c/base.hpp>
-#include <xmlrpc-c/registry.hpp>
-#include <xmlrpc-c/server_abyss.hpp>
+#include <XmlRpc.h>
 
 LOGGING("ka_xmitd")
 
@@ -60,6 +56,10 @@ double HvpsVoltage = -99.99;
 double MagnetronCurrent = -99.99;
 // HVPS current, mA
 double HvpsCurrent = -99.99;
+
+// Our RPC server
+using namespace XmlRpc;
+XmlRpcServer RpcServer;
 
 /// Xmlrpc++ method to get transmitter status from ka_xmitd. The method
 /// returns a xmlrpc_c::value_struct, which can be cast into a dictionary
@@ -189,46 +189,38 @@ double HvpsCurrent = -99.99;
 ///     bool hvpsOn = statusDict["hvps_on"].cvalue();
 ///     double hvpsCurrent = statusDict["hvps_current"].cvalue();
 /// @endcode
-class getStatusMethod : public xmlrpc_c::method {
+class GetStatusMethod : public XmlRpcServerMethod {
 public:
-    getStatusMethod() {
-        /// Return a struct 
-        this->_signature = "S:";
-        // method's result and two arguments are integers
-        this->_help = 
-            "This method returns a dictionary containing the current transmitter status";
-    }
-    void
-    execute(xmlrpc_c::paramList const& paramList,
-            xmlrpc_c::value * const retvalP) {
+    GetStatusMethod(XmlRpcServer *s) : XmlRpcServerMethod("getStatus", s) {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
 
-        paramList.verifyEnd(0);
-
-        std::map<std::string, xmlrpc_c::value> structData;
-        structData["fault_summary"] = xmlrpc_c::value_boolean(FaultSummary);
-        structData["hvps_runup"] = xmlrpc_c::value_boolean(HvpsRunup);
-        structData["standby"] = xmlrpc_c::value_boolean(Standby);
-        structData["heater_warmup"] = xmlrpc_c::value_boolean(HeaterWarmup);
-        structData["cooldown"] = xmlrpc_c::value_boolean(Cooldown);
-        structData["unit_on"] = xmlrpc_c::value_boolean(UnitOn);
-        structData["magnetron_current_fault"] = xmlrpc_c::value_boolean(MagnetronCurrentFault);
-        structData["blower_fault"] = xmlrpc_c::value_boolean(BlowerFault);
-        structData["hvps_on"] = xmlrpc_c::value_boolean(HvpsOn);
-        structData["remote_enabled"] = xmlrpc_c::value_boolean(RemoteEnabled);
-        structData["safety_interlock"] = xmlrpc_c::value_boolean(SafetyInterlock);
-        structData["reverse_power_fault"] = xmlrpc_c::value_boolean(ReversePowerFault);
-        structData["pulse_input_fault"] = xmlrpc_c::value_boolean(PulseInputFault);
-        structData["hvps_current_fault"] = xmlrpc_c::value_boolean(HvpsCurrentFault);
-        structData["waveguide_pressure_fault"] = xmlrpc_c::value_boolean(WaveguidePressureFault);
-        structData["hvps_under_voltage"] = xmlrpc_c::value_boolean(HvpsUnderVoltage);
-        structData["hvps_over_voltage"] = xmlrpc_c::value_boolean(HvpsOverVoltage);
-        structData["hvps_voltage"] = xmlrpc_c::value_double(HvpsVoltage);
-        structData["magnetron_current"] = xmlrpc_c::value_double(MagnetronCurrent);
-        structData["hvps_current"] = xmlrpc_c::value_double(HvpsCurrent);
+//        paramList.verifyEnd(0);
+        ILOG << "in getStatus()";
+        XmlRpcValue structData;
+        structData["fault_summary"] = XmlRpcValue(FaultSummary);
+        structData["hvps_runup"] = XmlRpcValue(HvpsRunup);
+        structData["standby"] = XmlRpcValue(Standby);
+        structData["heater_warmup"] = XmlRpcValue(HeaterWarmup);
+        structData["cooldown"] = XmlRpcValue(Cooldown);
+        structData["unit_on"] = XmlRpcValue(UnitOn);
+        structData["magnetron_current_fault"] = XmlRpcValue(MagnetronCurrentFault);
+        structData["blower_fault"] = XmlRpcValue(BlowerFault);
+        structData["hvps_on"] = XmlRpcValue(HvpsOn);
+        structData["remote_enabled"] = XmlRpcValue(RemoteEnabled);
+        structData["safety_interlock"] = XmlRpcValue(SafetyInterlock);
+        structData["reverse_power_fault"] = XmlRpcValue(ReversePowerFault);
+        structData["pulse_input_fault"] = XmlRpcValue(PulseInputFault);
+        structData["hvps_current_fault"] = XmlRpcValue(HvpsCurrentFault);
+        structData["waveguide_pressure_fault"] = XmlRpcValue(WaveguidePressureFault);
+        structData["hvps_under_voltage"] = XmlRpcValue(HvpsUnderVoltage);
+        structData["hvps_over_voltage"] = XmlRpcValue(HvpsOverVoltage);
+        structData["hvps_voltage"] = XmlRpcValue(HvpsVoltage);
+        structData["magnetron_current"] = XmlRpcValue(MagnetronCurrent);
+        structData["hvps_current"] = XmlRpcValue(HvpsCurrent);
         
-        *retvalP = xmlrpc_c::value_struct(structData);
+        retvalP = structData;
     }
-};
+} getStatusMethod(&RpcServer);
 
 
 
@@ -236,24 +228,13 @@ int
 main(int argc, char *argv[]) {
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
-    
-    try {
-        xmlrpc_c::registry myRegistry;
 
-        xmlrpc_c::methodPtr const getStatusMethodP(new getStatusMethod);
+    // Initialize our RPC server
+    RpcServer.bindAndListen(8080);
+    RpcServer.enableIntrospection(true);
 
-        myRegistry.addMethod("getStatus", getStatusMethodP);
-
-        xmlrpc_c::serverAbyss myAbyssServer(
-                xmlrpc_c::serverAbyss::constrOpt()
-        .registryP(&myRegistry)
-        .portNumber(8080));
-
-        myAbyssServer.run();
-        // xmlrpc_c::serverAbyss.run() never returns
-        assert(false);
-    } catch (std::exception const& e) {
-        ELOG << __PRETTY_FUNCTION__ << "Something failed. " << e.what();
+    while (true) {
+        RpcServer.work(1.0);
     }
     return 0;
 } 

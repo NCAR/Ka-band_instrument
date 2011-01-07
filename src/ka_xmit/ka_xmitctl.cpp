@@ -7,8 +7,8 @@
 
 #include <logx/Logging.h>
 
-#include <xmlrpc-c/base.hpp>
-#include <xmlrpc-c/client_simple.hpp>
+#include <XmlRpc.h>
+using namespace XmlRpc;
 
 LOGGING("ka_xmitctl")
 
@@ -17,20 +17,21 @@ main(int argc, char *argv[]) {
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
     
+    XmlRpcClient client("localhost", 8080);
+    
     try {
-        xmlrpc_c::clientSimple client;
-        // Get the transmitter status from ka_xmitd
-        xmlrpc_c::value result;
-        client.call("http://localhost:8080/RPC2", "getStatus", "", &result);
-
-        // cast the xmlrpc_c::value_struct into a map<string,value> dictionary
-        std::map<std::string, xmlrpc_c::value> statusDict = xmlrpc_c::value_struct(result);
+        XmlRpcValue noArgs;
+        XmlRpcValue statusDict;
+        client.execute("getStatus", noArgs, statusDict);
 
         // extract a couple of values from the dictionary
-        bool hvpsOn = xmlrpc_c::value_boolean(statusDict["hvps_on"]);
-        double hvpsCurrent = xmlrpc_c::value_double(statusDict["hvps_current"]);
+        ILOG << "statusDict.hasMember('hvps_on'): " << 
+                statusDict.hasMember("hvps_on") << ", value: " <<
+                bool(statusDict["hvps_on"]);
+        bool hvpsOn = statusDict["hvps_on"];
+        double hvpsCurrent = statusDict["hvps_current"];
         ILOG << "HVPS on: " << hvpsOn << ", HVPS current: " << hvpsCurrent;
-    } catch (std::exception const& e) {
-        ELOG << "xmlrpc++ client threw error: " << e.what();
+    } catch (XmlRpcException const& e) {
+        ELOG << "xmlrpc++ client threw error: " << e.getMessage();
     }
 }
