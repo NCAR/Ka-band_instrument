@@ -23,15 +23,15 @@ main(int argc, char *argv[]) {
         XmlRpcValue noArgs;
         XmlRpcValue statusDict;
         client.execute("getStatus", noArgs, statusDict);
+        if (client.isFault()) {
+            WLOG << "Server fault on getStatus";
+        }
 
         // extract a couple of values from the dictionary
-        ILOG << "statusDict.hasMember('hvps_on'): " << 
-                statusDict.hasMember("hvps_on") << ", value: " <<
-                bool(statusDict["hvps_on"]);
         bool hvpsOn = statusDict["hvps_on"];
         double hvpsCurrent = statusDict["hvps_current"];
         ILOG << "HVPS on: " << hvpsOn << ", HVPS current: " << hvpsCurrent;
     } catch (XmlRpcException const& e) {
-        ELOG << "xmlrpc++ client threw error: " << e.getMessage();
+        ELOG << "xmlrpc++ client threw exception: " << e.getMessage();
     }
 }
