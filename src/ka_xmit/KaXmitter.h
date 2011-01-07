@@ -124,6 +124,11 @@ public:
      */
     double getHvpsCurrent() const { return _hvpsCurrent; }
     
+    /**
+     * Device name to use when creating a simulation KaXmitter.
+     */
+    static const std::string SIM_DEVICE;
+        
 private:
     bool _faultSummary;
     bool _hvpsRunup;
@@ -145,6 +150,10 @@ private:
     double _hvpsVoltage;        // kV
     double _magnetronCurrent;   // mA
     double _hvpsCurrent;        // mA
+    
+    bool _simulate;
+    std::string _ttyDev;
+    int _fd;
 };
 
 #endif /* KAXMITTER_H_ */

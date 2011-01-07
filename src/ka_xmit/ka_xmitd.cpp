@@ -17,7 +17,7 @@
 
 LOGGING("ka_xmitd")
 
-KaXmitter xmitter("/dev/ttyS0");
+KaXmitter xmitter(KaXmitter::SIM_DEVICE);
 
 // Our RPC server
 using namespace XmlRpc;
