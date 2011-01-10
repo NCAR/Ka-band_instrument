@@ -123,6 +123,11 @@ public:
      * @return HVPS current, in mA
      */
     double getHvpsCurrent() const { return _hvpsCurrent; }
+    /**
+     * Return transmitter temperature, in C
+     * @return transmitter temperature, in C
+     */
+    double getTemperature() const { return _temperature; }
     
     /**
      * Device name to use when creating a simulation KaXmitter.
@@ -130,6 +135,40 @@ public:
     static const std::string SIM_DEVICE;
         
 private:
+    /**
+     * Get status from the transmitter, which includes 17 boolean flags,
+     * HVPS voltage and current, magnetron current, and transmitter temperature.
+     */
+    void _getStatus();
+    
+    /**
+     * Send a command to the transmitter.
+     */
+    void _sendCommand(std::string cmd);
+    
+    /**
+     * Is the argument string (command or reply) valid?
+     * @return true iff the argument string is valid, including its checksum
+     */
+    bool _argValid(std::string arg);
+    
+    /**
+     * Wait for input on our file descriptor, with a timeout specified in
+     * milliseconds. 
+     * @return 0 when input is ready, -1 if the select timed out, -2 on
+     *      select error
+     */
+    int _readSelect(unsigned int timeoutMsecs);
+    
+    // Command strings for the transmitter
+    static const std::string _OPERATE_COMMAND;
+    static const std::string _STANDBY_COMMAND;
+    static const std::string _RESET_COMMAND;
+    static const std::string _POWERON_COMMAND;
+    static const std::string _POWEROFF_COMMAND;
+    static const std::string _STATUS_COMMAND;
+    
+    // The last status values obtained from the transmitter
     bool _faultSummary;
     bool _hvpsRunup;
     bool _standby;
@@ -150,9 +189,15 @@ private:
     double _hvpsVoltage;        // kV
     double _magnetronCurrent;   // mA
     double _hvpsCurrent;        // mA
+    double _temperature;        // C
     
+    // Are we simulating?
     bool _simulate;
+    
+    // Our serial port device name (may be SIM_DEVICE)
     std::string _ttyDev;
+    
+    // File descriptor for the open serial port
     int _fd;
 };
 
