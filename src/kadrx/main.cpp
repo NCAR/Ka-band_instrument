@@ -300,8 +300,19 @@ main(int argc, char** argv)
         kaConfig.staggered_prt(), kaConfig.gates(), 1, false,
         Pentek::p7142sd3c::DDC10DECIMATE, kaConfig.external_start_trigger());
     
-    // We use SD3C's first general purpose timer for transmit pulse modulation
+    // We use SD3C's general purpose timer 0 (timer 3) for transmit pulse modulation
     sd3c.setGPTimer0(kaConfig.tx_pulse_mod_delay(), kaConfig.tx_pulse_mod_width());
+    
+    // Use SD3C's general purpose timer 2 (timer 6) for T/R LIMITER trigger.
+    // It must be *low* from T0 to 500 ns after the transmit pulse ends, and
+    // high for the rest of the PRT.
+    sd3c.setGPTimer2(kaConfig.tx_delay() + kaConfig.tx_pulse_width() + 5.0e-7,
+            kaConfig.prt1(), true);
+    
+    // Use SD3C's general purpose timer 3 (timer 7) for PIN SW trigger.
+    // This signal is the inverse of the T/R LIMITER signal above.
+    sd3c.setGPTimer3(kaConfig.tx_delay() + kaConfig.tx_pulse_width() + 5.0e-7,
+            kaConfig.prt1(), false);
     
 	// Create (but don't yet start) the downconversion threads.
     
