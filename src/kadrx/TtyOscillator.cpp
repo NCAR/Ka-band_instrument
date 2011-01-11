@@ -85,7 +85,7 @@ TtyOscillator::TtyOscillator(std::string devName, unsigned int oscillatorNum,
         WLOG << __PRETTY_FUNCTION__ << ": oscillator " << _oscillatorNum <<
             " startup scaled freq (" << _scaledCurrentFreq << 
             ") is not between given min (" << _scaledMinFreq << ") and max (" <<
-            _scaledMaxFreq;
+            _scaledMaxFreq << ")";
     }
 }
 
