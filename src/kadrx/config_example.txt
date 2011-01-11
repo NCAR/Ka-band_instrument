@@ -32,6 +32,9 @@ tx_pulse_mod_delay      8.0e-8  # s
 tx_pulse_mod_width      7.5e-7  # s
 tx_delay                0.0     # s
 
+test_target_delay		1.0e-4	# s
+test_target_width		5.0e-6	# s
+
 afc_g0_threshold_dbm    -50.0	  # minimum G0 power for good frequency estimates
 afc_coarse_step         5000000	# Hz
 afc_fine_step           100000	# Hz

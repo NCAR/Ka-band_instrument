@@ -144,16 +144,20 @@ public:
 
     int actual_num_rcvrs() const { return _getIntVal("actual_num_rcvrs"); }     /// number of channels
     double rcvr_bandwidth() const { return _getDoubleVal("rcvr_bandwidth"); }   /// Hz
-    double rcvr_cntr_freq() const { return _getDoubleVal("rcvr_cntr_freq"); }        /// Hz
-    double rcvr_pulse_width() const { return _getDoubleVal("rcvr_pulse_width"); }    /// seconds
+    double rcvr_cntr_freq() const { return _getDoubleVal("rcvr_cntr_freq"); }   /// Hz
+    double rcvr_pulse_width() const { return _getDoubleVal("rcvr_pulse_width"); }   /// seconds
     double rcvr_switching_network_loss() const { return _getDoubleVal("rcvr_switching_network_loss"); }  /// dB
-    double rcvr_waveguide_loss() const { return _getDoubleVal("rcvr_waveguide_loss"); }      /// dB
-    double rcvr_noise_figure() const { return _getDoubleVal("rcvr_noise_figure"); }          /// dB
-    double rcvr_filter_mismatch() const { return _getDoubleVal("rcvr_filter_mismatch"); }    /// dB
-    double rcvr_rf_gain() const { return _getDoubleVal("rcvr_rf_gain"); }                  /// dB
-    double rcvr_if_gain() const { return _getDoubleVal("rcvr_if_gain"); }            /// dB
-    double rcvr_digital_gain() const { return _getDoubleVal("rcvr_digital_gain"); }  /// dB
-    double rcvr_gate0_delay() const { return _getDoubleVal("rcvr_gate0_delay"); }    /// seconds
+    double rcvr_waveguide_loss() const { return _getDoubleVal("rcvr_waveguide_loss"); }     /// dB
+    double rcvr_noise_figure() const { return _getDoubleVal("rcvr_noise_figure"); }         /// dB
+    double rcvr_filter_mismatch() const { return _getDoubleVal("rcvr_filter_mismatch"); }   /// dB
+    double rcvr_rf_gain() const { return _getDoubleVal("rcvr_rf_gain"); }   /// dB
+    double rcvr_if_gain() const { return _getDoubleVal("rcvr_if_gain"); }   /// dB
+    double rcvr_digital_gain() const { return _getDoubleVal("rcvr_digital_gain"); } /// dB
+    double rcvr_gate0_delay() const { return _getDoubleVal("rcvr_gate0_delay"); }   /// seconds
+    
+    double test_target_delay() const { return _getDoubleVal("test_target_delay"); } /// seconds
+    double test_target_width() const { return _getDoubleVal("test_target_width"); } /// seconds
+    
     /// Five delay values for the general purpose timers in the sd3c firmware.
     /// The first GP timer is used for tx pulse modulation, and the rest are
     /// unused.

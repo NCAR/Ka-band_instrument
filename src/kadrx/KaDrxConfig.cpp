@@ -63,6 +63,8 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("burst_sample_width");
     keys.insert("afc_g0_threshold_dbm");
     keys.insert("a2d_counts_per_volt");
+    keys.insert("test_target_delay");
+    keys.insert("test_target_width");
     return keys;
 }
 
@@ -416,6 +418,16 @@ KaDrxConfig::isValid(bool verbose) const {
     if (cohere_iq_to_burst() == UNSET_BOOL) {
         if (verbose)
             std::cerr << "'cohere_iq_to_burst' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (test_target_delay() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'test_target_delay' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (test_target_width() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'test_target_width' unset in DRX configuration" << std::endl;
         valid = false;
     }
     return valid;
