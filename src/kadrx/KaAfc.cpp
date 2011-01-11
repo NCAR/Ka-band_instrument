@@ -265,7 +265,7 @@ KaAfcPrivate::run() {
 void
 KaAfcPrivate::setG0ThresholdDbm(double thresh) {
     QMutexLocker locker(&_mutex);
-    ILOG << "Setting AFC G0 threshold at " << thresh << " dB";
+    ILOG << "Setting AFC G0 threshold at " << thresh << " dBm";
     _g0ThreshDbm = thresh;
 }
 
@@ -360,7 +360,7 @@ KaAfcPrivate::_processXmitAverage() {
     double g0PowerDbm = 10.0 * log10(_g0PowerAvg) + 30; // +30 for dBW to dBm
 
     ILOG << "New " << _nToSum << "-pulse average: G0 " << g0PowerDbm << 
-        " dB, freq offset " << _freqOffset;
+        " dBm, freq offset " << _freqOffset;
 
     // Set mode based on whether g0PowerDbm is less than our threshold
     AfcMode_t newMode = (g0PowerDbm < _g0ThreshDbm) ? AFC_SEARCHING : AFC_TRACKING;
