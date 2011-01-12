@@ -310,12 +310,12 @@ main(int argc, char** argv)
     // It must be *low* from T0 to 500 ns after the transmit pulse ends, and
     // high for the rest of the PRT.
     sd3c.setGPTimer2(kaConfig.tx_delay() + kaConfig.tx_pulse_width() + 5.0e-7,
-            kaConfig.prt1(), true);
+            kaConfig.prt1(), false);
     
     // Use SD3C's general purpose timer 3 (timer 7) for PIN SW trigger.
     // This signal is the inverse of the T/R LIMITER signal above.
     sd3c.setGPTimer3(kaConfig.tx_delay() + kaConfig.tx_pulse_width() + 5.0e-7,
-            kaConfig.prt1(), false);
+            kaConfig.prt1(), true);
     
 	// Create (but don't yet start) the downconversion threads.
     
