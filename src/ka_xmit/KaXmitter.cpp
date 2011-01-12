@@ -165,6 +165,34 @@ KaXmitter::_getStatus() {
     _waveguidePressureFault = (reply[3] >> 2) & 0x1;
     _hvpsUnderVoltage = (reply[3] >> 1) & 0x1;
     _hvpsOverVoltage = (reply[3] >> 0) & 0x1;
+    
+    // 4-character HVPS voltage starting at character 4, e.g., " 0.0"
+    if (sscanf(reply + 4, "%4lf", &_hvpsVoltage) != 1)
+        WLOG << __PRETTY_FUNCTION__ << ": Bad HVPS voltage in status!";
+    DLOG << __PRETTY_FUNCTION__ << ": HVPS voltage " << _hvpsVoltage << " kV";
+        
+    // 4-character magnetron current starting at character 8, e.g., " 0.2"
+    if (sscanf(reply + 8, "%4lf", &_magnetronCurrent) != 1) {
+        WLOG << __PRETTY_FUNCTION__ << ": Bad magnetron current in status!";
+    } else {
+        DLOG << __PRETTY_FUNCTION__ << ": magnetron current " << 
+            _magnetronCurrent << " mA";
+    }
+        
+    // 4-character HVPS current starting at character 12, e.g., " 0.2"
+    if (sscanf(reply + 12, "%4lf", &_hvpsCurrent) != 1) {
+        WLOG << __PRETTY_FUNCTION__ << ": Bad HVPS current in status!";
+    } else {
+        DLOG << __PRETTY_FUNCTION__ << ": HVPS current " << _hvpsCurrent << " mA";
+    }
+    
+    // 3-character temperature starting at character 16, e.g., "+27"
+    if (sscanf(reply+16, "%3lf", &_temperature) != 1) {
+        WLOG << __PRETTY_FUNCTION__ << ": Bad temperature in status!";
+    } else {
+        DLOG << __PRETTY_FUNCTION__ << ": transmitter temperature " << 
+            _temperature << " C";
+    }
 }
 
 void

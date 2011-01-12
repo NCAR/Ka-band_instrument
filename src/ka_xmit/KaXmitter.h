@@ -186,6 +186,7 @@ private:
     bool _waveguidePressureFault;
     bool _hvpsUnderVoltage;
     bool _hvpsOverVoltage;
+    
     double _hvpsVoltage;        // kV
     double _magnetronCurrent;   // mA
     double _hvpsCurrent;        // mA
