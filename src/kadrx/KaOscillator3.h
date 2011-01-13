@@ -136,8 +136,8 @@ private:
         DIO_CLOCKINV = 9,
         DIO_DATA     = 10,
         DIO_DATAINV  = 11,
-        DIO_LE       = 14,
-        DIO_LEINV    = 15
+        DIO_LE       = 12,
+        DIO_LEINV    = 13
     } DIOLine_t;
     
     /**
