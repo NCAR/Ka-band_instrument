@@ -17,7 +17,7 @@
 
 LOGGING("ka_xmitd")
 
-KaXmitter xmitter(KaXmitter::SIM_DEVICE);
+KaXmitter *Xmitter = 0;
 
 // Our RPC server
 using namespace XmlRpc;
@@ -158,26 +158,26 @@ public:
         // Construct an XML-RPC <struct> (more accurately a dictionary)
         // containing all of the transmitter status values.
         XmlRpcValue statusDict;
-        statusDict["fault_summary"] = XmlRpcValue(xmitter.getFaultSummary());
-        statusDict["hvps_runup"] = XmlRpcValue(xmitter.getHvpsRunup());
-        statusDict["standby"] = XmlRpcValue(xmitter.getStandby());
-        statusDict["heater_warmup"] = XmlRpcValue(xmitter.getHeaterWarmup());
-        statusDict["cooldown"] = XmlRpcValue(xmitter.getCooldown());
-        statusDict["unit_on"] = XmlRpcValue(xmitter.getUnitOn());
-        statusDict["magnetron_current_fault"] = XmlRpcValue(xmitter.getMagnetronCurrentFault());
-        statusDict["blower_fault"] = XmlRpcValue(xmitter.getBlowerFault());
-        statusDict["hvps_on"] = XmlRpcValue(xmitter.getHvpsOn());
-        statusDict["remote_enabled"] = XmlRpcValue(xmitter.getRemoteEnabled());
-        statusDict["safety_interlock"] = XmlRpcValue(xmitter.getSafetyInterlock());
-        statusDict["reverse_power_fault"] = XmlRpcValue(xmitter.getReversePowerFault());
-        statusDict["pulse_input_fault"] = XmlRpcValue(xmitter.getPulseInputFault());
-        statusDict["hvps_current_fault"] = XmlRpcValue(xmitter.getHvpsCurrentFault());
-        statusDict["waveguide_pressure_fault"] = XmlRpcValue(xmitter.getWaveguidePressureFault());
-        statusDict["hvps_under_voltage"] = XmlRpcValue(xmitter.getHvpsUnderVoltage());
-        statusDict["hvps_over_voltage"] = XmlRpcValue(xmitter.getHvpsOverVoltage());
-        statusDict["hvps_voltage"] = XmlRpcValue(xmitter.getHvpsVoltage());
-        statusDict["magnetron_current"] = XmlRpcValue(xmitter.getMagnetronCurrent());
-        statusDict["hvps_current"] = XmlRpcValue(xmitter.getHvpsCurrent());
+        statusDict["fault_summary"] = XmlRpcValue(Xmitter->getFaultSummary());
+        statusDict["hvps_runup"] = XmlRpcValue(Xmitter->getHvpsRunup());
+        statusDict["standby"] = XmlRpcValue(Xmitter->getStandby());
+        statusDict["heater_warmup"] = XmlRpcValue(Xmitter->getHeaterWarmup());
+        statusDict["cooldown"] = XmlRpcValue(Xmitter->getCooldown());
+        statusDict["unit_on"] = XmlRpcValue(Xmitter->getUnitOn());
+        statusDict["magnetron_current_fault"] = XmlRpcValue(Xmitter->getMagnetronCurrentFault());
+        statusDict["blower_fault"] = XmlRpcValue(Xmitter->getBlowerFault());
+        statusDict["hvps_on"] = XmlRpcValue(Xmitter->getHvpsOn());
+        statusDict["remote_enabled"] = XmlRpcValue(Xmitter->getRemoteEnabled());
+        statusDict["safety_interlock"] = XmlRpcValue(Xmitter->getSafetyInterlock());
+        statusDict["reverse_power_fault"] = XmlRpcValue(Xmitter->getReversePowerFault());
+        statusDict["pulse_input_fault"] = XmlRpcValue(Xmitter->getPulseInputFault());
+        statusDict["hvps_current_fault"] = XmlRpcValue(Xmitter->getHvpsCurrentFault());
+        statusDict["waveguide_pressure_fault"] = XmlRpcValue(Xmitter->getWaveguidePressureFault());
+        statusDict["hvps_under_voltage"] = XmlRpcValue(Xmitter->getHvpsUnderVoltage());
+        statusDict["hvps_over_voltage"] = XmlRpcValue(Xmitter->getHvpsOverVoltage());
+        statusDict["hvps_voltage"] = XmlRpcValue(Xmitter->getHvpsVoltage());
+        statusDict["magnetron_current"] = XmlRpcValue(Xmitter->getMagnetronCurrent());
+        statusDict["hvps_current"] = XmlRpcValue(Xmitter->getHvpsCurrent());
         
         retvalP = statusDict;
     }
@@ -190,12 +190,25 @@ main(int argc, char *argv[]) {
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
 
+    WLOG << "ka_xmitd started!";
+    
+    Xmitter = new KaXmitter("/dev/ttyS0");
+    
     // Initialize our RPC server
     RpcServer.bindAndListen(8080);
     RpcServer.enableIntrospection(true);
 
+    /*
+     * Listen for XML-RPC commands for a while, then have the transmitter
+     * get fresh status. Repeat.
+     */
     while (true) {
+        // Note that work() mostly goes for 2x the given time, but sometimes
+        // goes for 1x the given time. Who knows why?
         RpcServer.work(1.0);
+        Xmitter->updateStatus();
     }
+    
+    delete(Xmitter);
     return 0;
 } 

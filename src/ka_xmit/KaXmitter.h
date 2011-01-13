@@ -23,17 +23,20 @@ public:
      */
     bool getFaultSummary() const { return _faultSummary; }
     /**
-     * Return true iff HVPS has been commanded ON
+     * Return true iff HVPS has been commanded ON. The value returned is from
+     * the time of the last call to updateStatus().
      * @return true iff HVPS has been commanded ON
      */
     bool getHvpsRunup() const { return _hvpsRunup; }
     /**
-     * Return true iff transmitter is ready for HV on
+     * Return true iff transmitter is ready for HV on. The value returned is from
+     * the time of the last call to updateStatus().
      * @return true iff transmitter is ready for HV on
      */
     bool getStandby() const { return _standby; }
     /**
-     * Return true iff heater 3-minute warmup is in progress
+     * Return true iff heater 3-minute warmup is in progress. The value returned
+     * is from the time of the last call to updateStatus().
      * @return true iff heater 3-minute warmup is in progress
      */
     bool getHeaterWarmup() const { return _heaterWarmup; }
@@ -43,91 +46,113 @@ public:
      */
     bool getCooldown() const { return _cooldown; }
     /**
-     * Return true iff transmitter contactor energized and unit not in cooldown
+     * Return true iff transmitter contactor energized and unit not in cooldown.
+     * The value returned is from the time of the last call to updateStatus().
      * @return true iff transmitter contactor energized and unit not in cooldown
      */
     bool getUnitOn() const { return _unitOn; }
     /**
-     * Return true iff magnetron over-current detected
+     * Return true iff magnetron over-current detected. The value returned is 
+     * from the time of the last call to updateStatus().
      * @return true iff magnetron over-current detected
      */
     bool getMagnetronCurrentFault() const { return _magnetronCurrentFault; }
     /**
      * Return true iff blower speed detector indicates that the blower is 
-     * stopped
+     * stopped. The value returned is from the time of the last call to 
+     * updateStatus().
      * @return true iff blower speed detector indicates that the blower is
      * stopped
      */
     bool getBlowerFault() const { return _blowerFault; }
     /**
      * Return true iff all HV power supplies have cleared the preset low 
-     * limits and HV is on
+     * limits and HV is on. The value returned is from the time of the last call
+     * to updateStatus().
      * @return true iff all HV power supplies have cleared the preset low 
      * limits and HV is on
      */
     bool getHvpsOn() const { return _hvpsOn; }
     /**
-     * Return true iff the unit is ready to accept remote commands
+     * Return true iff the unit is ready to accept remote commands. The value
+     * returned is from the time of the last call to updateStatus().
      * @return true iff the unit is ready to accept remote commands
      */
     bool getRemoteEnabled() const { return _remoteEnabled; }
     /**
-     * Return true iff power transmitter door/cover is open
+     * Return true iff power transmitter door/cover is open. The value returned
+     * is from the time of the last call to updateStatus().
      * @return true iff power transmitter door/cover is open
      */
     bool getSafetyInterlock() const { return _safetyInterlock; }
     /**
-     * Return true iff VSWR greater than 2:1 load mismatch
+     * Return true iff VSWR greater than 2:1 load mismatch. The value returned
+     * is from the time of the last call to updateStatus().
      * @return true iff VSWR greater than 2:1 load mismatch
      */
     bool getReversePowerFault() const { return _reversePowerFault; }
     /**
      * Return true iff transmitter input pulse has exceeded the duty cycle or 
-     * PRF limits
+     * PRF limits. The value returned is from the time of the last call to
+     * updateStatus().
      * @return true iff transmitter input pulse has exceeded the duty cycle or 
      * PRF limits
      */
     bool getPulseInputFault() const { return _pulseInputFault; }
     /**
-     * Return true iff HVPS protection has detected over-current
+     * Return true iff HVPS protection has detected over-current. The value 
+     * returned is from the time of the last call to updateStatus().
      * @return true iff HVPS protection has detected over-current
      */
     bool getHvpsCurrentFault() const { return _hvpsCurrentFault; }
     /**
-     * Return true iff waveguide pressure is too low
+     * Return true iff waveguide pressure is too low. The value returned is from
+     * the time of the last call to updateStatus().
      * @return true iff waveguide pressure is too low
      */
     bool getWaveguidePressureFault() const { return _waveguidePressureFault; }
     /**
-     * Return true iff HVPS voltage is too low
+     * Return true iff HVPS voltage is too low. The value returned is from the 
+     * time of the last call to updateStatus().
      * @return true iff HVPS voltage is too low
      */
     bool getHvpsUnderVoltage() const { return _hvpsUnderVoltage; }
     /**
-     * Return true iff HVPS voltage is too high
+     * Return true iff HVPS voltage is too high. The value returned is from the
+     * time of the last call to updateStatus().
      * @return true iff HVPS voltage is too high
      */
     bool getHvpsOverVoltage() const { return _hvpsOverVoltage; }
     /**
-     * Return HVPS voltage, in kV
+     * Return HVPS voltage, in kV. The value returned is from the time of the
+     * last call to updateStatus().
      * @return HVPS voltage, in kV
      */
     double getHvpsVoltage() const { return _hvpsVoltage; }
     /**
-     * Return average magnetron current, in mA
+     * Return average magnetron current, in mA. The value returned is from the
+     * time of the last call to updateStatus().
      * @return average magnetron current, in mA
      */
     double getMagnetronCurrent() const { return _magnetronCurrent; }
     /**
-     * Return HVPS current, in mA
+     * Return HVPS current, in mA. The value returned is from the time of the
+     * last call to updateStatus().
      * @return HVPS current, in mA
      */
     double getHvpsCurrent() const { return _hvpsCurrent; }
     /**
-     * Return transmitter temperature, in C
+     * Return transmitter temperature, in C. The value returned is from the time
+     * of the last call to updateStatus().
      * @return transmitter temperature, in C
      */
     double getTemperature() const { return _temperature; }
+    
+    /**
+     * Get current status values from the transmitter, updating our local
+     * values.
+     */
+    void updateStatus();
     
     /**
      * Device name to use when creating a simulation KaXmitter.
@@ -135,12 +160,6 @@ public:
     static const std::string SIM_DEVICE;
         
 private:
-    /**
-     * Get status from the transmitter, which includes 17 boolean flags,
-     * HVPS voltage and current, magnetron current, and transmitter temperature.
-     */
-    void _getStatus();
-    
     /**
      * Send a command to the transmitter.
      */

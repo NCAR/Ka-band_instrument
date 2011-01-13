@@ -19,7 +19,9 @@
 
 LOGGING("KaXmitter")
 
+// device name to use for simulated transmitter
 const std::string KaXmitter::SIM_DEVICE = "SimulatedKaXmitter";
+
 
 // operate command: STX 'O' ETX 0x2e
 const std::string KaXmitter::_OPERATE_COMMAND = "\x02\x4f\x03\x2e";
@@ -68,6 +70,7 @@ KaXmitter::KaXmitter(std::string ttyDev) :
         _fd(-1) {
     // Open the serial port
     if (! _simulate) {
+        DLOG << "Opening " << _ttyDev;
         if ((_fd = open(_ttyDev.c_str(), O_RDWR)) == -1) {
             ELOG << __PRETTY_FUNCTION__ << ": error opening " << _ttyDev << ": " <<
                     strerror(errno);
@@ -93,9 +96,10 @@ KaXmitter::KaXmitter(std::string ttyDev) :
                     " attributes: " << strerror(errno);
             abort();
         }
+        DLOG << "Done configuring " << _ttyDev;
     }
     // Get current status
-    _getStatus();
+    updateStatus();
 }
 
 KaXmitter::~KaXmitter() {
@@ -103,10 +107,9 @@ KaXmitter::~KaXmitter() {
 
 
 void
-KaXmitter::_getStatus() {
+KaXmitter::updateStatus() {
     if (_simulate)
         return;
-    
     // Get rid of any unread input
     tcflush(_fd, TCIFLUSH);
     
@@ -125,10 +128,10 @@ KaXmitter::_getStatus() {
     while (nRead < REPLYSIZE) {
         int result = read(_fd, reply + nRead, REPLYSIZE - nRead);
         if (result == 0) {
-            WLOG << __PRETTY_FUNCTION__ << ": reply read timeout. Trying again.";
-            return _getStatus();
+            WLOG << "Status reply read timeout. Trying again.";
+            return updateStatus();
         } else if (result < 0) {
-            ELOG << __PRETTY_FUNCTION__ << ": read error: " << strerror(errno);
+            ELOG << "Status reply read error: " << strerror(errno);
             abort();
         } else {
             nRead += result;
@@ -137,8 +140,8 @@ KaXmitter::_getStatus() {
     
     // Validate the reply
     if (! _argValid(std::string(reply, REPLYSIZE))) {
-        WLOG << __PRETTY_FUNCTION__ << ": Trying again after bad reply";
-        return _getStatus();
+        WLOG << ": Trying again after bad status reply";
+        updateStatus();
     }
     
     // Finally, parse the reply
@@ -150,6 +153,9 @@ KaXmitter::_getStatus() {
     _heaterWarmup = (reply[1] >> 2) & 0x1;
     _cooldown = (reply[1] >> 1) & 0x1;
     _unitOn = (reply[1] >> 0) & 0x1;
+    DLOG << "flt summary " << _faultSummary << ", runup " << _hvpsRunup << 
+        ", standby " << _standby << ", warmup " << _heaterWarmup << 
+        ", cooldown " << _cooldown << ", unit on " << _unitOn;
     
     // Six used bits in the second status byte
     _magnetronCurrentFault = (reply[2] >> 5) & 0x1;
@@ -158,6 +164,10 @@ KaXmitter::_getStatus() {
     _remoteEnabled = (reply[2] >> 2) & 0x1;
     _safetyInterlock = (reply[2] >> 1) & 0x1;
     _reversePowerFault = (reply[2] >> 0) & 0x1;
+    DLOG << "mag cur flt " << _magnetronCurrentFault << 
+        ", blower flt " << _blowerFault << ", hvpsOn " << _hvpsOn <<
+        ", remote ena " << _remoteEnabled << ", safety " << _safetyInterlock <<
+        ", reverse pwr flt " << _reversePowerFault;
     
     // Five used bits in the third status byte
     _pulseInputFault = (reply[3] >> 5) & 0x1;
@@ -165,33 +175,38 @@ KaXmitter::_getStatus() {
     _waveguidePressureFault = (reply[3] >> 2) & 0x1;
     _hvpsUnderVoltage = (reply[3] >> 1) & 0x1;
     _hvpsOverVoltage = (reply[3] >> 0) & 0x1;
+    DLOG << "pulse flt " << _pulseInputFault << 
+        ", HVPS cur flt " << _hvpsCurrentFault <<
+        ", wg pres flt " << _waveguidePressureFault <<
+        ", HVPS underV " << _hvpsUnderVoltage <<
+        ", HVPS overV " << _hvpsOverVoltage;
     
     // 4-character HVPS voltage starting at character 4, e.g., " 0.0"
-    if (sscanf(reply + 4, "%4lf", &_hvpsVoltage) != 1)
+    if (sscanf(reply + 4, "%4lf", &_hvpsVoltage) != 1) {
         WLOG << __PRETTY_FUNCTION__ << ": Bad HVPS voltage in status!";
-    DLOG << __PRETTY_FUNCTION__ << ": HVPS voltage " << _hvpsVoltage << " kV";
+    } else {
+        DLOG << "HVPS voltage " << _hvpsVoltage << " kV";
+    }
         
     // 4-character magnetron current starting at character 8, e.g., " 0.2"
     if (sscanf(reply + 8, "%4lf", &_magnetronCurrent) != 1) {
-        WLOG << __PRETTY_FUNCTION__ << ": Bad magnetron current in status!";
+        WLOG << "Bad magnetron current in status!";
     } else {
-        DLOG << __PRETTY_FUNCTION__ << ": magnetron current " << 
-            _magnetronCurrent << " mA";
+        DLOG << "magnetron current " << _magnetronCurrent << " mA";
     }
         
     // 4-character HVPS current starting at character 12, e.g., " 0.2"
     if (sscanf(reply + 12, "%4lf", &_hvpsCurrent) != 1) {
-        WLOG << __PRETTY_FUNCTION__ << ": Bad HVPS current in status!";
+        WLOG << "Bad HVPS current in status!";
     } else {
-        DLOG << __PRETTY_FUNCTION__ << ": HVPS current " << _hvpsCurrent << " mA";
+        DLOG << "HVPS current " << _hvpsCurrent << " mA";
     }
     
-    // 3-character temperature starting at character 16, e.g., "+27"
-    if (sscanf(reply+16, "%3lf", &_temperature) != 1) {
-        WLOG << __PRETTY_FUNCTION__ << ": Bad temperature in status!";
+    // 3-character temperature starting at character 16, e.g., "+27."
+    if (sscanf(reply+16, "%4lf", &_temperature) != 1) {
+        WLOG << "Bad temperature in status!";
     } else {
-        DLOG << __PRETTY_FUNCTION__ << ": transmitter temperature " << 
-            _temperature << " C";
+        DLOG << "transmitter temperature " << _temperature << " C";
     }
 }
 
@@ -295,7 +310,7 @@ KaXmitter::_readSelect(unsigned int waitMsecs)
             if (errno == EINTR) /* system call was interrupted */
                 continue;
 
-            ELOG << __PRETTY_FUNCTION__ << ": Read select error: " <<
+            ELOG << __PRETTY_FUNCTION__ << ": select error: " <<
                     strerror(errno);
             return -2; // select failed
         } 
