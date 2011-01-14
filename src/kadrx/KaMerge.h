@@ -94,6 +94,7 @@ private:
 
   /// IQ data
 
+  static const int NCHANNELS = 3;
   int _nGates;
   int _nGatesAlloc;
   int64_t _nPulsesSent;
