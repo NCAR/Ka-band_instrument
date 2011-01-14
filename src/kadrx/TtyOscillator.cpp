@@ -121,26 +121,26 @@ TtyOscillator::setScaledFreqAsync(unsigned int scaledFreq) {
     }
     // min/max checking
     if (scaledFreq > _scaledMaxFreq) {
-        WLOG << __PRETTY_FUNCTION__ << ": requested scaled frequency " << 
-                scaledFreq << " has been set to the maximum value of " <<
-                _scaledMaxFreq;
+        WLOG << "Oscillator " << _oscillatorNum << 
+            ": requested scaled frequency " << scaledFreq << 
+            " has been set to the maximum value of " << _scaledMaxFreq;
         scaledFreq = _scaledMaxFreq;
     }
     if (scaledFreq < _scaledMinFreq) {
-        WLOG << __PRETTY_FUNCTION__ << ": requested scaled frequency " << 
-                scaledFreq << " has been set to the minimum value of " <<
-                _scaledMinFreq;
+        WLOG << "Oscillator " << _oscillatorNum << 
+            ": requested scaled frequency " << scaledFreq << 
+            " has been set to the minimum value of " << _scaledMinFreq;
         scaledFreq = _scaledMinFreq;
     }
     
     // Nothing to do if they requested the current frequency...
     if (scaledFreq == _scaledCurrentFreq) {
-        ILOG << __PRETTY_FUNCTION__ << ": oscillator " << _oscillatorNum <<
-            " already at (" << scaledFreq << " x " << _freqStep << ") Hz";
+        ILOG << "Oscillator " << _oscillatorNum << " already at (" << 
+            scaledFreq << " x " << _freqStep << ") Hz";
         return;
     }
 
-    DLOG << __PRETTY_FUNCTION__ << ": setting oscillator " << _oscillatorNum <<
+    DLOG << "Setting oscillator " << _oscillatorNum <<
         " frequency to (" << scaledFreq << " x " << _freqStep << ") Hz";
     
     // Set _scaledRequestedFreq to non-zero while the request is in progress.
@@ -171,12 +171,10 @@ TtyOscillator::freqAttained() {
         return(true);
     // Get the status and see if the frequency matches the requested frequency.
     if (_getStatus()) {
-        ELOG << __PRETTY_FUNCTION__ <<
-                ": status read error for oscillator " << _oscillatorNum;
+        ELOG << "Oscillator " << _oscillatorNum << " status read error";
     } else {
-        ILOG << __PRETTY_FUNCTION__ << ": oscillator " << _oscillatorNum <<
-                " now at (" << _scaledCurrentFreq << " x " << _freqStep <<
-                ") Hz";
+        ILOG << "Oscillator " << _oscillatorNum << " now at (" << 
+            _scaledCurrentFreq << " x " << _freqStep << ") Hz";
     }
     bool attained = (_scaledCurrentFreq == _scaledRequestedFreq);
     _scaledRequestedFreq = 0;   // request completed
@@ -215,13 +213,11 @@ TtyOscillator::_getStatus() {
         while (nread < 13) {
             int status = read(_fd, reply + nread, 13 - nread);
             if (status == 0) {
-                WLOG << __PRETTY_FUNCTION__ << ": oscillator " <<
-                        _oscillatorNum << " status read timeout";
+                WLOG << "Oscillator " << _oscillatorNum << " status read timeout";
                 timeout = true;
                 break;
             } else if (status < 0) {
-                WLOG << __PRETTY_FUNCTION__ << ": oscillator " <<
-                        _oscillatorNum << ": " << strerror(errno);
+                WLOG << "Oscillator " << _oscillatorNum << ": " << strerror(errno);
                 return(1);
             }
             nread += status;
@@ -242,9 +238,9 @@ TtyOscillator::_getStatus() {
         return(0);
     }
     // If we get here, we got no status reply after many attempts
-    ELOG << __PRETTY_FUNCTION__ << ": No status reply from oscillator " <<
-            _oscillatorNum << " after " << maxattempts <<
-            "attempts. Is the serial line connected? Is the oscillator num wrong?";
+    ELOG << "Oscillator " << _oscillatorNum << 
+        ": No status reply after " << maxattempts << 
+        " attempts. Is the serial line disconnected or the oscillator num wrong?";
     abort();
 }
 
@@ -258,7 +254,7 @@ TtyOscillator::_sendCmd(char *cmd, unsigned int timeNeeded) {
         sleep(delay);
 
     // Send the command
-    DLOG << "Sending command '" << cmd << "'";
+    DLOG << "Oscillator " << _oscillatorNum << ": sending command '" << cmd << "'";
     if (! _simulate)
         write(_fd, cmd, cmdLen);
 
