@@ -74,16 +74,19 @@ private:
     /// Clear our sums
     void _clearSum();
     
-    /// Set frequencies for all three oscillators. Frequencies are in units
+    /// Set frequencies for all four oscillators. Frequencies are in units
     /// of the oscillators' frequency steps.
+    /// @param osc0ScaledFreq frequency for oscillator 0 in units of its 
+    ///     frequency step
     /// @param osc1ScaledFreq frequency for oscillator 1 in units of its 
     ///     frequency step
     /// @param osc2ScaledFreq frequency for oscillator 2 in units of its 
     ///     frequency step
     /// @param osc3ScaledFreq frequency for oscillator 3 in units of its 
     ///     frequency step
-    void _setOscillators(unsigned int osc1ScaledFreq, 
-        unsigned int osc2ScaledFreq, unsigned int osc3ScaledFreq);
+    void _setOscillators(unsigned int osc0ScaledFreq, 
+        unsigned int osc1ScaledFreq, unsigned int osc2ScaledFreq, 
+        unsigned int osc3ScaledFreq);
     
     /// Thread access mutex
     QMutex _mutex;
@@ -109,7 +112,12 @@ private:
     /// frequency is also reduced 300 kHz.
     TtyOscillator _osc1;
     
+    /// Oscillator 2: 16000-17000 MHz (16500 MHz nominal), 1 MHz step
+    /// We set this oscillator once, then leave it alone.
+    TtyOscillator _osc2;
+    
     /// oscillator 3: 107-108 MHz (107.50 MHz nominal), 50 kHz step
+    /// This oscillator is on the 3rd stage downconverter card
     KaOscillator3 _osc3;
     
     /// G0 threshold power for reliable calculated frequencies, in dBm
@@ -191,8 +199,9 @@ KaAfcPrivate::KaAfcPrivate() :
     QThread(),
     _mutex(QMutex::NonRecursive),   // must be non-recursive for QWaitCondition!
     _afcMode(AFC_SEARCHING),
-    _osc0(TtyOscillator::SIM_OSCILLATOR, 0, 100000, 14400, 15000),
-    _osc1(TtyOscillator::SIM_OSCILLATOR, 1, 10000, 12750, 13750), 
+    _osc0("/dev/ttydp00", 0, 100000, 14400, 15000),
+    _osc1("/dev/ttydp01", 1, 10000, 12750, 13750),
+    _osc2("/dev/ttydp02", 2, 1000000, 16000, 17000),
     _osc3(KaPmc730::thePmc730()),
     _g0ThreshDbm(-25.0),     // -25.0 dBm G0 threshold power for good frequencies
     _coarseStep(500000),    // 500 kHz coarse step (SEARCHING)
@@ -211,19 +220,23 @@ KaAfcPrivate::KaAfcPrivate() :
     // Set the initial oscillator frequencies
     unsigned int osc0ScaledFreq = (_osc0.getScaledMinFreq());   // 1.4400 GHz
     unsigned int osc1ScaledFreq = (132500000 / _osc1.getFreqStep());    // 132.50 MHz
+    unsigned int osc2ScaledFreq = (16500000000ll / _osc2.getFreqStep());   // 16.500 GHz
     unsigned int osc3ScaledFreq = (107500000 / _osc3.getFreqStep());    // 107.50 MHz
-    _setOscillators(osc0ScaledFreq, osc1ScaledFreq, osc3ScaledFreq);
+    _setOscillators(osc0ScaledFreq, osc1ScaledFreq, osc2ScaledFreq, 
+        osc3ScaledFreq);
 }
 
 void
 KaAfcPrivate::_setOscillators(unsigned int osc0ScaledFreq, 
-    unsigned int osc1ScaledFreq, unsigned int osc3ScaledFreq) {
+    unsigned int osc1ScaledFreq, unsigned int osc2ScaledFreq, 
+    unsigned int osc3ScaledFreq) {
     bool osc0_OK = false;
     bool osc1_OK = false;
+    bool osc2_OK = false;
     bool osc3_OK = false;
     // Set starting frequencies for all three oscillators. We try as many times
     // as necessary...
-    for (int attempt = 0; !(osc0_OK && osc1_OK && osc3_OK); attempt++) {
+    for (int attempt = 0; !(osc0_OK && osc1_OK && osc2_OK && osc3_OK); attempt++) {
         // Initiate the frequency settings for the three oscillators in parallel,
         // since it's a slow asynchronous process...
         if (! osc0_OK) {
@@ -237,15 +250,22 @@ KaAfcPrivate::_setOscillators(unsigned int osc0ScaledFreq,
                 WLOG << "...try again to set oscillator 1 frequency";
             _osc1.setScaledFreqAsync(osc1ScaledFreq);
         }
+        
+        if (! osc2_OK) {
+            if (attempt > 0)
+                WLOG << "...try again to set oscillator 2 frequency";
+            _osc2.setScaledFreqAsync(osc2ScaledFreq);
+        }
             
         if (! osc3_OK) {
             _osc3.setScaledFreq(osc3ScaledFreq);
-            osc3_OK = true; // KaOscillator3::setScaledFreq() always works!
+            osc3_OK = true; // we have no way to validate that osc3 is set (yet)
         }
         
         // Now complete the asynchronous process for the two serial oscillators
         osc0_OK = _osc0.freqAttained();
         osc1_OK = _osc1.freqAttained();
+        osc2_OK = _osc2.freqAttained();
     }
 }
 
@@ -454,7 +474,7 @@ KaAfcPrivate::_processXmitAverage() {
               " Hz, 1 and 3 by " << freqChange3 << " Hz";
           
           _setOscillators(_osc0.getScaledFreq() + osc0Steps,
-              _osc1.getScaledFreq() + osc1Steps, 
+              _osc1.getScaledFreq() + osc1Steps, _osc2.getScaledFreq(),
               _osc3.getScaledFreq() + osc3Steps);
           break;
       }
