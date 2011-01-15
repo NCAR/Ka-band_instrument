@@ -712,16 +712,10 @@ void KaMerge::_sendIwrfBurstPacket()
 
   // check that socket to client is open
 
-  fprintf(stderr, "00000000000000000000000000000000000\n");
   if (_openSocketToClient()) {
-    fprintf(stderr, "22222222222222222222222222222222222\n");
     return;
   }
   
-  fprintf(stderr, "11111111111111111111111111111111111\n");
-  iwrf_burst_header_print(stderr, *((iwrf_burst_header_t *) _burstBuf));
-  fprintf(stderr, "11111111111111111111111111111111111\n");
-
   if (_sock->writeBuffer(_burstBuf, _burstBufLen)) {
     cerr << "ERROR - KaMerge::_sendIwrfMetaData()" << endl;
     cerr << "  Writing burst packet" << endl;
