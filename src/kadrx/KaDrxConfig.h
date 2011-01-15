@@ -62,6 +62,10 @@ public:
     double burst_sample_width() const { 
         return _getDoubleVal("burst_sample_width"); 
     }
+    /// Burst sample frequency, hz
+    double burst_sample_frequency() const { 
+        return _getDoubleVal("burst_sample_frequency"); 
+    }
     /// peak transmit power, kW
     double tx_peak_power() const {
         return _getDoubleVal("tx_peak_power");
@@ -182,6 +186,19 @@ public:
     int cohere_iq_to_burst() const {
       return _getBoolVal("cohere_iq_to_burst");
     }
+
+    /// simulation of angles
+
+    int simulate_antenna_angles() const {
+      return _getBoolVal("simulate_antenna_angles");
+    }
+    double sim_elevation() const {
+      return _getDoubleVal("sim_elevation"); /// deg
+    }
+    double sim_az_rate() const {
+      return _getDoubleVal("sim_az_rate"); /// deg/s
+    }
+
     /**
      * Fill the given RadarDDS::SysHousekeeping struct from contents of the
      * configuration. Some or all existing contents may be overwritten.

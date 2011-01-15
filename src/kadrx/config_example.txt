@@ -13,6 +13,7 @@ external_start_trigger  0       # boolean
 
 burst_sample_delay      0       # s
 burst_sample_width      5.0e-7  # s
+burst_sample_frequency  1.0e8   # hz
 
 staggered_prt           0       # boolean
 prt1                    1.0e-3  # s
@@ -35,7 +36,7 @@ tx_delay                0.0     # s
 test_target_delay		2.0e-5	# s
 test_target_width		5.0e-6	# s
 
-afc_g0_threshold_dbm    -50.0	  # minimum G0 power for good frequency estimates
+afc_g0_threshold_dbm    -50.0	# minimum G0 power for good frequency estimates
 afc_coarse_step         5000000	# Hz
 afc_fine_step           100000	# Hz
 
@@ -58,3 +59,10 @@ merge_queue_size       2048      # size of queue which acts as buffer
 
 iwrf_server_tcp_port    12000   # TCP port
 pulse_interval_per_iwrf_meta_data   100   # how often to send out meta data
+
+# simulation of antenna angles
+
+simulate_antenna_angles       1
+sim_elevation                 0.5  # deg
+sim_az_rate                   10.0 # deg/s
+

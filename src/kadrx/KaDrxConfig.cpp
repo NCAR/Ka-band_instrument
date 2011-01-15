@@ -61,10 +61,13 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("altitude");
     keys.insert("burst_sample_delay");
     keys.insert("burst_sample_width");
+    keys.insert("burst_sample_frequency");
     keys.insert("afc_g0_threshold_dbm");
     keys.insert("a2d_counts_per_volt");
     keys.insert("test_target_delay");
     keys.insert("test_target_width");
+    keys.insert("sim_elevation");
+    keys.insert("sim_az_rate");
     return keys;
 }
 
@@ -92,6 +95,7 @@ std::set<std::string> KaDrxConfig::_createBoolLegalKeys() {
     keys.insert("staggered_prt");
     keys.insert("ldr_mode");
     keys.insert("cohere_iq_to_burst");
+    keys.insert("simulate_antenna_angles");
     return keys;
 }
 
@@ -368,6 +372,11 @@ KaDrxConfig::isValid(bool verbose) const {
     if (burst_sample_width() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'burst_sample_width' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (burst_sample_frequency() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'burst_sample_frequency' unset in DRX configuration" << std::endl;
         valid = false;
     }
     if (external_start_trigger() == UNSET_BOOL) {

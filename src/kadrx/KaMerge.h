@@ -97,13 +97,21 @@ private:
   static const int NCHANNELS = 3;
   int _nGates;
   int _nGatesAlloc;
-  int64_t _nPulsesSent;
   int _pulseIntervalPerIwrfMetaData;
   int16_t *_iq;
   char *_pulseBuf;
   int _pulseBufLen;
   double _a2dCountsPerVolt;
   bool _cohereIqToBurst;
+
+  /// Burst IQ
+
+  int _nSamplesBurst;
+  int _nSamplesBurstAlloc;
+  int16_t *_burstIq;
+  char *_burstBuf;
+  int _burstBufLen;
+  double _burstSampleFreqHz;
 
   /// pulse sequence number and times
   
@@ -121,7 +129,9 @@ private:
   iwrf_radar_info_t _radarInfo;
   iwrf_ts_processing_t _tsProc;
   iwrf_calibration_t _calib;
+  iwrf_scan_segment_t _simScan;
   iwrf_pulse_header_t _pulseHdr;
+  iwrf_burst_header_t _burstHdr;
 
   /// Server
 
@@ -129,6 +139,12 @@ private:
   ServerSocket _server;
   bool _serverIsOpen;
   Socket *_sock;
+
+  /// simulation of antenna angles
+
+  bool _simAntennaAngles;
+  double _simElevation;
+  double _simAzRate;
   
   /// methods
 
@@ -141,9 +157,14 @@ private:
   void _cohereIqToBurstPhase();
   void _cohereIqToBurstPhase(PulseData &pulse,
                              const BurstData &burst);
+
   void _assembleIwrfPulsePacket();
   void _sendIwrfPulsePacket();
   void _allocPulseBuf();
+  
+  void _assembleIwrfBurstPacket();
+  void _sendIwrfBurstPacket();
+  void _allocBurstBuf();
   
   int _openServer();
   int _openSocketToClient();

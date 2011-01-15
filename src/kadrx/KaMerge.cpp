@@ -49,9 +49,17 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _pulseBuf = NULL;
   _iq = NULL;
   _nGatesAlloc = 0;
-  _nPulsesSent = 0;
   _pulseIntervalPerIwrfMetaData =
     config.pulse_interval_per_iwrf_meta_data();
+  _pulseBufLen = 0;
+
+  // burst data
+
+  _nSamplesBurst = 0;
+  _nSamplesBurstAlloc = 0;
+  _burstIq = NULL;
+  _burstBuf = NULL;
+  _burstBufLen = 0;
 
   // scaling between A2D counts and volts
   
@@ -131,12 +139,39 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _calib.power_meas_loss_db_h = _config.tx_peak_pwr_coupling();
   _calib.power_meas_loss_db_v = _config.tx_peak_pwr_coupling();
 
+  // initialize IWRF scan segment for simulation angles
+
+  iwrf_scan_segment_init(_simScan);
+  _simScan.scan_mode = IWRF_SCAN_MODE_AZ_SUR_360;
+
+  // initialize pulse header
+
   iwrf_pulse_header_init(_pulseHdr);
+
+  // initialize burst IQ
+
+  iwrf_burst_header_init(_burstHdr);
+  _burstSampleFreqHz= _config.burst_sample_frequency();
 
   // server
 
   _serverIsOpen = false;
   _sock = NULL;
+
+  /// simulation of antenna angles
+
+  _simAntennaAngles = false;
+  _simElevation = 0.5;
+  _simAzRate = 10.0;
+  if (_config.simulate_antenna_angles() != KaDrxConfig::UNSET_BOOL) {
+    _simAntennaAngles = _config.simulate_antenna_angles();
+  }
+  if (_config.sim_elevation() != KaDrxConfig::UNSET_DOUBLE) {
+    _simElevation = _config.sim_elevation();
+  }
+  if (_config.sim_az_rate() != KaDrxConfig::UNSET_DOUBLE) {
+    _simAzRate = _config.sim_az_rate();
+  }
 
 }
 
@@ -157,6 +192,10 @@ KaMerge::~KaMerge()
 
   if (_pulseBuf) {
     delete[] _pulseBuf;
+  }
+
+  if (_burstBuf) {
+    delete[] _burstBuf;
   }
 
 }
@@ -209,6 +248,14 @@ void KaMerge::run()
     if (_cohereIqToBurst) {
       _cohereIqToBurstPhase();
     }
+    
+    // assemble the IWRF burst packet
+    
+    _assembleIwrfBurstPacket();
+    
+    // send out the IWRF burst packet
+    
+    _sendIwrfBurstPacket();
     
     // assemble the IWRF pulse packet
     
@@ -617,6 +664,96 @@ void KaMerge::_allocPulseBuf()
   }
 
   memset(_iq, 0, _nGates * NCHANNELS * 2 * sizeof(int16_t));
+
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// assemble IWRF burst packet
+
+void KaMerge::_assembleIwrfBurstPacket()
+{
+
+  // allocate space for Burst IQ samples
+
+  _nSamplesBurst = _burst->getNSamples();
+  _allocBurstBuf();
+  
+  // load up IQ data
+  
+  memcpy(_burstIq, _burst->getIq(), _nSamplesBurst * 2 * sizeof(int16_t));
+  
+  // burst header
+
+  _burstHdr.packet.len_bytes = _burstBufLen;
+  _burstHdr.packet.seq_num = _packetSeqNum++;
+  _burstHdr.packet.time_secs_utc = _timeSecs;
+  _burstHdr.packet.time_nano_secs = _nanoSecs;
+  
+  _burstHdr.pulse_seq_num = _pulseSeqNum;
+  _burstHdr.n_samples = _nSamplesBurst;
+  _burstHdr.channel_id = 0;
+  _burstHdr.iq_encoding = IWRF_IQ_ENCODING_SCALED_SI16;
+  _burstHdr.scale = 1.0 / _a2dCountsPerVolt;
+  _burstHdr.offset = 0.0;
+  _burstHdr.power_dbm = _burst->getG0PowerDbm();
+  _burstHdr.phase_deg = _burst->getG0PhaseDeg();
+  _burstHdr.freq_hz = _burst->getG0FreqHz();
+  _burstHdr.sampling_freq_hz = _burstSampleFreqHz;
+
+  memcpy(_burstBuf, &_burstHdr, sizeof(_burstHdr));
+
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// send out the IWRF burst packet
+
+void KaMerge::_sendIwrfBurstPacket()
+{
+
+  // check that socket to client is open
+
+  fprintf(stderr, "00000000000000000000000000000000000\n");
+  if (_openSocketToClient()) {
+    fprintf(stderr, "22222222222222222222222222222222222\n");
+    return;
+  }
+  
+  fprintf(stderr, "11111111111111111111111111111111111\n");
+  iwrf_burst_header_print(stderr, *((iwrf_burst_header_t *) _burstBuf));
+  fprintf(stderr, "11111111111111111111111111111111111\n");
+
+  if (_sock->writeBuffer(_burstBuf, _burstBufLen)) {
+    cerr << "ERROR - KaMerge::_sendIwrfMetaData()" << endl;
+    cerr << "  Writing burst packet" << endl;
+    cerr << "  " << _sock->getErrStr() << endl;
+    _closeSocketToClient();
+    return;
+  }
+  
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// allocate burst buffer
+
+void KaMerge::_allocBurstBuf()
+{
+  
+  if (_nSamplesBurst > _nSamplesBurstAlloc) {
+    
+    if (_burstBuf) {
+      delete[] _burstBuf;
+    }
+
+    _burstBufLen =
+      sizeof(iwrf_burst_header_t) + (_nSamplesBurst * 2 * sizeof(int16_t));
+    _burstBuf = new char[_burstBufLen];
+    _burstIq = reinterpret_cast<int16_t *>(_burstBuf + sizeof(iwrf_burst_header_t));
+    
+    _nSamplesBurstAlloc = _nSamplesBurst;
+
+  }
+
+  memset(_burstIq, 0, _nSamplesBurst * 2 * sizeof(int16_t));
 
 }
 
