@@ -14,6 +14,9 @@ using namespace boost::posix_time;
 
 LOGGING("KaDrxPub")
 
+const double KaDrxPub::RAD_TO_DEG = 57.29577951308092;
+const double KaDrxPub::DEG_TO_RAD = 1.0 / KaDrxPub::RAD_TO_DEG;
+
 ////////////////////////////////////////////////////////////////////////////////
 KaDrxPub::KaDrxPub(
                 Pentek::p7142sd3c& sd3c,
@@ -374,36 +377,12 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     KaAfc::theAfc().newXmitSample(g0Power, freqCorrection, pulseSeqNum);
 }
 
-/*
- * Angle conversions
- */
-
-#ifndef RAD_TO_DEG
-#define RAD_TO_DEG 57.29577951308092
-#endif
-
-#ifndef DEG_PER_RAD
-#define DEG_PER_RAD 57.29577951308092
-#endif
-
-#ifndef DEG_TO_RAD
-#define DEG_TO_RAD 0.01745329251994372
-#endif
-
-#ifndef RAD_PER_DEG
-#define RAD_PER_DEG 0.01745329251994372
-#endif
-
 // compute arg in degrees
 
 double KaDrxPub::_argDeg(double ival, double qval)
   
 {
-  double arg = 0.0;
-  if (ival != 0.0 || qval != 0.0) {
-    arg = atan2(qval, ival);
-  }
-  arg *= RAD_TO_DEG;
+  double arg = atan2(qval, ival) * RAD_TO_DEG;
   return arg;
 }
 
