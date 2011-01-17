@@ -192,8 +192,14 @@ public:
     int simulate_antenna_angles() const {
       return _getBoolVal("simulate_antenna_angles");
     }
-    double sim_elevation() const {
-      return _getDoubleVal("sim_elevation"); /// deg
+    int sim_n_elev() const {
+      return _getIntVal("sim_n_elev");
+    }
+    double sim_start_elev() const {
+      return _getDoubleVal("sim_start_elev"); /// deg
+    }
+    double sim_delta_elev() const {
+      return _getDoubleVal("sim_delta_elev"); /// deg
     }
     double sim_az_rate() const {
       return _getDoubleVal("sim_az_rate"); /// deg/s

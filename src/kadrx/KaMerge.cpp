@@ -161,21 +161,30 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   /// simulation of antenna angles
 
   _simAntennaAngles = false;
-  _simElevation = 0.5;
+  _simNElev = 10;
+  _simStartElev = 0.5;
+  _simDeltaElev = 1.0;
   _simAzRate = 10.0;
-  _simAzimuth = 0.0;
-  _simVolNum = 0;
-  _simSweepNum = 0;
   if (_config.simulate_antenna_angles() != KaDrxConfig::UNSET_BOOL) {
     _simAntennaAngles = _config.simulate_antenna_angles();
   }
-  if (_config.sim_elevation() != KaDrxConfig::UNSET_DOUBLE) {
-    _simElevation = _config.sim_elevation();
+  if (_config.sim_n_elev() != KaDrxConfig::UNSET_INT) {
+    _simNElev = _config.sim_n_elev();
+  }
+  if (_config.sim_start_elev() != KaDrxConfig::UNSET_DOUBLE) {
+    _simStartElev = _config.sim_start_elev();
+  }
+  if (_config.sim_delta_elev() != KaDrxConfig::UNSET_DOUBLE) {
+    _simDeltaElev = _config.sim_delta_elev();
   }
   if (_config.sim_az_rate() != KaDrxConfig::UNSET_DOUBLE) {
     _simAzRate = _config.sim_az_rate();
   }
-
+  _simElev = _simStartElev;
+  _simAz = 0.0;
+  _simVolNum = 0;
+  _simSweepNum = 0;
+  
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -621,15 +630,13 @@ void KaMerge::_assembleIwrfPulsePacket()
 
   if (_simAntennaAngles) {
     double dAz = _pulseHdr.prt * _simAzRate;
-    _simAzimuth += dAz;
-    if (_simAzimuth >= 360.0) {
-      _simAzimuth = 0.0;
+    _simAz += dAz;
+    if (_simAz >= 360.0) {
+      _simAz = 0.0;
       _simSweepNum++;
-      _simElevation += 1.0;
+      _simElev += _simDeltaElev;
       if (_simSweepNum == 10) {
-        if (_config.sim_elevation() != KaDrxConfig::UNSET_DOUBLE) {
-          _simElevation = _config.sim_elevation();
-        }
+        _simElev = _simStartElev;
         _simSweepNum = 0;
         _simVolNum++;
       }
@@ -637,9 +644,9 @@ void KaMerge::_assembleIwrfPulsePacket()
     _pulseHdr.scan_mode = IWRF_SCAN_MODE_AZ_SUR_360;
     _pulseHdr.volume_num = _simVolNum;
     _pulseHdr.sweep_num = _simSweepNum;
-    _pulseHdr.fixed_el = _simElevation;
-    _pulseHdr.elevation = _simElevation;
-    _pulseHdr.azimuth = _simAzimuth;
+    _pulseHdr.fixed_el = _simElev;
+    _pulseHdr.elevation = _simElev;
+    _pulseHdr.azimuth = _simAz;
   }
   
   memcpy(_pulseBuf, &_pulseHdr, sizeof(_pulseHdr));

@@ -143,9 +143,12 @@ private:
   /// simulation of antenna angles
 
   bool _simAntennaAngles;
-  double _simElevation;
+  int _simNElev;
+  double _simStartElev;
+  double _simDeltaElev;
+  double _simElev;
   double _simAzRate;
-  double _simAzimuth;
+  double _simAz;
   int _simVolNum;
   int _simSweepNum;
   

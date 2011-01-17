@@ -66,7 +66,8 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("a2d_counts_per_volt");
     keys.insert("test_target_delay");
     keys.insert("test_target_width");
-    keys.insert("sim_elevation");
+    keys.insert("sim_start_elev");
+    keys.insert("sim_delta_elev");
     keys.insert("sim_az_rate");
     return keys;
 }
@@ -83,6 +84,7 @@ std::set<std::string> KaDrxConfig::_createIntLegalKeys() {
     keys.insert("merge_queue_size");
     keys.insert("iwrf_server_tcp_port");
     keys.insert("pulse_interval_per_iwrf_meta_data");
+    keys.insert("sim_n_elev");
     return keys;
 }
 

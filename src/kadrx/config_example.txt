@@ -63,6 +63,8 @@ pulse_interval_per_iwrf_meta_data   100   # how often to send out meta data
 # simulation of antenna angles
 
 simulate_antenna_angles       1
-sim_elevation                 0.5  # deg
+sim_n_elev                    10
+sim_start_elev                0.5  # deg
+sim_delta_elev                1.5  # deg
 sim_az_rate                   10.0 # deg/s
 
