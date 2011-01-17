@@ -163,6 +163,9 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _simAntennaAngles = false;
   _simElevation = 0.5;
   _simAzRate = 10.0;
+  _simAzimuth = 0.0;
+  _simVolNum = 0;
+  _simSweepNum = 0;
   if (_config.simulate_antenna_angles() != KaDrxConfig::UNSET_BOOL) {
     _simAntennaAngles = _config.simulate_antenna_angles();
   }
@@ -616,6 +619,29 @@ void KaMerge::_assembleIwrfPulsePacket()
   _pulseHdr.start_range_m = _tsProc.start_range_m;
   _pulseHdr.gate_spacing_m = _tsProc.gate_spacing_m;
 
+  if (_simAntennaAngles) {
+    double dAz = _pulseHdr.prt * _simAzRate;
+    _simAzimuth += dAz;
+    if (_simAzimuth >= 360.0) {
+      _simAzimuth = 0.0;
+      _simSweepNum++;
+      _simElevation += 1.0;
+      if (_simSweepNum == 10) {
+        if (_config.sim_elevation() != KaDrxConfig::UNSET_DOUBLE) {
+          _simElevation = _config.sim_elevation();
+        }
+        _simSweepNum = 0;
+        _simVolNum++;
+      }
+    }
+    _pulseHdr.scan_mode = IWRF_SCAN_MODE_AZ_SUR_360;
+    _pulseHdr.volume_num = _simVolNum;
+    _pulseHdr.sweep_num = _simSweepNum;
+    _pulseHdr.fixed_el = _simElevation;
+    _pulseHdr.elevation = _simElevation;
+    _pulseHdr.azimuth = _simAzimuth;
+  }
+  
   memcpy(_pulseBuf, &_pulseHdr, sizeof(_pulseHdr));
 
 }

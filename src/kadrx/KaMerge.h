@@ -145,6 +145,9 @@ private:
   bool _simAntennaAngles;
   double _simElevation;
   double _simAzRate;
+  double _simAzimuth;
+  int _simVolNum;
+  int _simSweepNum;
   
   /// methods
 
