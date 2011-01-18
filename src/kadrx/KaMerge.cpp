@@ -153,10 +153,16 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   iwrf_burst_header_init(_burstHdr);
   _burstSampleFreqHz= _config.burst_sample_frequency();
 
-  // server
+  /// PRT mode
 
-  _serverIsOpen = false;
-  _sock = NULL;
+  _staggeredPrt = false;
+  if (_config.staggered_prt() != KaDrxConfig::UNSET_BOOL) {
+    _staggeredPrt = _config.staggered_prt();
+  }
+  _prt1 = 1.0e-3;
+  if (_config.prt1() != KaDrxConfig::UNSET_DOUBLE) {
+    _prt1 = _config.prt1();
+  }
 
   /// simulation of antenna angles
 
@@ -184,7 +190,12 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _simAz = 0.0;
   _simVolNum = 0;
   _simSweepNum = 0;
-  
+
+  // server
+
+  _serverIsOpen = false;
+  _sock = NULL;
+
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -604,9 +615,14 @@ void KaMerge::_assembleIwrfPulsePacket()
   _pulseHdr.packet.time_nano_secs = _nanoSecs;
 
   _pulseHdr.pulse_seq_num = _pulseSeqNum;
-  _pulseHdr.prt =
-    (double) (_timeSecs - _prevTimeSecs) +
-    (double) (_nanoSecs - _prevNanoSecs) * 1.0e-9;
+
+  if (_staggeredPrt) {
+     _pulseHdr.prt =
+       (double) (_timeSecs - _prevTimeSecs) +
+       (double) (_nanoSecs - _prevNanoSecs) * 1.0e-9;
+  } else {
+    _pulseHdr.prt = _prt1;
+  }
 
   _pulseHdr.pulse_width_us = _tsProc.pulse_width_us;
   _pulseHdr.n_gates = _nGates;

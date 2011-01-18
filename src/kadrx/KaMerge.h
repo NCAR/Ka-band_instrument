@@ -122,6 +122,11 @@ private:
   int64_t _prevPulseSeqNum;
   time_t _prevTimeSecs;
   int _prevNanoSecs;
+
+  /// prt mode
+
+  bool _staggeredPrt;
+  double _prt1;
   
   /// IWRF data
 
