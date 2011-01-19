@@ -199,12 +199,9 @@ KaAfcPrivate::KaAfcPrivate() :
     QThread(),
     _mutex(QMutex::NonRecursive),   // must be non-recursive for QWaitCondition!
     _afcMode(AFC_SEARCHING),
-//    _osc0("/dev/ttydp00", 0, 100000, 14400, 15000),
-//    _osc1("/dev/ttydp01", 1, 10000, 12750, 13750),
-//    _osc2("/dev/ttydp02", 2, 1000000, 16000, 17000),
-    _osc0(TtyOscillator::SIM_OSCILLATOR, 0, 100000, 14400, 15000),
-    _osc1(TtyOscillator::SIM_OSCILLATOR, 1, 10000, 12750, 13750),
-    _osc2(TtyOscillator::SIM_OSCILLATOR, 2, 1000000, 16000, 17000),
+    _osc0("/dev/ttydp00", 0, 100000, 15000, 16000),
+    _osc1("/dev/ttydp01", 1, 10000, 12750, 13750),
+    _osc2("/dev/ttydp02", 2, 1000000, 16000, 17000),
     _osc3(KaPmc730::thePmc730()),
     _g0ThreshDbm(-25.0),     // -25.0 dBm G0 threshold power for good frequencies
     _coarseStep(500000),    // 500 kHz coarse step (SEARCHING)
@@ -350,7 +347,7 @@ KaAfcPrivate::newXmitSample(double g0Power, double freqOffset,
     
     // Look for pulse gaps
     int pulseGap = pulseSeqNum - _lastRcvdPulse - 1;
-    if (pulseGap) {
+    if (pulseGap && _nSummed != 0) {
         WLOG << __PRETTY_FUNCTION__ << ": " << pulseGap << 
             " pulse gap (_nSummed = " << _nSummed << ")";
     }
@@ -441,7 +438,7 @@ KaAfcPrivate::_processXmitAverage() {
           }
           // If the frequency offset is less than our threshold, return now
           if (fabs(_freqOffset) < 6.0e4) {
-              ILOG << "Frequency offset < 60 kHz, nothing to do!";
+              DLOG << "Frequency offset < 60 kHz, nothing to do!";
               return;
           }
           
