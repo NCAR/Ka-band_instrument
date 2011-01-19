@@ -9,9 +9,9 @@ ant_gain                46.2    # dB
 ant_hbeam_width         0.75    # deg
 ant_vbeam_width         0.68    # deg
 
-external_start_trigger  0       # boolean
+external_start_trigger  1       # boolean
 
-burst_sample_delay      0       # s
+burst_sample_delay      1.55e-6 # s
 burst_sample_width      5.0e-7  # s
 burst_sample_frequency  1.0e8   # hz
 
@@ -21,24 +21,24 @@ prt1                    1.0e-3  # s
 rcvr_bandwidth          1.37e6  # Hz
 rcvr_digital_gain       -2.67   # dB
 rcvr_filter_mismatch    1.1     # dB
-rcvr_gate0_delay        0.0     # s
+rcvr_gate0_delay        5.5e-6  # s
 rcvr_noise_figure       8.9     # dB
-rcvr_pulse_width        5.0e-7	# s
+rcvr_pulse_width        5.0e-7    # s
 rcvr_rf_gain            39.48   # dB
 
-tx_cntr_freq            3.5e10	# Hz
+tx_cntr_freq            3.5e10  # Hz
 tx_peak_power           58.78   # dBm
-tx_pulse_width          5.0e-7	# s
-tx_pulse_mod_delay      8.0e-8  # s
-tx_pulse_mod_width      7.5e-7  # s
+tx_pulse_width          5.0e-7  # s
+tx_pulse_mod_delay      6.0e-7  # s
+tx_pulse_mod_width      6.0e-7  # s
 tx_delay                0.0     # s
 
-test_target_delay		2.0e-5	# s
-test_target_width		5.0e-6	# s
+test_target_delay       2.0e-5  # s
+test_target_width       5.0e-6  # s
 
-afc_g0_threshold_dbm    -50.0	# minimum G0 power for good frequency estimates
-afc_coarse_step         5000000	# Hz
-afc_fine_step           100000	# Hz
+afc_g0_threshold_dbm    -20.0   # minimum G0 power for good frequency estimates
+afc_coarse_step         5000000 # Hz
+afc_fine_step           100000  # Hz
 
 a2d_counts_per_volt    327670.0 # full scale (32767) = 0.1 V
 
@@ -49,22 +49,21 @@ altitude                1609
 
 # processing the IQ data - should we cohere to the burst?
 
-cohere_iq_to_burst    0
+cohere_iq_to_burst      0
 
 # merge queue size
 
-merge_queue_size       2048      # size of queue which acts as buffer
-                                 # for the merge
+merge_queue_size        2048    # size of queue which acts as buffer
+                                # for the merge
 # IWRF data export
 
-iwrf_server_tcp_port    12000   # TCP port
-pulse_interval_per_iwrf_meta_data   100   # how often to send out meta data
+iwrf_server_tcp_port                12000   # TCP port
+pulse_interval_per_iwrf_meta_data   100     # how often to send out meta data
 
 # simulation of antenna angles
 
-simulate_antenna_angles       1
-sim_n_elev                    10
-sim_start_elev                0.5  # deg
-sim_delta_elev                1.5  # deg
-sim_az_rate                   10.0 # deg/s
-
+simulate_antenna_angles 1
+sim_n_elev              10
+sim_start_elev          0.5     # deg
+sim_delta_elev          1.5     # deg
+sim_az_rate             10.0    # deg/s
