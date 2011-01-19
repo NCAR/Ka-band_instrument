@@ -6,7 +6,7 @@
  */
 
 #include <string>
-#include <cassert>
+#include <cstdlib>
 #include <unistd.h>
 
 #include <logx/Logging.h>
@@ -243,12 +243,15 @@ main(int argc, char *argv[]) {
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
 
-    WLOG << "ka_xmitd started!";
+    if (argc != 3) {
+        ELOG << "Usage: " << argv[0] << " <xmitter_ttydev> <server_port> [<logx_arg> ...]";
+        exit(1);
+    }
     
-    Xmitter = new KaXmitter("/dev/ttyS0");
+    Xmitter = new KaXmitter(argv[1]);
     
     // Initialize our RPC server
-    RpcServer.bindAndListen(8080);
+    RpcServer.bindAndListen(atoi(argv[2]));
     RpcServer.enableIntrospection(true);
 
     /*
