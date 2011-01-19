@@ -78,6 +78,8 @@ KaXmitCtlMainWindow::_updateStatus() {
     if (_xmlrpcClient.isFault()) {
         WLOG << __FUNCTION__ << ": XML-RPC fault on getStatus";
     }
+    
+    // boolean status values
     _ui.runupLabel->setEnabled(_hvpsRunup());
     _ui.standbyLabel->setEnabled(_standby());
     _ui.warmupLabel->setEnabled(_heaterWarmup());
@@ -85,6 +87,7 @@ KaXmitCtlMainWindow::_updateStatus() {
     _ui.hvpsOnLabel->setEnabled(_hvpsOn());
     _ui.remoteEnabledLabel->setEnabled(_remoteEnabled());
     
+    // fault lights
     _ui.magCurrFaultIcon->setPixmap(_magnetronCurrentFault() ? _redLED : _greenLED);
     _ui.blowerFaultIcon->setPixmap(_blowerFault() ? _redLED : _greenLED);
     _ui.interlockFaultIcon->setPixmap(_safetyInterlock() ? _redLED : _greenLED);
@@ -95,6 +98,7 @@ KaXmitCtlMainWindow::_updateStatus() {
     _ui.hvpsUnderVFaultIcon->setPixmap(_hvpsUnderVoltage() ? _redLED : _greenLED);
     _ui.hvpsOverVFaultIcon->setPixmap(_hvpsOverVoltage() ? _redLED : _greenLED);
     
+    // Text displays for voltage, currents, and temperature
     QString txt;
     
     txt.setNum(_hvpsVoltage(), 'f', 1);
@@ -109,7 +113,10 @@ KaXmitCtlMainWindow::_updateStatus() {
     txt.setNum(_temperature(), 'f', 0);
     _ui.temperatureValue->setText(txt);
     
+    // "unit on" light
     _ui.unitOnLabel->setPixmap(_unitOn() ? _greenLED : _greenLED_off);
+    
+    // enable/disable buttons
     _ui.powerButton->setEnabled(_remoteEnabled());
     if (_unitOn() && _remoteEnabled()) {
         _ui.faultResetButton->setEnabled(_faultSummary());
@@ -119,6 +126,12 @@ KaXmitCtlMainWindow::_updateStatus() {
         _ui.faultResetButton->setEnabled(false);
         _ui.standbyButton->setEnabled(false);
         _ui.operateButton->setEnabled(false);
+    }
+    
+    if (_remoteEnabled()) {
+        statusBar()->clearMessage();
+    } else {
+        statusBar()->showMessage("Remote control is currently DISABLED");
     }
 }
 
