@@ -121,3 +121,26 @@ KaXmitCtlMainWindow::_updateStatus() {
         _ui.operateButton->setEnabled(false);
     }
 }
+
+bool
+KaXmitCtlMainWindow::_statusBool(std::string key) {
+    if (! _statusDict.hasMember(key)) {
+        ELOG << "Status dictionary does not contain requested key '" << key <<
+            "'!";
+        abort();
+    } else {
+        return(bool(_statusDict[key]));
+    }
+}
+
+double
+KaXmitCtlMainWindow::_statusDouble(std::string  key) {
+    if (! _statusDict.hasMember(key)) {
+        ELOG << "Status dictionary does not contain requested key '" << key <<
+            "'!";
+        abort();
+    } else {
+        return(double(_statusDict[key]));
+    }
+}
+    
