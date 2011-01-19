@@ -4,9 +4,11 @@ tools = Split("""
 logx
 doxygen
 xmlrpc
+qt4
 """)
 
 env = Environment(tools = ['default'] + tools)
+env.EnableQt4Modules(['QtCore', 'QtGui'])
 
 xmitd_sources = Split("""
 ka_xmitd.cpp
@@ -17,11 +19,25 @@ Default(ka_xmitd)
 
 xmitctl_sources = Split("""
 ka_xmitctl.cpp
+KaXmitCtlMainWindow.cpp
+qrc_KaXmitCtlMainWindow.cc
 """)
 ka_xmitctl = env.Program('ka_xmitctl', xmitctl_sources)
 Default(ka_xmitctl)
 
+uifiles = Split("""
+KaXmitCtlMainWindow.ui
+""")
+env.Uic4(uifiles)
+
+# This generates the rules for *.qrc -> qrc_*.cc
+qrcfiles = Split("""
+KaXmitCtlMainWindow.qrc
+""")
+env.Qrc(qrcfiles)
+
 headers = Split("""
+KaXmitCtlMainWindow.h
 KaXmitter.h
 """)
 

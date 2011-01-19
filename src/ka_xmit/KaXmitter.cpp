@@ -44,27 +44,6 @@ const std::string KaXmitter::_STATUS_COMMAND = "\x02\x57\x03\x26";
 
 
 KaXmitter::KaXmitter(std::string ttyDev) :
-        _faultSummary(false),
-        _hvpsRunup(false),
-        _standby(false),
-        _heaterWarmup(false),
-        _cooldown(false),
-        _unitOn(false),
-        _magnetronCurrentFault(false),
-        _blowerFault(false),
-        _hvpsOn(false),
-        _remoteEnabled(false),
-        _safetyInterlock(false),
-        _reversePowerFault(false),
-        _pulseInputFault(false),
-        _hvpsCurrentFault(false),
-        _waveguidePressureFault(false),
-        _hvpsUnderVoltage(false),
-        _hvpsOverVoltage(false),
-        _hvpsVoltage(0.0),
-        _magnetronCurrent(0.0),
-        _hvpsCurrent(0.0),
-        _temperature(0.0),
         _simulate(ttyDev == SIM_DEVICE),
         _ttyDev(ttyDev),
         _fd(-1) {
@@ -98,18 +77,64 @@ KaXmitter::KaXmitter(std::string ttyDev) :
         }
         DLOG << "Done configuring " << _ttyDev;
     }
-    // Get current status
-    updateStatus();
 }
 
 KaXmitter::~KaXmitter() {
 }
 
+void
+KaXmitter::powerOn() {
+    _sendCommand(_POWERON_COMMAND);
+}
 
 void
-KaXmitter::updateStatus() {
-    if (_simulate)
-        return;
+KaXmitter::powerOff() {
+    _sendCommand(_POWEROFF_COMMAND);
+}
+
+void
+KaXmitter::faultReset() {
+    _sendCommand(_RESET_COMMAND);
+}
+
+void
+KaXmitter::standby() {
+    _sendCommand(_STANDBY_COMMAND);
+}
+
+void
+KaXmitter::operate() {
+    _sendCommand(_OPERATE_COMMAND);
+}
+
+const KaXmitStatus &
+KaXmitter::getStatus() {
+    if (_simulate) {
+        _status.faultSummary = false;
+        _status.hvpsRunup = false;
+        _status.standby = false;
+        _status.heaterWarmup = false;
+        _status.cooldown = false;
+        _status.unitOn = false;
+        _status.magnetronCurrentFault = false;
+        _status.blowerFault = false;
+        _status.hvpsOn = false;
+        _status.remoteEnabled = false;
+        _status.safetyInterlock = false;
+        _status.reversePowerFault = false;
+        _status.pulseInputFault = false;
+        _status.hvpsCurrentFault = false;
+        _status.waveguidePressureFault = false;
+        _status.hvpsUnderVoltage = false;
+        _status.hvpsOverVoltage = false;
+        _status.hvpsVoltage = false;
+        _status.magnetronCurrent = 0.2;
+        _status.hvpsCurrent = 0.3;
+        _status.temperature = 32;
+        
+        return(_status);
+    }
+    
     // Get rid of any unread input
     tcflush(_fd, TCIFLUSH);
     
@@ -129,7 +154,7 @@ KaXmitter::updateStatus() {
         int result = read(_fd, reply + nRead, REPLYSIZE - nRead);
         if (result == 0) {
             WLOG << "Status reply read timeout. Trying again.";
-            return updateStatus();
+            return getStatus();
         } else if (result < 0) {
             ELOG << "Status reply read error: " << strerror(errno);
             abort();
@@ -141,73 +166,80 @@ KaXmitter::updateStatus() {
     // Validate the reply
     if (! _argValid(std::string(reply, REPLYSIZE))) {
         WLOG << ": Trying again after bad status reply";
-        updateStatus();
+        return(getStatus());
     }
     
     // Finally, parse the reply
     
     // Six used bits in the first status byte
-    _faultSummary = (reply[1] >> 5) & 0x1;
-    _hvpsRunup = (reply[1] >> 4) & 0x1;
-    _standby = (reply[1] >> 3) & 0x1;
-    _heaterWarmup = (reply[1] >> 2) & 0x1;
-    _cooldown = (reply[1] >> 1) & 0x1;
-    _unitOn = (reply[1] >> 0) & 0x1;
-    DLOG << "flt summary " << _faultSummary << ", runup " << _hvpsRunup << 
-        ", standby " << _standby << ", warmup " << _heaterWarmup << 
-        ", cooldown " << _cooldown << ", unit on " << _unitOn;
+    _status.faultSummary = (reply[1] >> 5) & 0x1;
+    _status.hvpsRunup = (reply[1] >> 4) & 0x1;
+    _status.standby = (reply[1] >> 3) & 0x1;
+    _status.heaterWarmup = (reply[1] >> 2) & 0x1;
+    _status.cooldown = (reply[1] >> 1) & 0x1;
+    _status.unitOn = (reply[1] >> 0) & 0x1;
+    DLOG << "flt summary " << _status.faultSummary << 
+        ", runup " << _status.hvpsRunup << 
+        ", standby " << _status.standby << 
+        ", warmup " << _status.heaterWarmup << 
+        ", cooldown " << _status.cooldown << 
+        ", unit on " << _status.unitOn;
     
     // Six used bits in the second status byte
-    _magnetronCurrentFault = (reply[2] >> 5) & 0x1;
-    _blowerFault = (reply[2] >> 4) & 0x1;
-    _hvpsOn = (reply[2] >> 3) & 0x1;
-    _remoteEnabled = (reply[2] >> 2) & 0x1;
-    _safetyInterlock = (reply[2] >> 1) & 0x1;
-    _reversePowerFault = (reply[2] >> 0) & 0x1;
-    DLOG << "mag cur flt " << _magnetronCurrentFault << 
-        ", blower flt " << _blowerFault << ", hvpsOn " << _hvpsOn <<
-        ", remote ena " << _remoteEnabled << ", safety " << _safetyInterlock <<
-        ", reverse pwr flt " << _reversePowerFault;
+    _status.magnetronCurrentFault = (reply[2] >> 5) & 0x1;
+    _status.blowerFault = (reply[2] >> 4) & 0x1;
+    _status.hvpsOn = (reply[2] >> 3) & 0x1;
+    _status.remoteEnabled = (reply[2] >> 2) & 0x1;
+    _status.safetyInterlock = (reply[2] >> 1) & 0x1;
+    _status.reversePowerFault = (reply[2] >> 0) & 0x1;
+    DLOG << "mag cur flt " << _status.magnetronCurrentFault << 
+        ", blower flt " << _status.blowerFault << 
+        ", hvpsOn " << _status.hvpsOn <<
+        ", remote ena " << _status.remoteEnabled << 
+        ", safety " << _status.safetyInterlock <<
+        ", reverse pwr flt " << _status.reversePowerFault;
     
     // Five used bits in the third status byte
-    _pulseInputFault = (reply[3] >> 5) & 0x1;
-    _hvpsCurrentFault = (reply[3] >> 3) & 0x1;
-    _waveguidePressureFault = (reply[3] >> 2) & 0x1;
-    _hvpsUnderVoltage = (reply[3] >> 1) & 0x1;
-    _hvpsOverVoltage = (reply[3] >> 0) & 0x1;
-    DLOG << "pulse flt " << _pulseInputFault << 
-        ", HVPS cur flt " << _hvpsCurrentFault <<
-        ", wg pres flt " << _waveguidePressureFault <<
-        ", HVPS underV " << _hvpsUnderVoltage <<
-        ", HVPS overV " << _hvpsOverVoltage;
+    _status.pulseInputFault = (reply[3] >> 5) & 0x1;
+    _status.hvpsCurrentFault = (reply[3] >> 3) & 0x1;
+    _status.waveguidePressureFault = (reply[3] >> 2) & 0x1;
+    _status.hvpsUnderVoltage = (reply[3] >> 1) & 0x1;
+    _status.hvpsOverVoltage = (reply[3] >> 0) & 0x1;
+    DLOG << "pulse flt " << _status.pulseInputFault << 
+        ", HVPS cur flt " << _status.hvpsCurrentFault <<
+        ", wg pres flt " << _status.waveguidePressureFault <<
+        ", HVPS underV " << _status.hvpsUnderVoltage <<
+        ", HVPS overV " << _status.hvpsOverVoltage;
     
     // 4-character HVPS voltage starting at character 4, e.g., " 0.0"
-    if (sscanf(reply + 4, "%4lf", &_hvpsVoltage) != 1) {
+    if (sscanf(reply + 4, "%4lf", &_status.hvpsVoltage) != 1) {
         WLOG << __PRETTY_FUNCTION__ << ": Bad HVPS voltage in status!";
     } else {
-        DLOG << "HVPS voltage " << _hvpsVoltage << " kV";
+        DLOG << "HVPS voltage " << _status.hvpsVoltage << " kV";
     }
         
     // 4-character magnetron current starting at character 8, e.g., " 0.2"
-    if (sscanf(reply + 8, "%4lf", &_magnetronCurrent) != 1) {
+    if (sscanf(reply + 8, "%4lf", &_status.magnetronCurrent) != 1) {
         WLOG << "Bad magnetron current in status!";
     } else {
-        DLOG << "magnetron current " << _magnetronCurrent << " mA";
+        DLOG << "magnetron current " << _status.magnetronCurrent << " mA";
     }
         
     // 4-character HVPS current starting at character 12, e.g., " 0.2"
-    if (sscanf(reply + 12, "%4lf", &_hvpsCurrent) != 1) {
+    if (sscanf(reply + 12, "%4lf", &_status.hvpsCurrent) != 1) {
         WLOG << "Bad HVPS current in status!";
     } else {
-        DLOG << "HVPS current " << _hvpsCurrent << " mA";
+        DLOG << "HVPS current " << _status.hvpsCurrent << " mA";
     }
     
     // 3-character temperature starting at character 16, e.g., "+27."
-    if (sscanf(reply+16, "%4lf", &_temperature) != 1) {
+    if (sscanf(reply+16, "%4lf", &_status.temperature) != 1) {
         WLOG << "Bad temperature in status!";
     } else {
-        DLOG << "transmitter temperature " << _temperature << " C";
+        DLOG << "transmitter temperature " << _status.temperature << " C";
     }
+    
+    return(_status);
 }
 
 void

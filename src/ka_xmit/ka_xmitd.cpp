@@ -155,35 +155,88 @@ class GetStatusMethod : public XmlRpcServerMethod {
 public:
     GetStatusMethod(XmlRpcServer *s) : XmlRpcServerMethod("getStatus", s) {}
     void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        const KaXmitStatus & status = Xmitter->getStatus();
         // Construct an XML-RPC <struct> (more accurately a dictionary)
         // containing all of the transmitter status values.
         XmlRpcValue statusDict;
-        statusDict["fault_summary"] = XmlRpcValue(Xmitter->getFaultSummary());
-        statusDict["hvps_runup"] = XmlRpcValue(Xmitter->getHvpsRunup());
-        statusDict["standby"] = XmlRpcValue(Xmitter->getStandby());
-        statusDict["heater_warmup"] = XmlRpcValue(Xmitter->getHeaterWarmup());
-        statusDict["cooldown"] = XmlRpcValue(Xmitter->getCooldown());
-        statusDict["unit_on"] = XmlRpcValue(Xmitter->getUnitOn());
-        statusDict["magnetron_current_fault"] = XmlRpcValue(Xmitter->getMagnetronCurrentFault());
-        statusDict["blower_fault"] = XmlRpcValue(Xmitter->getBlowerFault());
-        statusDict["hvps_on"] = XmlRpcValue(Xmitter->getHvpsOn());
-        statusDict["remote_enabled"] = XmlRpcValue(Xmitter->getRemoteEnabled());
-        statusDict["safety_interlock"] = XmlRpcValue(Xmitter->getSafetyInterlock());
-        statusDict["reverse_power_fault"] = XmlRpcValue(Xmitter->getReversePowerFault());
-        statusDict["pulse_input_fault"] = XmlRpcValue(Xmitter->getPulseInputFault());
-        statusDict["hvps_current_fault"] = XmlRpcValue(Xmitter->getHvpsCurrentFault());
-        statusDict["waveguide_pressure_fault"] = XmlRpcValue(Xmitter->getWaveguidePressureFault());
-        statusDict["hvps_under_voltage"] = XmlRpcValue(Xmitter->getHvpsUnderVoltage());
-        statusDict["hvps_over_voltage"] = XmlRpcValue(Xmitter->getHvpsOverVoltage());
-        statusDict["hvps_voltage"] = XmlRpcValue(Xmitter->getHvpsVoltage());
-        statusDict["magnetron_current"] = XmlRpcValue(Xmitter->getMagnetronCurrent());
-        statusDict["hvps_current"] = XmlRpcValue(Xmitter->getHvpsCurrent());
+        statusDict["fault_summary"] = XmlRpcValue(status.faultSummary);
+        statusDict["hvps_runup"] = XmlRpcValue(status.hvpsRunup);
+        statusDict["standby"] = XmlRpcValue(status.standby);
+        statusDict["heater_warmup"] = XmlRpcValue(status.heaterWarmup);
+        statusDict["cooldown"] = XmlRpcValue(status.cooldown);
+        statusDict["unit_on"] = XmlRpcValue(status.unitOn);
+        statusDict["magnetron_current_fault"] = XmlRpcValue(status.magnetronCurrentFault);
+        statusDict["blower_fault"] = XmlRpcValue(status.blowerFault);
+        statusDict["hvps_on"] = XmlRpcValue(status.hvpsOn);
+        statusDict["remote_enabled"] = XmlRpcValue(status.remoteEnabled);
+        statusDict["safety_interlock"] = XmlRpcValue(status.safetyInterlock);
+        statusDict["reverse_power_fault"] = XmlRpcValue(status.reversePowerFault);
+        statusDict["pulse_input_fault"] = XmlRpcValue(status.pulseInputFault);
+        statusDict["hvps_current_fault"] = XmlRpcValue(status.hvpsCurrentFault);
+        statusDict["waveguide_pressure_fault"] = XmlRpcValue(status.waveguidePressureFault);
+        statusDict["hvps_under_voltage"] = XmlRpcValue(status.hvpsUnderVoltage);
+        statusDict["hvps_over_voltage"] = XmlRpcValue(status.hvpsOverVoltage);
+        statusDict["hvps_voltage"] = XmlRpcValue(status.hvpsVoltage);
+        statusDict["magnetron_current"] = XmlRpcValue(status.magnetronCurrent);
+        statusDict["hvps_current"] = XmlRpcValue(status.hvpsCurrent);
+        statusDict["temperature"] = XmlRpcValue(status.temperature);
         
         retvalP = statusDict;
     }
 } getStatusMethod(&RpcServer);
 
+/// Xmlrpc++ method to turn transmitter on. Note that this merely turns on
+/// power to the transmitter unit, and does not enable the high voltage (i.e.,
+/// actual transmission).
+class PowerOnMethod : public XmlRpcServerMethod {
+public:
+    PowerOnMethod(XmlRpcServer *s) : XmlRpcServerMethod("powerOn", s) {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        DLOG << "power ON command received";
+        Xmitter->powerOn();
+    }
+} powerOnMethod(&RpcServer);
 
+/// Xmlrpc++ method to turn transmitter off. It takes three minutes
+/// of cooldown time before the transmitter turns off completely.
+class PowerOffMethod : public XmlRpcServerMethod {
+public:
+    PowerOffMethod(XmlRpcServer *s) : XmlRpcServerMethod("powerOff", s) {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        DLOG << "power OFF command received";
+        Xmitter->powerOff();
+    }
+} powerOffMethod(&RpcServer);
+
+/// Xmlrpc++ method to reset transmitter faults.
+class FaultResetMethod : public XmlRpcServerMethod {
+public:
+    FaultResetMethod(XmlRpcServer *s) : XmlRpcServerMethod("faultReset", s) {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        DLOG << "fault reset command received";
+        Xmitter->faultReset();
+    }
+} faultResetMethod(&RpcServer);
+
+/// Xmlrpc++ method to enter "standby" state (warmed up, but high voltage off)
+class StandbyMethod : public XmlRpcServerMethod {
+public:
+    StandbyMethod(XmlRpcServer *s) : XmlRpcServerMethod("standby", s) {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        DLOG << "standby command received";
+        Xmitter->standby();
+    }
+} standbyMethod(&RpcServer);
+
+/// Xmlrpc++ method to enter "operate" state (high voltage on, ready to transmit)
+class OperateMethod : public XmlRpcServerMethod {
+public:
+    OperateMethod(XmlRpcServer *s) : XmlRpcServerMethod("operate", s) {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        DLOG << "operate command received";
+        Xmitter->operate();
+    }
+} operateMethod(&RpcServer);
 
 int
 main(int argc, char *argv[]) {
@@ -199,14 +252,12 @@ main(int argc, char *argv[]) {
     RpcServer.enableIntrospection(true);
 
     /*
-     * Listen for XML-RPC commands for a while, then have the transmitter
-     * get fresh status. Repeat.
+     * Listen for XML-RPC commands for a while. Repeat.
      */
     while (true) {
         // Note that work() mostly goes for 2x the given time, but sometimes
         // goes for 1x the given time. Who knows why?
         RpcServer.work(1.0);
-        Xmitter->updateStatus();
     }
     
     delete(Xmitter);
