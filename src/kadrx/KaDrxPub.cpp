@@ -332,10 +332,10 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     }
 
     // Frequency discriminator -- runs every hit
-    // Compute cross product over middle 20 samples (frequency discriminator) 
+    // Compute cross product over middle 16 samples (frequency discriminator) 
     // using moving coherent average to reduce variance
     // i contains inphase samples; q contains quadrature samples
-    for (unsigned int g = 2; g <= 20; g++) {
+    for (unsigned int g = 2; g <= 17; g++) {
         double a = i[g] + i[g + 1];
         double b = q[g] + q[g + 1];
         double c = i[g + 2] + i[g + 1];
