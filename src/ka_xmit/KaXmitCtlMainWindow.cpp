@@ -20,11 +20,13 @@ KaXmitCtlMainWindow::KaXmitCtlMainWindow(std::string xmitterHost,
     int xmitterPort) :
     QMainWindow(),
     _ui(),
+    _xmitterHost(xmitterHost),
+    _xmitterPort(xmitterPort),
     _updateTimer(this),
     _redLED(":/redLED.png"),
     _greenLED(":/greenLED.png"),
     _greenLED_off(":/greenLED_off.png"),
-    _xmlrpcClient(xmitterHost.c_str(), xmitterPort) {
+    _xmlrpcClient(_xmitterHost.c_str(), _xmitterPort) {
     // Set up the UI
     _ui.setupUi(this);
     
@@ -35,48 +37,55 @@ KaXmitCtlMainWindow::KaXmitCtlMainWindow(std::string xmitterHost,
 KaXmitCtlMainWindow::~KaXmitCtlMainWindow() {
 }
 
+bool
+KaXmitCtlMainWindow::_executeXmlRpcCommand(const std::string cmd, 
+    const XmlRpcValue & params, XmlRpcValue & result) {
+    DLOG << "Executing '" << cmd << "()' command";
+    if (! _xmlrpcClient.execute(cmd.c_str(), params, result)) {
+        DLOG << "Error executing " << cmd << "() call to ka_xmitd";
+        _noConnection();
+        return(false);
+    }
+    if (_xmlrpcClient.isFault()) {
+        ELOG << "XML-RPC fault on " << cmd << "() call";
+        abort();
+    }
+    return true;  
+}
+
 void
 KaXmitCtlMainWindow::on_powerButton_clicked() {
     XmlRpcValue result;
-    std::string cmd = _unitOn() ? "powerOff" : "powerOn";
-    DLOG << "Executing '" << cmd << "'";
-    _xmlrpcClient.execute(cmd.c_str(), _NULL_XMLRPCVALUE, result);
-    
+    _executeXmlRpcCommand((_unitOn() ? "powerOff" : "powerOn"),
+        _NULL_XMLRPCVALUE, result);
     _updateStatus();
 }
 
 void
 KaXmitCtlMainWindow::on_faultResetButton_clicked() {
     XmlRpcValue result;
-    DLOG << "Executing 'faultReset'";
-    _xmlrpcClient.execute("faultReset", _NULL_XMLRPCVALUE, result);
-    
+    _executeXmlRpcCommand("faultReset", _NULL_XMLRPCVALUE, result);
     _updateStatus();
 }
 
 void
 KaXmitCtlMainWindow::on_standbyButton_clicked() {
     XmlRpcValue result;
-    DLOG << "Executing 'standby'";
-    _xmlrpcClient.execute("standby", _NULL_XMLRPCVALUE, result);
-    
+    _executeXmlRpcCommand("standby", _NULL_XMLRPCVALUE, result);
     _updateStatus();
 }
 
 void
 KaXmitCtlMainWindow::on_operateButton_clicked() {
     XmlRpcValue result;
-    DLOG << "Executing 'operate'";
-    _xmlrpcClient.execute("operate", _NULL_XMLRPCVALUE, result);
-    
+    _executeXmlRpcCommand("operate", _NULL_XMLRPCVALUE, result);
     _updateStatus();
 }
 
 void
 KaXmitCtlMainWindow::_updateStatus() {
-    _xmlrpcClient.execute("getStatus", _NULL_XMLRPCVALUE, _statusDict);
-    if (_xmlrpcClient.isFault()) {
-        WLOG << __FUNCTION__ << ": XML-RPC fault on getStatus";
+    if (! _executeXmlRpcCommand("getStatus", _NULL_XMLRPCVALUE, _statusDict)) {
+        return;
     }
     
     // boolean status values
@@ -156,4 +165,32 @@ KaXmitCtlMainWindow::_statusDouble(std::string  key) {
         return(double(_statusDict[key]));
     }
 }
+ 
+void
+KaXmitCtlMainWindow::_noConnection() {
+    std::ostringstream ss;
+    ss << "No connection to ka_xmitd @ " << _xmitterHost << ":" << _xmitterPort;
+    statusBar()->showMessage(ss.str().c_str());
     
+    _ui.runupLabel->setEnabled(false);
+    _ui.standbyLabel->setEnabled(false);
+    _ui.warmupLabel->setEnabled(false);
+    _ui.cooldownLabel->setEnabled(false);
+    _ui.hvpsOnLabel->setEnabled(false);
+    _ui.remoteEnabledLabel->setEnabled(false);
+    
+    _ui.magCurrFaultIcon->setPixmap(_greenLED_off);
+    _ui.blowerFaultIcon->setPixmap(_greenLED_off);
+    _ui.interlockFaultIcon->setPixmap(_greenLED_off);
+    _ui.revPowerFaultIcon->setPixmap(_greenLED_off);
+    _ui.pulseInputFaultIcon->setPixmap(_greenLED_off);
+    _ui.hvpsCurrFaultIcon->setPixmap(_greenLED_off);
+    _ui.wgPresFaultIcon->setPixmap(_greenLED_off);
+    _ui.hvpsUnderVFaultIcon->setPixmap(_greenLED_off);
+    _ui.hvpsOverVFaultIcon->setPixmap(_greenLED_off);
+    
+    _ui.powerButton->setEnabled(false);
+    _ui.faultResetButton->setEnabled(false);
+    _ui.standbyButton->setEnabled(false);
+    _ui.operateButton->setEnabled(false);
+}

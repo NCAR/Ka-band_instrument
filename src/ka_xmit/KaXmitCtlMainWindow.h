@@ -29,6 +29,11 @@ private slots:
     void _updateStatus();
 private:
     static const XmlRpc::XmlRpcValue _NULL_XMLRPCVALUE;
+    // Execute an XML-RPC command
+    bool _executeXmlRpcCommand(const std::string cmd, 
+        const XmlRpc::XmlRpcValue & params, XmlRpc::XmlRpcValue & result);
+    // Disable the UI when no connection exists to the ka_xmitd.
+    void _noConnection();
     
     bool _faultSummary() { return(_statusBool("fault_summary")); }
     bool _hvpsRunup() { return(_statusBool("hvps_runup")); }
@@ -56,6 +61,8 @@ private:
     double _statusDouble(std::string key);
     
     Ui::KaXmitCtlMainWindow _ui;
+    std::string _xmitterHost;
+    int _xmitterPort;
     QTimer _updateTimer;
     QPixmap _redLED;
     QPixmap _greenLED;
