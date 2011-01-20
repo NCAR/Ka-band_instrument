@@ -117,7 +117,7 @@ KaOscillator3::setFrequency(unsigned int freq) {
         abort();
     }
     
-    DLOG << "Setting O3 frequency to " << freq << " Hz, (N value " <<
+    ILOG << "Setting O3 frequency to " << freq << " Hz, (N value " <<
         freq / OSC3_FREQ_STEP << ")";
     
     // Calculate our N divider value
