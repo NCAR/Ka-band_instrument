@@ -6,10 +6,14 @@
  */
 
 #include <string>
+#include <cerrno>
+#include <cstring>
 #include <cstdlib>
 #include <unistd.h>
+#include <sys/types.h>
 
 #include <logx/Logging.h>
+#include <log4cpp/SyslogAppender.hh>
 
 #include <XmlRpc.h>
 
@@ -240,12 +244,34 @@ public:
 
 int
 main(int argc, char *argv[]) {
+    // Append our log to local syslog
+    log4cpp::SyslogAppender app("SyslogAppender", "ka_xmitd", LOG_DAEMON);
+    localCategory().addAppender(app);
+    
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
 
-    if (argc != 3) {
-        ELOG << "Usage: " << argv[0] << " <xmitter_ttydev> <server_port> [<logx_arg> ...]";
+    if (argc != 3 && argc != 4) {
+        std::cerr << "Usage: " << argv[0] << 
+            " <xmitter_ttydev> <server_port> [f] [<logx_arg> ...]" << std::endl;
+        std::cerr << std::endl;
+        std::cerr << "If 'f' is given after the port number, the program will" <<
+            std::endl;
+        std::cerr << "run in foreground, otherwise it will run as a daemon in" <<
+            std::endl;
+        std::cerr << "background." << std::endl;
         exit(1);
+    }
+    
+    // If we didn't get a third arg, run in background
+    if (argc == 3) {
+        pid_t pid = fork();
+        if (pid < 0) {
+            ELOG << "Error forking: " << strerror(errno);
+            exit(1);
+        } else if (pid > 0) {
+            exit(0);    // parent process exits now, leaving the child in background
+        }
     }
     
     Xmitter = new KaXmitter(argv[1]);
