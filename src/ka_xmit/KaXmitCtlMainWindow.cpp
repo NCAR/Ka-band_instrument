@@ -179,6 +179,8 @@ KaXmitCtlMainWindow::_noConnection() {
     _ui.hvpsOnLabel->setEnabled(false);
     _ui.remoteEnabledLabel->setEnabled(false);
     
+    _ui.unitOnLabel->setPixmap(_greenLED_off);
+    
     _ui.magCurrFaultIcon->setPixmap(_greenLED_off);
     _ui.blowerFaultIcon->setPixmap(_greenLED_off);
     _ui.interlockFaultIcon->setPixmap(_greenLED_off);
@@ -188,6 +190,11 @@ KaXmitCtlMainWindow::_noConnection() {
     _ui.wgPresFaultIcon->setPixmap(_greenLED_off);
     _ui.hvpsUnderVFaultIcon->setPixmap(_greenLED_off);
     _ui.hvpsOverVFaultIcon->setPixmap(_greenLED_off);
+    
+    _ui.hvpsVoltageValue->setText("0.0");
+    _ui.magCurrentValue->setText("0.0");
+    _ui.hvpsCurrentValue->setText("0.0");
+    _ui.temperatureValue->setText("0");
     
     _ui.powerButton->setEnabled(false);
     _ui.faultResetButton->setEnabled(false);
