@@ -92,6 +92,7 @@ std::set<std::string> KaDrxConfig::_createIntLegalKeys() {
 std::set<std::string> KaDrxConfig::_BoolLegalKeys(_createBoolLegalKeys());
 std::set<std::string> KaDrxConfig::_createBoolLegalKeys() {
     std::set<std::string> keys;
+    keys.insert("afc_enabled");
     keys.insert("external_start_trigger");
     keys.insert("pdpp");
     keys.insert("staggered_prt");
@@ -384,6 +385,11 @@ KaDrxConfig::isValid(bool verbose) const {
     if (external_start_trigger() == UNSET_BOOL) {
         if (verbose)
             std::cerr << "'external_start_trigger' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (afc_enabled() == UNSET_BOOL) {
+        if (verbose)
+            std::cerr << "'afc_enabled' unset in DRX configuration" << std::endl;
         valid = false;
     }
     if (afc_g0_threshold_dbm() == UNSET_DOUBLE) {

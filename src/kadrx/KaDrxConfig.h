@@ -108,6 +108,11 @@ public:
     int ldr_mode() const {
         return _getBoolVal("ldr_mode");
     }
+    
+    /// Is AFC enabled?
+    int afc_enabled() const {
+        return _getBoolVal("afc_enabled");
+    }
     /// AFC G0 threshold power for reliable calculated frequencies, in dBm
     double afc_g0_threshold_dbm() const {
         return _getDoubleVal("afc_g0_threshold_dbm");

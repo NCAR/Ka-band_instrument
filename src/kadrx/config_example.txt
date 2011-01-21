@@ -33,14 +33,15 @@ tx_pulse_mod_delay      6.0e-7  # s
 tx_pulse_mod_width      6.0e-7  # s
 tx_delay                0.0     # s
 
-test_target_delay       2.0e-5  # s
-test_target_width       5.0e-6  # s
+test_target_delay       75.0e-6 # s
+test_target_width       10.0e-6 # s
 
+afc_enabled				1
 afc_g0_threshold_dbm    -20.0   # minimum G0 power for good frequency estimates
 afc_coarse_step         5000000 # Hz
 afc_fine_step           100000  # Hz
 
-a2d_counts_per_volt    327670.0 # full scale (32767) = 0.1 V
+a2d_counts_per_volt     327670.0    # full scale (32767) = 0.1 V
 
 # FL1 location
 latitude                40.03794
