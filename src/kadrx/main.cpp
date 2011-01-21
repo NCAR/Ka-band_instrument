@@ -16,6 +16,8 @@
 #include <csignal>
 #include <logx/Logging.h>
 
+LOGGING("kadrx")
+
 // For configuration management
 #include <QtConfig.h>
 // Proxy argc/argv
@@ -336,11 +338,16 @@ main(int argc, char** argv)
     Pentek::p7142Up & upConverter = *sd3c.addUpconverter("0C", 
         sd3c.adcFrequency(), sd3c.adcFrequency() / 4, 9); 
 
-    // set up AFC from the configuration
-    KaAfc::theAfc().setG0ThresholdDbm(kaConfig.afc_g0_threshold_dbm());
-    KaAfc::theAfc().setCoarseStep(kaConfig.afc_coarse_step());
-    KaAfc::theAfc().setFineStep(kaConfig.afc_fine_step());
-    KaAfc::theAfc().setMaxDataLatency(burstThread.downconverter()->dataInterruptPeriod());
+    // Set up AFC from the configuration. (The first reference to theAfc() is
+    // what actually starts the AFC thread.)
+    if (kaConfig.afc_enabled()) {
+        KaAfc::theAfc().setG0ThresholdDbm(kaConfig.afc_g0_threshold_dbm());
+        KaAfc::theAfc().setCoarseStep(kaConfig.afc_coarse_step());
+        KaAfc::theAfc().setFineStep(kaConfig.afc_fine_step());
+        KaAfc::theAfc().setMaxDataLatency(burstThread.downconverter()->dataInterruptPeriod());
+    } else {
+        WLOG << "AFC is disabled!";
+    }
     
     // catch a control-C
     signal(SIGINT, sigHandler);
