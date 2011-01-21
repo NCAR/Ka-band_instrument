@@ -12,12 +12,15 @@
 . /etc/rc.d/init.d/functions
 
 KA_XMITD=/home/ka/workspace/ka/src/ka_xmit/ka_xmitd
+USER=ka
+XMITTER_DEV=/dev/ttydp03
+PORT=8080
 
 start() 
 {
         echo -n $"Starting ka_xmitd: "
 	# Transmitter is on serial line /dev/ttydp03. Provide XML-RPC service at port 8080
-        daemon $KA_XMITD /dev/ttydp03 8080
+        daemon --user $USER $KA_XMITD $XMITTER_DEV $PORT
 
 	touch /var/lock/subsys/ka_xmitd
         echo
