@@ -218,7 +218,7 @@ KaAfcPrivate::KaAfcPrivate() :
     // Enable termination via terminate(), since we don't have a Qt event loop.
     setTerminationEnabled(true);
     // Set the initial oscillator frequencies
-    unsigned int osc0ScaledFreq = (_osc0.getScaledMinFreq());   // 1.4400 GHz
+    unsigned int osc0ScaledFreq = (_osc0.getScaledMinFreq());   // 1.5000 GHz
     unsigned int osc1ScaledFreq = (132500000 / _osc1.getFreqStep());    // 132.50 MHz
     unsigned int osc2ScaledFreq = (16500000000ll / _osc2.getFreqStep());   // 16.500 GHz
     unsigned int osc3ScaledFreq = (107500000 / _osc3.getFreqStep());    // 107.50 MHz
