@@ -157,6 +157,9 @@ class KaDrxPub : public QThread {
 		/// downconverter.
 		RadarDDS::SysHousekeeping _baseDdsHskp;
 		
+        // Are we doing AFC?
+        bool _doAfc;
+        
         // Keep numerator and denominator so that our burst frequency 
         // calculation performs a weighted average over time
         double _numerator;

@@ -47,6 +47,7 @@ KaDrxPub::KaDrxPub(
      _ndxInDdsSample(0),
      _sampleNumber(0),
      _baseDdsHskp(),
+     _doAfc(_config.afc_enabled()),
      _numerator(0),
      _denominator(0),
      _g0Magnitude(-9999.0),
@@ -318,6 +319,10 @@ KaDrxPub::_configIsValid() const {
 ////////////////////////////////////////////////////////////////////////////////
 void
 KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
+    // No handling to perform if we're not doing AFC!
+    if (! _doAfc)
+        return;
+        
     // initialize variables
     const double DIS_WT = 0.01;
 
