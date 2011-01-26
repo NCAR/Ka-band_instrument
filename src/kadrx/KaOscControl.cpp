@@ -1,11 +1,11 @@
 /*
- * KaAfc.cpp
+ * KaOscControl.cpp
  *
  *  Created on: Oct 29, 2010
  *      Author: burghart
  */
 
-#include "KaAfc.h"
+#include "KaOscControl.h"
 #include "KaPmc730.h"
 #include "TtyOscillator.h"
 #include "KaOscillator3.h"
@@ -19,22 +19,22 @@
 #include <iostream>
 #include <logx/Logging.h>
 
-LOGGING("KaAfc")
+LOGGING("KaOscControl")
 
 // Pointer to our singleton instance
-KaAfc * KaAfc::_theAfc = 0;
+KaOscControl * KaOscControl::_theControl = 0;
 
-/// KaAfcPrivate is the private implementation class for KaAfc, subclassed from
+/// KaOscControlPriv is the private implementation class for KaOscControl, subclassed from
 /// QThread. The object gets new xmit samples via newXmitSample() calls (from 
 /// another thread), adds them to sums, and when sufficient samples have
 /// been summed releases the averages which will be processed by the local 
 /// thread. The local thread takes the averages and adjusts the three 
 /// programmable oscillators it controls.
-class KaAfcPrivate : public QThread {
+class KaOscControlPriv : public QThread {
 public:
-    KaAfcPrivate();
+    KaOscControlPriv();
     
-    ~KaAfcPrivate();
+    ~KaOscControlPriv();
     
     void run();
     
@@ -157,45 +157,45 @@ private:
     double _maxDataLatency;
 };
 
-KaAfc::KaAfc() {
+KaOscControl::KaOscControl() {
     // Instantiate our private thread and start it.
-    _afcPrivate = new KaAfcPrivate();
-    _afcPrivate->start();
+    _privImpl = new KaOscControlPriv();
+    _privImpl->start();
 }
 
-KaAfc::~KaAfc() {
-    _afcPrivate->terminate();
-    if (! _afcPrivate->wait(5000)) {
-        ELOG << "KaAfcPrivate thread failed to stop in 5 seconds. Exiting anyway.";
+KaOscControl::~KaOscControl() {
+    _privImpl->terminate();
+    if (! _privImpl->wait(5000)) {
+        ELOG << "KaOscControlPriv thread failed to stop in 5 seconds. Exiting anyway.";
     }
 }
 
 void
-KaAfc::newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqNum) {
-    _afcPrivate->newXmitSample(g0Power, freqOffset, pulseSeqNum);
+KaOscControl::newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqNum) {
+    _privImpl->newXmitSample(g0Power, freqOffset, pulseSeqNum);
 }
 
 void
-KaAfc::setG0ThresholdDbm(double thresh)  { 
-    theAfc()._afcPrivate->setG0ThresholdDbm(thresh);
+KaOscControl::setG0ThresholdDbm(double thresh)  { 
+    _privImpl->setG0ThresholdDbm(thresh);
 }
 
 void
-KaAfc::setCoarseStep(unsigned int step)  { 
-    theAfc()._afcPrivate->setCoarseStep(step);
+KaOscControl::setCoarseStep(unsigned int step)  { 
+    _privImpl->setCoarseStep(step);
 }
 
 void
-KaAfc::setFineStep(unsigned int step)  { 
-    theAfc()._afcPrivate->setFineStep(step);
+KaOscControl::setFineStep(unsigned int step)  { 
+    _privImpl->setFineStep(step);
 }
 
 void
-KaAfc::setMaxDataLatency(double maxDataLatency) {
-    theAfc()._afcPrivate->setMaxDataLatency(maxDataLatency);
+KaOscControl::setMaxDataLatency(double maxDataLatency) {
+    _privImpl->setMaxDataLatency(maxDataLatency);
 }
 
-KaAfcPrivate::KaAfcPrivate() :
+KaOscControlPriv::KaOscControlPriv() :
     QThread(),
     _mutex(QMutex::NonRecursive),   // must be non-recursive for QWaitCondition!
     _afcMode(AFC_SEARCHING),
@@ -227,7 +227,7 @@ KaAfcPrivate::KaAfcPrivate() :
 }
 
 void
-KaAfcPrivate::_setOscillators(unsigned int osc0ScaledFreq, 
+KaOscControlPriv::_setOscillators(unsigned int osc0ScaledFreq, 
     unsigned int osc1ScaledFreq, unsigned int osc2ScaledFreq, 
     unsigned int osc3ScaledFreq) {
     bool osc0_OK = false;
@@ -269,11 +269,11 @@ KaAfcPrivate::_setOscillators(unsigned int osc0ScaledFreq,
     }
 }
 
-KaAfcPrivate::~KaAfcPrivate() {
+KaOscControlPriv::~KaOscControlPriv() {
 }
 
 void
-KaAfcPrivate::run() {
+KaOscControlPriv::run() {
     while (true) {
         _mutex.lock();
         _newAverage.wait(&_mutex);
@@ -283,14 +283,14 @@ KaAfcPrivate::run() {
 }
 
 void
-KaAfcPrivate::setG0ThresholdDbm(double thresh) {
+KaOscControlPriv::setG0ThresholdDbm(double thresh) {
     QMutexLocker locker(&_mutex);
     ILOG << "Setting AFC G0 threshold at " << thresh << " dBm";
     _g0ThreshDbm = thresh;
 }
 
 void
-KaAfcPrivate::setCoarseStep(unsigned int step) {
+KaOscControlPriv::setCoarseStep(unsigned int step) {
     QMutexLocker locker(&_mutex);
     // Make sure the requested step is a multiple of the frequency steps of
     // all oscillators we're controlling
@@ -308,7 +308,7 @@ KaAfcPrivate::setCoarseStep(unsigned int step) {
 }
 
 void
-KaAfcPrivate::setFineStep(unsigned int step) {
+KaOscControlPriv::setFineStep(unsigned int step) {
     QMutexLocker locker(&_mutex);
     // Make sure the requested step is a multiple of the frequency steps of
     // all oscillators we're controlling
@@ -326,13 +326,13 @@ KaAfcPrivate::setFineStep(unsigned int step) {
 }
 
 void
-KaAfcPrivate::setMaxDataLatency(double maxDataLatency) {
+KaOscControlPriv::setMaxDataLatency(double maxDataLatency) {
     ILOG << "Setting AFC maximum data latency to " << maxDataLatency << " seconds";
     _maxDataLatency = maxDataLatency;
 }
 
 void
-KaAfcPrivate::newXmitSample(double g0Power, double freqOffset, 
+KaOscControlPriv::newXmitSample(double g0Power, double freqOffset, 
     int64_t pulseSeqNum) {
     if (!(_pulsesRcvd % 5000))
         ILOG << _pulsesRcvd << " pulses received, " << _pulsesDropped << " dropped";
@@ -370,13 +370,13 @@ KaAfcPrivate::newXmitSample(double g0Power, double freqOffset,
 }
 
 void
-KaAfcPrivate::_clearSum() {
+KaOscControlPriv::_clearSum() {
     _g0PowerSum = 0.0;
     _nSummed = 0;
 }
 
 void
-KaAfcPrivate::_processXmitAverage() {
+KaOscControlPriv::_processXmitAverage() {
     double g0PowerDbm = 10.0 * log10(_g0PowerAvg) + 30; // +30 for dBW to dBm
 
     ILOG << "New " << _nToSum << "-pulse average: G0 " << g0PowerDbm << 

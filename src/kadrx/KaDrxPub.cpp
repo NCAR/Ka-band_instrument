@@ -1,5 +1,5 @@
 #include "KaDrxPub.h"
-#include "KaAfc.h"
+#include "KaOscControl.h"
 #include "KaMerge.h"
 #include "PulseData.h"
 #include "BurstData.h"
@@ -379,7 +379,7 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     _g0FreqHz = _config.rcvr_cntr_freq() + freqCorrection;
     
     // Ship the G0 power and frequency offset values to the AFC
-    KaAfc::theAfc().newXmitSample(g0Power, freqCorrection, pulseSeqNum);
+    KaOscControl::theControl().newXmitSample(g0Power, freqCorrection, pulseSeqNum);
 }
 
 // compute arg in degrees

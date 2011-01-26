@@ -16,10 +16,10 @@ rapradar
 sources = Split("""
 Adf4001.cpp
 BurstData.cpp
-KaAfc.cpp
 KaDrxConfig.cpp
 KaDrxPub.cpp
 KaMerge.cpp
+KaOscControl.cpp
 KaOscillator3.cpp
 KaPmc730.cpp
 PulseData.cpp
@@ -31,10 +31,10 @@ headers = Split("""
 Adf4001.h
 BurstData.h
 CircBuffer.h
-KaAfc.h
 KaDrxConfig.h
 KaDrxPub.h
 KaMerge.h
+KaOscControl.h
 KaOscillator3.h
 KaPmc730.h
 PulseData.h

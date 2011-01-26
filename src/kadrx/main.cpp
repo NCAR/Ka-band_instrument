@@ -27,7 +27,7 @@ LOGGING("kadrx")
 // with OpenDDS 2.0/2.1
 #include <dds/Version.h>
 
-#include "KaAfc.h"
+#include "KaOscControl.h"
 #include "KaDrxPub.h"
 #include "p7142sd3c.h"
 #include "DDSPublisher.h"
@@ -338,13 +338,14 @@ main(int argc, char** argv)
     Pentek::p7142Up & upConverter = *sd3c.addUpconverter("0C", 
         sd3c.adcFrequency(), sd3c.adcFrequency() / 4, 9); 
 
-    // Set up AFC from the configuration. (The first reference to theAfc() is
-    // what actually starts the AFC thread.)
+    // Set up oscillator control from the configuration. (The first reference 
+    // to theControl() is what actually starts the oscillator control thread.)
+    KaOscControl & oscControl = KaOscControl::theControl();
     if (kaConfig.afc_enabled()) {
-        KaAfc::theAfc().setG0ThresholdDbm(kaConfig.afc_g0_threshold_dbm());
-        KaAfc::theAfc().setCoarseStep(kaConfig.afc_coarse_step());
-        KaAfc::theAfc().setFineStep(kaConfig.afc_fine_step());
-        KaAfc::theAfc().setMaxDataLatency(burstThread.downconverter()->dataInterruptPeriod());
+        oscControl.setG0ThresholdDbm(kaConfig.afc_g0_threshold_dbm());
+        oscControl.setCoarseStep(kaConfig.afc_coarse_step());
+        oscControl.setFineStep(kaConfig.afc_fine_step());
+        oscControl.setMaxDataLatency(burstThread.downconverter()->dataInterruptPeriod());
     } else {
         WLOG << "AFC is disabled!";
     }
