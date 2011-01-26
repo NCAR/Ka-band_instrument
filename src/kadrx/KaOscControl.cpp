@@ -40,8 +40,8 @@ public:
     
     /// Accept an incoming set of averaged transmit pulse information comprising
     /// g0 power, and calculated frequency offset. This information will be used
-    /// to adjust oscillator frequencies. If this AfcThread is currently in the 
-    /// process of a frequency adjustment, the given sample will be ignored.
+    /// to adjust oscillator frequencies. If this KaOscControl is currently in 
+    /// the process of a frequency adjustment, the given sample will be ignored.
     /// @param g0Power g0 power, in dBm
     /// @param freqOffset measured frequency offset, in Hz
     /// @param pulseSeqNum pulse number, counted since transmitter startup
