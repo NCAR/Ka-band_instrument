@@ -6,6 +6,7 @@ logx
 pentek
 qtt_qtconfig
 boost_date_time
+boost_mutex
 boost_program_options
 doxygen
 qt4
