@@ -34,6 +34,7 @@ LOGGING("kadrx")
 #include "KaTSWriter.h"
 #include "KaDrxConfig.h"
 #include "KaMerge.h"
+#include "KaMonitor.h"
 
 using namespace std;
 using namespace boost::posix_time;
@@ -269,6 +270,9 @@ main(int argc, char** argv)
     // create the merge object
 
     _merge = new KaMerge(kaConfig);
+    
+    // Reference to the singleton KaMonitor is sufficient to start it up...
+    KaMonitor::theMonitor();
     
     // For OpenDDS 2.1, keep the published sample size less than ~64 KB,
     // since larger samples are a problem...
