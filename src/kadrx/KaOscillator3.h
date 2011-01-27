@@ -206,6 +206,10 @@ private:
      */
     uint16_t _nDivider;
     uint16_t _rDivider;
+    /**
+     * Keep the last command bitbanged to the ADF4001.
+     */
+    uint32_t _lastCommandSent;
 };
 
 #endif /* KAOSCILLATOR3_H_ */

@@ -15,7 +15,10 @@
 LOGGING("KaOscillator3");
 
 KaOscillator3::KaOscillator3(Pmc730 & pmc730) :
-    _pmc730(pmc730) {
+    _pmc730(pmc730),
+    _nDivider(0),
+    _rDivider(0),
+    _lastCommandSent(0) {
     // Verify that the DIO lines we use to program the PLL are all set to output
     if (_pmc730.getDioDirection(DIO_CLOCK) != Pmc730::DIO_OUTPUT ||
             _pmc730.getDioDirection(DIO_CLOCKINV) != Pmc730::DIO_OUTPUT ||
@@ -82,19 +85,42 @@ KaOscillator3::_adf4001Bitbang(uint32_t val) {
     // Assure that CLOCK and LE lines are low when we start.
     _setClock(0);
     _setLE(0);
+    
+    // Buffer to hold echoed bits from the ADF4001
+    uint32_t echoedBits = 0;
+    
     // Send over each bit, from most to least significant
     for (int bitnum = 23; bitnum >= 0; bitnum--) {
-        // Send the bit on the DATA line
+        // First read the muxout bit from the ADF4001 (on DIO channel 7) 
+        // and append it to echoedBits. As long as muxout is MUX_SERIAL_DATA, 
+        // the bit we read should be the bit we sent out 24 bits ago...
+        uint8_t muxoutBit = (_pmc730.getDio0_7() >> 7) & 0x1;
+        echoedBits = (echoedBits << 1) | muxoutBit;
+
+        // Send the next bit on the DATA line
         unsigned int bit = (val >> bitnum) & 0x1;
         _setData(bit);
         // CLOCK high then low to clock in the bit
         _setClock(1);
         _setClock(0);
     }
+    
     // Finally, set LE high to latch the whole thing
     _setLE(1);
     // ..and LE back to low to clean up
-    _setLE(0);    
+    _setLE(0);
+    
+    // Did we get a successful echo back of the last command we sent?
+    DLOG << std::hex << "last command 0x" << _lastCommandSent << 
+        ", echo 0x" << echoedBits << std::dec;
+        
+    if (_lastCommandSent && (_lastCommandSent != echoedBits)) {
+        ELOG << __PRETTY_FUNCTION__ << std::hex << "Last command sent (0x" << 
+            _lastCommandSent << ") != echoed bits (0x" << echoedBits << ")" <<
+            std::dec;
+        abort();
+    }
+    _lastCommandSent = val;
 }
 
 void
@@ -132,7 +158,7 @@ KaOscillator3::setFrequency(unsigned int freq) {
             Adf4001::CPCURRENT2_X8, Adf4001::CPCURRENT1_X8, 
             Adf4001::TCTIMEOUT_63, Adf4001::FASTLOCK_DISABLED,
             Adf4001::CPTHREESTATE_DISABLE, Adf4001::PPOLARITY_POSITIVE,
-            Adf4001::MUX_DLOCK_DETECT, Adf4001::COUNTER_RESET_DISABLED);
+            Adf4001::MUX_SERIAL_DATA, Adf4001::COUNTER_RESET_DISABLED);
     _adf4001Bitbang(latch);
     
     latch = Adf4001::rLatch(Adf4001::LDP_3CYCLES, Adf4001::ABP_2_9NS, _rDivider);
