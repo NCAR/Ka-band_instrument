@@ -9,7 +9,7 @@ ant_gain                46.2    # dB
 ant_hbeam_width         0.75    # deg
 ant_vbeam_width         0.68    # deg
 
-external_clock			1		# boolean
+external_clock          1       # boolean
 external_start_trigger  1       # boolean
 
 burst_sample_delay      1.55e-6 # s
