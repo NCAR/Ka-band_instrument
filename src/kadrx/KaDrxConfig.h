@@ -94,6 +94,13 @@ public:
     double tx_pulse_mod_width() const {
         return _getDoubleVal("tx_pulse_mod_width");
     }
+    /**
+     * Are we using an external clock?
+     * @ return 0 if false, 1 if true, or UNSET_BOOL if unset
+     */
+    int external_clock() const {
+        return _getBoolVal("external_clock");
+    }
     /** 
      * Are we using an external start trigger? 
      * @ return 0 if false, 1 if true, or UNSET_BOOL if unset

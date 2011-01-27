@@ -76,8 +76,10 @@ KaDrxPub::KaDrxPub(
         delay = _config.burst_sample_delay();
         width = _config.burst_sample_width();
     }
+    
     _down = sd3c.addDownconverter(_chanId, burstSampling, tsLength,
-        delay, width, gaussianFile, kaiserFile, simPauseMS, simWavelength);
+        delay, width, gaussianFile, kaiserFile, simPauseMS, simWavelength, 
+        !(_config.external_clock()));
 
     if (burstSampling) {
         // Get the burst gate count calculated by the downconverter

@@ -93,6 +93,7 @@ std::set<std::string> KaDrxConfig::_BoolLegalKeys(_createBoolLegalKeys());
 std::set<std::string> KaDrxConfig::_createBoolLegalKeys() {
     std::set<std::string> keys;
     keys.insert("afc_enabled");
+    keys.insert("external_clock");
     keys.insert("external_start_trigger");
     keys.insert("pdpp");
     keys.insert("staggered_prt");
@@ -380,6 +381,11 @@ KaDrxConfig::isValid(bool verbose) const {
     if (burst_sample_frequency() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'burst_sample_frequency' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (external_clock() == UNSET_BOOL) {
+        if (verbose)
+            std::cerr << "'external_clock' unset in DRX configuration" << std::endl;
         valid = false;
     }
     if (external_start_trigger() == UNSET_BOOL) {
