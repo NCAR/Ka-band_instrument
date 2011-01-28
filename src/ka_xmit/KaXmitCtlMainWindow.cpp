@@ -142,12 +142,10 @@ KaXmitCtlMainWindow::_update() {
     
     // enable/disable buttons
     _ui.powerButton->setEnabled(_remoteEnabled());
-    if (_remoteEnabled()) {
+    if (_remoteEnabled() && _unitOn()) {
         _ui.faultResetButton->setEnabled(_faultSummary());
-        if (_unitOn()) {
-            _ui.standbyButton->setEnabled(! _standby());
-            _ui.operateButton->setEnabled(! _hvpsRunup());
-        }
+        _ui.standbyButton->setEnabled(! _standby());
+        _ui.operateButton->setEnabled(! _hvpsRunup());
     } else {
         _ui.faultResetButton->setEnabled(false);
         _ui.standbyButton->setEnabled(false);
