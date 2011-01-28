@@ -7,6 +7,8 @@
 
 #include <string>
 #include <map>
+#include <deque>
+#include <ctime>
 
 #include <QMainWindow>
 #include <QPixmap>
@@ -26,14 +28,18 @@ private slots:
     void on_faultResetButton_clicked();
     void on_standbyButton_clicked();
     void on_operateButton_clicked();
-    void _updateStatus();
+    void _update();
 private:
     static const XmlRpc::XmlRpcValue _NULL_XMLRPCVALUE;
     // Execute an XML-RPC command
     bool _executeXmlRpcCommand(const std::string cmd, 
         const XmlRpc::XmlRpcValue & params, XmlRpc::XmlRpcValue & result);
+    // Send a "FaultReset" command to the transmitter
+    void _faultReset();
     // Disable the UI when no connection exists to the ka_xmitd.
     void _noConnection();
+    // Special handling for pulse input faults
+    void _handlePulseInputFault();
     
     bool _faultSummary() { return(_statusBool("fault_summary")); }
     bool _hvpsRunup() { return(_statusBool("hvps_runup")); }
@@ -70,5 +76,11 @@ private:
     XmlRpc::XmlRpcClient _xmlrpcClient;
     // Last status read
     XmlRpc::XmlRpcValue _statusDict;
+    // Pulse input fault times
+    std::deque<time_t> _pulseInputFaultTimes;
+    // Are we allowing auto-reset of pulse input faults?
+    bool _doAutoFaultReset;
+    // How many auto fault resets have we done?
+    int _autoResetCount;
 };
 #endif /*KAXMITCTLMAINWINDOW_H_*/

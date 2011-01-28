@@ -4,6 +4,7 @@
  *  Created on: Jan 14, 2011
  *      Author: burghart
  */
+#include <sstream>
 #include <logx/Logging.h>
 
 #include "KaXmitCtlMainWindow.h"
@@ -26,11 +27,15 @@ KaXmitCtlMainWindow::KaXmitCtlMainWindow(std::string xmitterHost,
     _redLED(":/redLED.png"),
     _greenLED(":/greenLED.png"),
     _greenLED_off(":/greenLED_off.png"),
-    _xmlrpcClient(_xmitterHost.c_str(), _xmitterPort) {
+    _xmlrpcClient(_xmitterHost.c_str(), _xmitterPort),
+    _statusDict(),
+    _pulseInputFaultTimes(),
+    _doAutoFaultReset(true),
+    _autoResetCount(0) {
     // Set up the UI
     _ui.setupUi(this);
     
-    connect(&_updateTimer, SIGNAL(timeout()), this, SLOT(_updateStatus()));
+    connect(&_updateTimer, SIGNAL(timeout()), this, SLOT(_update()));
     _updateTimer.start(1000);
 }
 
@@ -58,32 +63,39 @@ KaXmitCtlMainWindow::on_powerButton_clicked() {
     XmlRpcValue result;
     _executeXmlRpcCommand((_unitOn() ? "powerOff" : "powerOn"),
         _NULL_XMLRPCVALUE, result);
-    _updateStatus();
+    _update();
 }
 
-void
-KaXmitCtlMainWindow::on_faultResetButton_clicked() {
+void KaXmitCtlMainWindow::_faultReset() {
     XmlRpcValue result;
     _executeXmlRpcCommand("faultReset", _NULL_XMLRPCVALUE, result);
-    _updateStatus();
+    // When a faultReset command is issued, allow auto-resets on pulse faults
+    // again.
+    _doAutoFaultReset = true;
+}
+    
+void
+KaXmitCtlMainWindow::on_faultResetButton_clicked() {
+    _faultReset();
+    _update();
 }
 
 void
 KaXmitCtlMainWindow::on_standbyButton_clicked() {
     XmlRpcValue result;
     _executeXmlRpcCommand("standby", _NULL_XMLRPCVALUE, result);
-    _updateStatus();
+    _update();
 }
 
 void
 KaXmitCtlMainWindow::on_operateButton_clicked() {
     XmlRpcValue result;
     _executeXmlRpcCommand("operate", _NULL_XMLRPCVALUE, result);
-    _updateStatus();
+    _update();
 }
 
 void
-KaXmitCtlMainWindow::_updateStatus() {
+KaXmitCtlMainWindow::_update() {
     if (! _executeXmlRpcCommand("getStatus", _NULL_XMLRPCVALUE, _statusDict)) {
         return;
     }
@@ -122,15 +134,20 @@ KaXmitCtlMainWindow::_updateStatus() {
     txt.setNum(_temperature(), 'f', 0);
     _ui.temperatureValue->setText(txt);
     
+    txt.setNum(_autoResetCount);
+    _ui.autoResetValue->setText(txt);
+    
     // "unit on" light
     _ui.unitOnLabel->setPixmap(_unitOn() ? _greenLED : _greenLED_off);
     
     // enable/disable buttons
     _ui.powerButton->setEnabled(_remoteEnabled());
-    if (_unitOn() && _remoteEnabled()) {
+    if (_remoteEnabled()) {
         _ui.faultResetButton->setEnabled(_faultSummary());
-        _ui.standbyButton->setEnabled(! _standby());
-        _ui.operateButton->setEnabled(! _hvpsRunup());
+        if (_unitOn()) {
+            _ui.standbyButton->setEnabled(! _standby());
+            _ui.operateButton->setEnabled(! _hvpsRunup());
+        }
     } else {
         _ui.faultResetButton->setEnabled(false);
         _ui.standbyButton->setEnabled(false);
@@ -141,6 +158,11 @@ KaXmitCtlMainWindow::_updateStatus() {
         statusBar()->clearMessage();
     } else {
         statusBar()->showMessage("Remote control is currently DISABLED");
+    }
+    
+    // Special handling for pulse input faults
+    if (_pulseInputFault()) {
+        _handlePulseInputFault();
     }
 }
 
@@ -195,9 +217,42 @@ KaXmitCtlMainWindow::_noConnection() {
     _ui.magCurrentValue->setText("0.0");
     _ui.hvpsCurrentValue->setText("0.0");
     _ui.temperatureValue->setText("0");
+    _ui.autoResetValue->setText("0");
     
     _ui.powerButton->setEnabled(false);
     _ui.faultResetButton->setEnabled(false);
     _ui.standbyButton->setEnabled(false);
     _ui.operateButton->setEnabled(false);
+}
+
+void
+KaXmitCtlMainWindow::_handlePulseInputFault() {
+    // If auto-resets are disabled, just return now
+    if (! _doAutoFaultReset)
+        return;
+
+    // Push the time of this fault on to our deque
+    _pulseInputFaultTimes.push_back(time(0));
+    // Pop the earliest entry when we hit MAX_ENTRIES+1 entries.
+    const unsigned int MAX_ENTRIES = 10;
+    if (_pulseInputFaultTimes.size() == (MAX_ENTRIES + 1))
+        _pulseInputFaultTimes.pop_front();
+    // Issue a "faultReset" command unless the time span for the last 
+    // MAX_ENTRIES faults is less than 100 seconds.
+    if (_pulseInputFaultTimes.size() < MAX_ENTRIES || 
+        ((_pulseInputFaultTimes[MAX_ENTRIES - 1] - _pulseInputFaultTimes[0]) > 100)) {
+        _faultReset();
+        _autoResetCount++;
+        statusBar()->showMessage("Pulse input fault auto reset");
+    } else {
+        std::ostringstream ss;
+        ss << "Auto fault reset disabled after 10 faults in " << 
+            (_pulseInputFaultTimes[MAX_ENTRIES - 1] - _pulseInputFaultTimes[0]) << 
+            " seconds!";
+        statusBar()->showMessage(ss.str().c_str());
+        // Disable auto fault resets. They will be reenabled if the user
+        // pushes the "Fault Reset" button.
+        _doAutoFaultReset = false;
+    }
+    return;     
 }
