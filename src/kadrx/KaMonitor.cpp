@@ -12,11 +12,70 @@
 #include <QTimer>
 #include <QMutex>
 
+#include <cmath>
 #include <vector>
 
 #include <logx/Logging.h>
 
 LOGGING("KaMonitor")
+
+/* 
+ * Quinstar QEA crystal detector calibration measurements from 11/04/2010, 
+ * input power in dBm vs. output volts.
+ */
+static const float QEA_Cal[][2] = {
+  {-34.72, 2.48E-03},
+  {-33.72, 3.36E-03},
+  {-32.72, 4.60E-03},
+  {-31.72, 6.00E-03},
+  {-30.72, 7.60E-03},
+  {-29.72, 9.60E-03},
+  {-28.72, 1.24E-02},
+  {-27.72, 1.54E-02},
+  {-26.72, 2.06E-02},
+  {-25.72, 2.58E-02},
+  {-24.72, 3.16E-02},
+  {-23.72, 3.86E-02},
+  {-22.72, 4.72E-02},
+  {-21.72, 5.70E-02},
+  {-20.72, 6.92E-02},
+  {-19.72, 8.22E-02},
+  {-18.72, 9.80E-02},
+  {-17.72, 1.16E-01},
+  {-16.72, 1.44E-01},
+  {-15.72, 1.67E-01},
+  {-14.72, 1.95E-01},
+  {-13.72, 2.26E-01},
+  {-12.72, 2.62E-01},
+  {-11.72, 2.94E-01},
+  {-10.72, 3.40E-01},
+  {-9.72, 3.90E-01},
+  {-8.72, 4.48E-01},
+  {-7.72, 5.14E-01},
+  {-6.72, 6.08E-01},
+  {-5.72, 6.90E-01},
+  {-4.72, 7.84E-01},
+  {-3.72, 8.86E-01},
+  {-2.72, 1.00E+00},
+  {-1.72, 1.13E+00},
+  {-0.72, 1.26E+00},
+  {0.28, 1.41E+00},
+  {1.28, 1.56E+00},
+  {2.28, 1.74E+00},
+  {3.28, 1.97E+00},
+  {4.28, 2.16E+00},
+  {5.28, 2.36E+00},
+  {6.28, 2.56E+00},
+  {7.28, 2.76E+00},
+  {8.28, 2.86E+00},
+  {9.28, 3.08E+00},
+  {10.28, 3.30E+00},
+  {11.28, 3.50E+00},
+  {12.28, 3.72E+00},
+  {13.28, 3.94E+00},
+  {14.28, 4.14E+00},
+};
+static const int QEA_CalLen = (sizeof(QEA_Cal) / (sizeof(*QEA_Cal)));
 
 // Pointer to our singleton instance
 KaMonitor * KaMonitor::_theMonitor = 0;
@@ -34,11 +93,25 @@ public:
     void run();
     
 private:
+    /**
+     * Convert QEA crystal detector voltage to input power (in dBm), based
+     * on a fixed table of calibration measurements.
+     * @param voltage QEA crystal detector output, in V
+     * @return power measured by the QEA crystal detector, in dBm
+     */
+    double _lookupQEAPower(double voltage);
+    /**
+     * Return the temperature, in C, based on temperature sensor voltage.
+     * @param voltage voltage from temperature sensor
+     * @return the temperature, in C
+     */
+    double _temperature(double voltage);
+    
     /// Thread access mutex
     QMutex _mutex;
     /// Temperatures
     float _procEnclosureTemp;       // C
-    float _procDrTemp;              // C
+    float _procDrxTemp;              // C
     float _txEnclosureTemp;         // C
     float _rxTopTemp;               // C
     float _rxBackTemp;              // C
@@ -47,6 +120,8 @@ private:
     float _hTxPowerVideo;           // H tx pulse power, dBm
     float _vTxPowerVideo;           // V tx pulse power, dBm
     float _testTargetPowerVideo;    // test target power, dBm
+    /// 5V power supply
+    float _psVoltage;
 };
 
 KaMonitor::KaMonitor() {
@@ -66,7 +141,7 @@ KaMonitorPriv::KaMonitorPriv() :
     QThread(),
     _mutex(QMutex::Recursive),
     _procEnclosureTemp(-999),
-    _procDrTemp(-999),
+    _procDrxTemp(-999),
     _txEnclosureTemp(-999),
     _rxTopTemp(-999),
     _rxBackTemp(-999),
@@ -87,7 +162,66 @@ KaMonitorPriv::run() {
   
     while (true) {
         std::vector<float> analogData = KaPmc730::thePmc730().readAnalogChannels(0, 9);
-        ILOG << "Analog 8: " << analogData[8] << ", 9: " << analogData[9];
+        _testTargetPowerVideo = _lookupQEAPower(analogData[0]);
+        _vTxPowerVideo = _lookupQEAPower(analogData[1]);
+        _hTxPowerVideo = _lookupQEAPower(analogData[2]);
+        _rxFrontTemp = _temperature(analogData[3]);
+        _rxBackTemp = _temperature(analogData[4]);
+        _rxTopTemp = _temperature(analogData[5]);
+        _txEnclosureTemp = _temperature(analogData[6]);
+        _procDrxTemp = _temperature(analogData[7]);
+        _procEnclosureTemp = _temperature(analogData[8]);
+        _psVoltage = analogData[9];
+        ILOG << "TT:" << _testTargetPowerVideo << " dBm " <<
+            " V:" << _vTxPowerVideo << " dBm " <<
+            " H:" << _hTxPowerVideo << " dBm ";
+        ILOG << "rx front: " << _rxFrontTemp << " C, back: " << _rxBackTemp <<
+            " C, top: " << _rxTopTemp << " C";
+        ILOG << "tx enclosure: " << _txEnclosureTemp << " C";
+        ILOG << "proc enclosure: " << _procEnclosureTemp << " C, drx: " <<
+            _procDrxTemp << " C";
+        ILOG << "5V PS: " << _psVoltage << " V";
         usleep(1000000); // 1 s
     }
+}
+
+double KaMonitorPriv::_lookupQEAPower(double voltage) {
+    // If we're below the lowest voltage in the cal table, just return the
+    // lowest power in the cal table.
+    if (voltage < QEA_Cal[0][1]) {
+        return(QEA_Cal[0][0]);
+    }
+    // If we're above the highest voltage in the cal table, just return the
+    // highest power in the cal table.
+    if (voltage > QEA_Cal[QEA_CalLen - 1][1]) {
+        return(QEA_Cal[QEA_CalLen - 1][0]);
+    }
+    // OK, our voltage is somewhere in the table. Move up through the table, 
+    // and interpolate between the two enclosing points.
+    for (int i = 0; i < QEA_CalLen - 1; i++) {
+        float powerLow = QEA_Cal[i][0];
+        float vLow = QEA_Cal[i][1];
+        float powerHigh = QEA_Cal[i + 1][0];
+        float vHigh = QEA_Cal[i + 1][1];
+        DLOG << i << " (" << vLow << ", " << voltage << ", " << vHigh << ")";
+        if (vHigh < voltage)
+            continue;
+        // Convert powers to linear space, then interpolate to our input voltage
+        double powerLowLinear = pow(10.0, powerLow / 10.0);
+        double powerHighLinear = pow(10.0, powerHigh / 10.0);
+        double fraction = (voltage - vLow) / (vHigh - vLow);
+        double powerLinear = powerLowLinear + 
+            (powerHighLinear - powerLowLinear) * fraction;
+        // Convert interpolated power back to dBm and return it.
+        return(10.0 * log10(powerLinear));
+    }
+    // Oops if we get here...
+    ELOG << __PRETTY_FUNCTION__ << ": Bad lookup for " << voltage << " V!";
+    abort();
+}
+
+double KaMonitorPriv::_temperature(double voltage) {
+    // Apply the V->T function as determined by Bryan Gales' 10 Nov 2010 oil
+    // bath calibration.
+    return(100 * (voltage - 2.7229));
 }
