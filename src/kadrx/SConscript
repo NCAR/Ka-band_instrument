@@ -20,6 +20,7 @@ BurstData.cpp
 KaDrxConfig.cpp
 KaDrxPub.cpp
 KaMerge.cpp
+KaMonitor.cpp
 KaOscControl.cpp
 KaOscillator3.cpp
 KaPmc730.cpp
@@ -35,6 +36,7 @@ CircBuffer.h
 KaDrxConfig.h
 KaDrxPub.h
 KaMerge.h
+KaMonitor.h
 KaOscControl.h
 KaOscillator3.h
 KaPmc730.h
