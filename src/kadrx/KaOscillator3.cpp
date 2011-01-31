@@ -14,24 +14,29 @@
 
 LOGGING("KaOscillator3");
 
-KaOscillator3::KaOscillator3(Pmc730 & pmc730) :
+Pmc730 & KaOscillator3::SIM_PMC730 = *(Pmc730*)0;
+
+KaOscillator3::KaOscillator3(Pmc730 & pmc730, bool testReadback) :
     _pmc730(pmc730),
+    _testReadback(testReadback && ! _pmcSimulated()),
     _nDivider(0),
     _rDivider(0),
     _lastCommandSent(0) {
     // Verify that the DIO lines we use to program the PLL are all set to output
-    if (_pmc730.getDioDirection(DIO_CLOCK) != Pmc730::DIO_OUTPUT ||
-            _pmc730.getDioDirection(DIO_CLOCKINV) != Pmc730::DIO_OUTPUT ||
-            _pmc730.getDioDirection(DIO_DATA) != Pmc730::DIO_OUTPUT ||
-            _pmc730.getDioDirection(DIO_DATAINV) != Pmc730::DIO_OUTPUT ||
-            _pmc730.getDioDirection(DIO_LE) != Pmc730::DIO_OUTPUT ||
-            _pmc730.getDioDirection(DIO_LEINV) != Pmc730::DIO_OUTPUT) {
-        ELOG << __PRETTY_FUNCTION__ << ": PMC-730 DIO lines " << 
-                DIO_CLOCK << ", " << DIO_CLOCKINV << ", " << 
-                DIO_DATA << ", " << DIO_DATAINV << ", " <<
-                DIO_LE << ", and " << DIO_LEINV << 
-                " are not all set for output!";
-        abort();
+    if (! _pmcSimulated()) {
+        if (_pmc730.getDioDirection(DIO_CLOCK) != Pmc730::DIO_OUTPUT ||
+                _pmc730.getDioDirection(DIO_CLOCKINV) != Pmc730::DIO_OUTPUT ||
+                _pmc730.getDioDirection(DIO_DATA) != Pmc730::DIO_OUTPUT ||
+                _pmc730.getDioDirection(DIO_DATAINV) != Pmc730::DIO_OUTPUT ||
+                _pmc730.getDioDirection(DIO_LE) != Pmc730::DIO_OUTPUT ||
+                _pmc730.getDioDirection(DIO_LEINV) != Pmc730::DIO_OUTPUT) {
+            ELOG << __PRETTY_FUNCTION__ << ": PMC-730 DIO lines " << 
+                    DIO_CLOCK << ", " << DIO_CLOCKINV << ", " << 
+                    DIO_DATA << ", " << DIO_DATAINV << ", " <<
+                    DIO_LE << ", and " << DIO_LEINV << 
+                    " are not all set for output!";
+            abort();
+        }
     }
     // Our frequency step must divide evenly into the reference frequency
     assert((OSC3_REF_FREQ % OSC3_FREQ_STEP) == 0);
@@ -48,6 +53,8 @@ KaOscillator3::~KaOscillator3() {
 void
 KaOscillator3::_sendDifferentialSignal(bool signalHigh, DIOLine_t dioPosLine,
         DIOLine_t dioNegLine) {
+    if (_pmcSimulated())
+        return;
     // as written, this only works for DIO lines in the range 8-15!
     assert(dioPosLine >=8 && dioPosLine <= 15 &&
             dioNegLine >= 8 && dioNegLine <= 15);
@@ -82,6 +89,8 @@ KaOscillator3::_setData(bool signalHigh) {
 
 void
 KaOscillator3::_adf4001Bitbang(uint32_t val) {
+    if (_pmcSimulated())
+        return;
     // Assure that CLOCK and LE lines are low when we start.
     _setClock(0);
     _setLE(0);
@@ -114,7 +123,7 @@ KaOscillator3::_adf4001Bitbang(uint32_t val) {
     DLOG << std::hex << "last command 0x" << _lastCommandSent << 
         ", echo 0x" << echoedBits << std::dec;
         
-    if (_lastCommandSent && (_lastCommandSent != echoedBits)) {
+    if (_testReadback && _lastCommandSent && (_lastCommandSent != echoedBits)) {
         ELOG << __PRETTY_FUNCTION__ << std::hex << "Last command sent (0x" << 
             _lastCommandSent << ") != echoed bits (0x" << echoedBits << ")" <<
             std::dec;

@@ -54,7 +54,16 @@ class Pmc730;
  */
 class KaOscillator3 {
 public:
-    KaOscillator3(Pmc730 & pmc730);
+    /**
+     * Constructor for a real oscillator 3, with communication via the
+     * given PMC-730 card.
+     * @param pmc730 Reference to the PMC730 card through which oscillator 3
+     *      is connected. Set to SIM_PMC730 to simulate existence of a
+     *      PMC-730 card.
+     * @param testReadback If true, echoed bits are read back from the PLL
+     *      chip to validate oscillator programming.
+     */
+    KaOscillator3(Pmc730 & pmc730, bool testReadback = true);
     virtual ~KaOscillator3();
     
     /**
@@ -74,6 +83,10 @@ public:
      * Maximum output frequency
      */
     static const unsigned int OSC3_MAX_FREQ = 108000000;
+    /**
+     * "Simulated" Pmc730.
+     */
+    static Pmc730 & SIM_PMC730;
     
     /**
      * Set oscillator 3 frequency. The selected frequency must be a multiple
@@ -199,8 +212,19 @@ private:
      *      bits of val are sent to the PLL).
      */
     void _adf4001Bitbang(uint32_t val);
+    /**
+     * Is our PMC-730 simulated? (I.e., is it a reference to NULL?)
+     */
+    bool _pmcSimulated() {
+        return(&_pmc730 == 0);
+    }
         
     Pmc730 & _pmc730;
+    /**
+     * If _testReadback is true, echoed bits from the PLL chip are verified
+     * against previously sent commands.
+     */
+    bool _testReadback;
     /**
      * Oscillator 3 output frequency = (_nDivider / _rDivider) * OSC3_REF_FREQ
      */
