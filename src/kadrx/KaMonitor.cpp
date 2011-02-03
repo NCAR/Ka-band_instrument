@@ -12,8 +12,10 @@
 #include <QTimer>
 #include <QMutex>
 
+#include <iomanip>
 #include <cmath>
 #include <vector>
+#include <deque>
 
 #include <logx/Logging.h>
 
@@ -105,17 +107,45 @@ private:
      * @param voltage voltage from temperature sensor
      * @return the temperature, in C
      */
-    double _temperature(double voltage);
+    double _voltsToTemp(double voltage) {
+        // Temperature sensor voltage = 0.01 * T(Kelvin)
+        // Convert volts to Kelvin, then to Celsius
+        return((100 * voltage) - 273.15);
+    }
+    /**
+     * Get new values for all of our sensor data
+     */
+    void _getNewValues();
+    /**
+     * Return the average of values in a deque<float>, or -99.9 if the deque
+     * is empty.
+     * @return the average of values in a deque<float>, or -99.9 if the deque
+     *      is empty.
+     */
+    float _dequeAverage(std::deque<float> & list);
     
     /// Thread access mutex
     QMutex _mutex;
-    /// Temperatures
-    float _procEnclosureTemp;       // C
-    float _procDrxTemp;              // C
-    float _txEnclosureTemp;         // C
-    float _rxTopTemp;               // C
-    float _rxBackTemp;              // C
-    float _rxFrontTemp;             // C
+    
+    /// Temperature accessors
+    float _procEnclosureTemp() { return _dequeAverage(_procEnclosureTemps); } // C
+    float _procDrxTemp() { return _dequeAverage(_procDrxTemps); } // C
+    float _txEnclosureTemp() { return _dequeAverage(_txEnclosureTemps); } // C
+    float _rxTopTemp() { return _dequeAverage(_rxTopTemps); } // C
+    float _rxBackTemp() { return _dequeAverage(_rxBackTemps); } // C
+    float _rxFrontTemp() { return _dequeAverage(_rxFrontTemps); } // C
+    
+    /// window size for moving temperature averages
+    static const unsigned int TEMP_AVERAGING_LEN = 20;
+    
+    /// Deques to hold temperature lists
+    std::deque<float> _procEnclosureTemps;
+    std::deque<float> _procDrxTemps;
+    std::deque<float> _txEnclosureTemps;
+    std::deque<float> _rxTopTemps;
+    std::deque<float> _rxBackTemps;
+    std::deque<float> _rxFrontTemps;
+    
     /// Video power monitors
     float _hTxPowerVideo;           // H tx pulse power, dBm
     float _vTxPowerVideo;           // V tx pulse power, dBm
@@ -139,16 +169,7 @@ KaMonitor::~KaMonitor() {
 
 KaMonitorPriv::KaMonitorPriv() :
     QThread(),
-    _mutex(QMutex::Recursive),
-    _procEnclosureTemp(-999),
-    _procDrxTemp(-999),
-    _txEnclosureTemp(-999),
-    _rxTopTemp(-999),
-    _rxBackTemp(-999),
-    _rxFrontTemp(-999),
-    _hTxPowerVideo(-999),
-    _vTxPowerVideo(-999),
-    _testTargetPowerVideo(-999) {
+    _mutex(QMutex::Recursive) {
 }
 
 KaMonitorPriv::~KaMonitorPriv() {
@@ -161,31 +182,57 @@ KaMonitorPriv::run() {
     setTerminationEnabled(true);
   
     while (true) {
-        std::vector<float> analogData = KaPmc730::thePmc730().readAnalogChannels(0, 9);
-        _testTargetPowerVideo = _lookupQEAPower(analogData[0]);
-        _vTxPowerVideo = _lookupQEAPower(analogData[1]);
-        _hTxPowerVideo = _lookupQEAPower(analogData[2]);
-        _rxFrontTemp = _temperature(analogData[3]);
-        _rxBackTemp = _temperature(analogData[4]);
-        _rxTopTemp = _temperature(analogData[5]);
-        _txEnclosureTemp = _temperature(analogData[6]);
-        _procDrxTemp = _temperature(analogData[7]);
-        _procEnclosureTemp = _temperature(analogData[8]);
-        _psVoltage = analogData[9];
-        ILOG << "TT:" << _testTargetPowerVideo << " dBm " <<
-            " V:" << _vTxPowerVideo << " dBm " <<
-            " H:" << _hTxPowerVideo << " dBm ";
-        ILOG << "rx front: " << _rxFrontTemp << " C, back: " << _rxBackTemp <<
-            " C, top: " << _rxTopTemp << " C";
-        ILOG << "tx enclosure: " << _txEnclosureTemp << " C";
-        ILOG << "proc enclosure: " << _procEnclosureTemp << " C, drx: " <<
-            _procDrxTemp << " C";
-        ILOG << "5V PS: " << _psVoltage << " V";
+        _getNewValues();
+        DLOG << std::fixed << std::setprecision(1) <<
+            "TT: " << _testTargetPowerVideo << " dBm, " <<
+            "V: " << _vTxPowerVideo << " dBm, " <<
+            "H: " << _hTxPowerVideo << " dBm";
+        DLOG << std::fixed << std::setprecision(1) << 
+            "rx front: " << _rxFrontTemp() <<  " C, " << 
+            "back: " << _rxBackTemp() << " C, " << 
+            "top: " << _rxTopTemp() << " C";
+        DLOG << std::fixed << std::setprecision(1) << 
+            "tx enclosure: " << _txEnclosureTemp() << " C";
+        DLOG << std::fixed << std::setprecision(1) << 
+            "proc enclosure: " << _procEnclosureTemp() << " C, " << 
+            "drx: " << _procDrxTemp() << " C";
+        DLOG << std::fixed << std::setprecision(2) << 
+            "5V PS: " << _psVoltage << " V";
         usleep(1000000); // 1 s
     }
 }
 
-double KaMonitorPriv::_lookupQEAPower(double voltage) {
+void
+KaMonitorPriv::_getNewValues() {
+    // We get our data from analog channels 0-9 on the PMC-730 multi-IO card
+    std::vector<float> analogData = KaPmc730::thePmc730().readAnalogChannels(0, 9);
+    // Channels 0-2 give us RF power measurements
+    _testTargetPowerVideo = _lookupQEAPower(analogData[0]);
+    _vTxPowerVideo = _lookupQEAPower(analogData[1]);
+    _hTxPowerVideo = _lookupQEAPower(analogData[2]);
+    // Channels 3-8 give us various temperatures. The data are a bit noisy, so
+    // we keep up to TEMP_AVERAGING_LEN samples so we can generate moving 
+    // averages.
+    _rxFrontTemps.push_back(_voltsToTemp(analogData[3]));
+    _rxBackTemps.push_back(_voltsToTemp(analogData[4]));
+    _rxTopTemps.push_back(_voltsToTemp(analogData[5]));
+    _txEnclosureTemps.push_back(_voltsToTemp(analogData[6]));
+    _procDrxTemps.push_back(_voltsToTemp(analogData[7]));
+    _procEnclosureTemps.push_back(_voltsToTemp(analogData[8]));
+    while (_rxFrontTemps.size() > TEMP_AVERAGING_LEN) {
+        _rxFrontTemps.pop_front();
+        _rxBackTemps.pop_front();
+        _rxTopTemps.pop_front();
+        _txEnclosureTemps.pop_front();
+        _procDrxTemps.pop_front();
+        _procEnclosureTemps.pop_front();
+    }
+    // Channel 9 gives us the voltage read from our 5V power supply
+    _psVoltage = analogData[9];
+}
+
+double
+KaMonitorPriv::_lookupQEAPower(double voltage) {
     // If we're below the lowest voltage in the cal table, just return the
     // lowest power in the cal table.
     if (voltage < QEA_Cal[0][1]) {
@@ -203,7 +250,6 @@ double KaMonitorPriv::_lookupQEAPower(double voltage) {
         float vLow = QEA_Cal[i][1];
         float powerHigh = QEA_Cal[i + 1][0];
         float vHigh = QEA_Cal[i + 1][1];
-        DLOG << i << " (" << vLow << ", " << voltage << ", " << vHigh << ")";
         if (vHigh < voltage)
             continue;
         // Convert powers to linear space, then interpolate to our input voltage
@@ -220,8 +266,14 @@ double KaMonitorPriv::_lookupQEAPower(double voltage) {
     abort();
 }
 
-double KaMonitorPriv::_temperature(double voltage) {
-    // Apply the V->T function as determined by Bryan Gales' 10 Nov 2010 oil
-    // bath calibration.
-    return(100 * (voltage - 2.7229));
+float
+KaMonitorPriv::_dequeAverage(std::deque<float> & list) {
+    unsigned int nPoints = list.size();
+    if (nPoints == 0)
+        return(-99.9);
+        
+    float sum = 0.0;
+    for (unsigned int i = 0; i < nPoints; i++)
+        sum += list[i];
+    return(sum / nPoints); 
 }
