@@ -398,6 +398,7 @@ KaOscControlPriv::_processXmitAverage() {
               // Only sum 10 pulses at a time when in searching mode
               _afcMode = AFC_SEARCHING;
               _nToSum = 10;
+              _clearSum();
               // Start searching at minimum oscillator 0 frequency
               DLOG << "SEARCH starting oscillator 0 frequency at (" << 
                    _osc0.getScaledMinFreq() << " x " << _osc0.getFreqStep() << 
@@ -432,8 +433,8 @@ KaOscControlPriv::_processXmitAverage() {
               // Sum 50 pulses at a time while in tracking mode
               _afcMode = AFC_TRACKING;
               _nToSum = 50;
-              // Return now to go get a new average over more pulses
               _clearSum();
+              // Return now to go get a new average over more pulses
               return;
           }
           // If the frequency offset is less than our threshold, return now
