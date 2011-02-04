@@ -205,7 +205,7 @@ KaMonitorPriv::run() {
 void
 KaMonitorPriv::_getNewValues() {
     // We get our data from analog channels 0-9 on the PMC-730 multi-IO card
-    std::vector<float> analogData = KaPmc730::thePmc730().readAnalogChannels(0, 9);
+    std::vector<float> analogData = KaPmc730::theKaPmc730().readAnalogChannels(0, 9);
     // Channels 0-2 give us RF power measurements
     _testTargetPowerVideo = _lookupQEAPower(analogData[0]);
     _vTxPowerVideo = _lookupQEAPower(analogData[1]);

@@ -202,7 +202,7 @@ KaOscControlPriv::KaOscControlPriv() :
     _osc0("/dev/ttydp00", 0, 100000, 15000, 16000),
     _osc1("/dev/ttydp01", 1, 10000, 12750, 13750),
     _osc2("/dev/ttydp02", 2, 1000000, 16000, 17000),
-    _osc3(KaPmc730::thePmc730()),
+    _osc3(KaPmc730::theKaPmc730()),
     _g0ThreshDbm(-25.0),     // -25.0 dBm G0 threshold power for good frequencies
     _coarseStep(500000),    // 500 kHz coarse step (SEARCHING)
     _fineStep(100000),      // 100 kHz fine step (TRACKING)

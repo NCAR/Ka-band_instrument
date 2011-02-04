@@ -15,12 +15,15 @@
 /// gain specialized methods related to the specific connections to the PMC730 
 /// on the Ka-band radar (e.g., PMC730 DIO line 8 is connected to the PLL CLOCK+ 
 /// input on the downconverter board).
-class KaPmc730 {
+class KaPmc730 : public Pmc730 {
 public:
     /// Return a reference to Ka's singleton Pmc730 instance.
-    static Pmc730 & thePmc730();
-protected:
-    static Pmc730 * _thePmc730;
+    static KaPmc730 & theKaPmc730();
+private:
+    KaPmc730();
+    virtual ~KaPmc730();
+    
+    static KaPmc730 * _theKaPmc730;
 };
 
 #endif /* KAPMC730_H_ */
