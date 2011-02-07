@@ -34,8 +34,10 @@ private:
     // Execute an XML-RPC command
     bool _executeXmlRpcCommand(const std::string cmd, 
         const XmlRpc::XmlRpcValue & params, XmlRpc::XmlRpcValue & result);
-    // Send a "FaultReset" command to the transmitter
+    // Send a "faultReset" command to the transmitter
     void _faultReset();
+    // Send an "operate" command to the transmitter
+    void _operate();
     // Disable the UI when no connection exists to the ka_xmitd.
     void _noConnection();
     // Special handling for pulse input faults
@@ -76,6 +78,8 @@ private:
     XmlRpc::XmlRpcClient _xmlrpcClient;
     // Last status read
     XmlRpc::XmlRpcValue _statusDict;
+    // What was the last time we saw the transmitter in "operate" mode?
+    time_t _lastOperateTime;
     // Pulse input fault times
     std::deque<time_t> _pulseInputFaultTimes;
     // Are we allowing auto-reset of pulse input faults?

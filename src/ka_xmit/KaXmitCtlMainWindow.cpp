@@ -29,6 +29,7 @@ KaXmitCtlMainWindow::KaXmitCtlMainWindow(std::string xmitterHost,
     _greenLED_off(":/greenLED_off.png"),
     _xmlrpcClient(_xmitterHost.c_str(), _xmitterPort),
     _statusDict(),
+    _lastOperateTime(0),
     _pulseInputFaultTimes(),
     _doAutoFaultReset(true),
     _autoResetCount(0) {
@@ -69,14 +70,14 @@ KaXmitCtlMainWindow::on_powerButton_clicked() {
 void KaXmitCtlMainWindow::_faultReset() {
     XmlRpcValue result;
     _executeXmlRpcCommand("faultReset", _NULL_XMLRPCVALUE, result);
-    // When a faultReset command is issued, allow auto-resets on pulse faults
-    // again.
-    _doAutoFaultReset = true;
 }
     
 void
 KaXmitCtlMainWindow::on_faultResetButton_clicked() {
     _faultReset();
+    // When a manual faultReset command is issued, re-enable auto-resets on 
+    // pulse faults again (assuming they've been disabled).
+    _doAutoFaultReset = true;
     _update();
 }
 
@@ -88,9 +89,14 @@ KaXmitCtlMainWindow::on_standbyButton_clicked() {
 }
 
 void
-KaXmitCtlMainWindow::on_operateButton_clicked() {
+KaXmitCtlMainWindow::_operate() {
     XmlRpcValue result;
     _executeXmlRpcCommand("operate", _NULL_XMLRPCVALUE, result);
+}
+
+void
+KaXmitCtlMainWindow::on_operateButton_clicked() {
+    _operate();
     _update();
 }
 
@@ -98,6 +104,12 @@ void
 KaXmitCtlMainWindow::_update() {
     if (! _executeXmlRpcCommand("getStatus", _NULL_XMLRPCVALUE, _statusDict)) {
         return;
+    }
+
+    // Keep track of the latest time we saw the transmitter in "operate" mode.
+    // If high voltage is enabled, consider the radar to be operating.
+    if (_hvpsRunup()) {
+        _lastOperateTime = time(0);
     }
     
     // boolean status values
@@ -229,9 +241,13 @@ KaXmitCtlMainWindow::_handlePulseInputFault() {
     if (! _doAutoFaultReset)
         return;
 
+    // Get current time
+    time_t now = time(0);
+
     // Push the time of this fault on to our deque
-    _pulseInputFaultTimes.push_back(time(0));
-    // Pop the earliest entry when we hit MAX_ENTRIES+1 entries.
+    _pulseInputFaultTimes.push_back(now);
+    
+    // Keep no more than MAX_ENTRIES fault time entries.
     const unsigned int MAX_ENTRIES = 10;
     if (_pulseInputFaultTimes.size() == (MAX_ENTRIES + 1))
         _pulseInputFaultTimes.pop_front();
@@ -251,6 +267,13 @@ KaXmitCtlMainWindow::_handlePulseInputFault() {
         // Disable auto fault resets. They will be reenabled if the user
         // pushes the "Fault Reset" button.
         _doAutoFaultReset = false;
+    }
+    // The pulse input fault puts the radar into "standby" mode. 
+    // If the radar was *very* recently in "operate" mode, return it to 
+    // operate mode, assuming that the pulse input fault moved it to "standby".
+    if ((now - _lastOperateTime) < 2) {
+        _operate();
+        statusBar()->showMessage("Pulse input fault auto reset (enabling 'Operate')");
     }
     return;     
 }
