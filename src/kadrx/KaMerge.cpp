@@ -581,7 +581,7 @@ void KaMerge::_cohereIqToBurstPhase(PulseData &pulse,
     }
 
     *II = (int16_t) (ivalCohered + 0.5);
-    *QQ = (int16_t) (ivalCohered + 0.5);
+    *QQ = (int16_t) (qvalCohered + 0.5);
     
   } // igate
 
