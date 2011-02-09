@@ -18,44 +18,44 @@ PORT=8080
 
 start() 
 {
-        echo -n $"Starting ka_xmitd: "
-	# Transmitter is on serial line /dev/ttydp03. Provide XML-RPC service at port 8080
-        daemon --user $USER $KA_XMITD $XMITTER_DEV $PORT
+    echo -n $"Starting ka_xmitd: "
+    # Transmitter is on serial line /dev/ttydp03. Provide XML-RPC service at port 8080
+    daemon --user $USER $KA_XMITD $XMITTER_DEV $PORT
 
-	touch /var/lock/subsys/ka_xmitd
-        echo
+    touch /var/lock/subsys/ka_xmitd
+    echo
 }
 
 stop() 
 {
-        echo -n $"Shutting down ka_xmitd: "
-	killproc ka_xmitd
+    echo -n $"Shutting down ka_xmitd: "
+    killproc ka_xmitd
 
-	rm -f  /var/lock/subsys/ka_xmitd
-        echo
+    rm -f  /var/lock/subsys/ka_xmitd
+    echo
 }
 
 # See how we were called.
 case "$1" in
   start)
-	start
-        ;;
+    start
+    ;;
   stop)
-	stop
+    stop
         ;;
   restart|reload)
-	stop
-	start
-	;;
+    stop
+    start
+    ;;
   condrestart)
-	[ -e /var/lock/subsys/ka_xmitd ] && (stop; start)
-	;;
+    [ -e /var/lock/subsys/ka_xmitd ] && (stop; start)
+    ;;
   status)
-  	status ka_xmitd
-	;;
+    status ka_xmitd
+    ;;
   *)
-        echo $"Usage: $0 {start|stop|restart|reload|condrestart}"
-        exit 1
+    echo $"Usage: $0 {start|stop|restart|reload|condrestart|status}"
+    exit 1
 esac
 
 exit 0
