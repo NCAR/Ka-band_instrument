@@ -36,13 +36,18 @@ private:
         const XmlRpc::XmlRpcValue & params, XmlRpc::XmlRpcValue & result);
     // Send a "faultReset" command to the transmitter
     void _faultReset();
+    // Disable the UI
+    void _disableUi();
     // Send an "operate" command to the transmitter
     void _operate();
     // Disable the UI when no connection exists to the ka_xmitd.
-    void _noConnection();
+    void _noDaemon();
+    // Disable the UI if the daemon is not talking to the transmitter
+    void _noXmitter();
     // Special handling for pulse input faults
     void _handlePulseInputFault();
     
+    bool _serialConnected() { return(_statusBool("serial_connected")); }
     bool _faultSummary() { return(_statusBool("fault_summary")); }
     bool _hvpsRunup() { return(_statusBool("hvps_runup")); }
     bool _standby() { return(_statusBool("standby")); }

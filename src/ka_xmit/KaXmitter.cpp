@@ -53,7 +53,7 @@ KaXmitter::KaXmitter(std::string ttyDev) :
         if ((_fd = open(_ttyDev.c_str(), O_RDWR)) == -1) {
             ELOG << __PRETTY_FUNCTION__ << ": error opening " << _ttyDev << ": " <<
                     strerror(errno);
-            abort();
+            exit(1);
         }
 
         // Make the port 9600 8N1, "raw"
@@ -61,7 +61,7 @@ KaXmitter::KaXmitter(std::string ttyDev) :
         if (tcgetattr(_fd, &ios) == -1) {
             ELOG << __PRETTY_FUNCTION__ << ": error getting " << _ttyDev << 
                     " attributes: " << strerror(errno);
-            abort();
+            exit(1);
         }
         cfmakeraw(&ios);
         cfsetspeed(&ios, B9600);
@@ -73,7 +73,7 @@ KaXmitter::KaXmitter(std::string ttyDev) :
         if (tcsetattr(_fd, TCSAFLUSH, &ios) == -1) {
             ELOG << __PRETTY_FUNCTION__ << ": error setting " << _ttyDev << 
                     " attributes: " << strerror(errno);
-            abort();
+            exit(1);
         }
         DLOG << "Done configuring " << _ttyDev;
     }
@@ -109,25 +109,32 @@ KaXmitter::operate() {
 
 const KaXmitStatus &
 KaXmitter::getStatus() {
+    // initialize status
+    _status.serialConnected = false;
+    _status.faultSummary = false;
+    _status.hvpsRunup = false;
+    _status.standby = false;
+    _status.heaterWarmup = false;
+    _status.cooldown = false;
+    _status.unitOn = false;
+    _status.magnetronCurrentFault = false;
+    _status.blowerFault = false;
+    _status.hvpsOn = false;
+    _status.remoteEnabled = false;
+    _status.safetyInterlock = false;
+    _status.reversePowerFault = false;
+    _status.pulseInputFault = false;
+    _status.hvpsCurrentFault = false;
+    _status.waveguidePressureFault = false;
+    _status.hvpsUnderVoltage = false;
+    _status.hvpsOverVoltage = false;
+    _status.hvpsVoltage = false;
+    _status.magnetronCurrent = 0.0;
+    _status.hvpsCurrent = 0.0;
+    _status.temperature = 0;
+    
     if (_simulate) {
-        _status.faultSummary = false;
-        _status.hvpsRunup = false;
-        _status.standby = false;
-        _status.heaterWarmup = false;
-        _status.cooldown = false;
-        _status.unitOn = false;
-        _status.magnetronCurrentFault = false;
-        _status.blowerFault = false;
-        _status.hvpsOn = false;
-        _status.remoteEnabled = false;
-        _status.safetyInterlock = false;
-        _status.reversePowerFault = false;
-        _status.pulseInputFault = false;
-        _status.hvpsCurrentFault = false;
-        _status.waveguidePressureFault = false;
-        _status.hvpsUnderVoltage = false;
-        _status.hvpsOverVoltage = false;
-        _status.hvpsVoltage = false;
+        _status.serialConnected = true;
         _status.magnetronCurrent = 0.2;
         _status.hvpsCurrent = 0.3;
         _status.temperature = 32;
@@ -143,7 +150,9 @@ KaXmitter::getStatus() {
     
     // Wait up to a second for reply to be ready
     if (_readSelect(1000) < 0) {
-        abort();
+        WLOG << __PRETTY_FUNCTION__ << 
+            ": read select timed out! Is the transmitter plugged in?";
+        return(_status);
     }
     
     // Read the 21-byte status reply
@@ -157,7 +166,7 @@ KaXmitter::getStatus() {
             return getStatus();
         } else if (result < 0) {
             ELOG << "Status reply read error: " << strerror(errno);
-            abort();
+            return(_status);
         } else {
             nRead += result;
         }
@@ -170,6 +179,7 @@ KaXmitter::getStatus() {
     }
     
     // Finally, parse the reply
+    _status.serialConnected = true;
     
     // Six used bits in the first status byte
     _status.faultSummary = (reply[1] >> 5) & 0x1;
@@ -268,8 +278,8 @@ KaXmitter::_sendCommand(std::string cmd) {
             return;
         sleep(1);
     }
-    // Abort if we fail to get the command through after many attempts...
-    abort();
+    // Exit if we fail to get the command through after many attempts...
+    exit(1);
 }
 
 bool

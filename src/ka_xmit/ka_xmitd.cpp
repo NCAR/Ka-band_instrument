@@ -9,6 +9,7 @@
 #include <cerrno>
 #include <cstring>
 #include <cstdlib>
+#include <ctime>
 #include <unistd.h>
 #include <sys/types.h>
 
@@ -163,6 +164,7 @@ public:
         // Construct an XML-RPC <struct> (more accurately a dictionary)
         // containing all of the transmitter status values.
         XmlRpcValue statusDict;
+        statusDict["serial_connected"] = XmlRpcValue(status.serialConnected);
         statusDict["fault_summary"] = XmlRpcValue(status.faultSummary);
         statusDict["hvps_runup"] = XmlRpcValue(status.hvpsRunup);
         statusDict["standby"] = XmlRpcValue(status.standby);
@@ -250,7 +252,7 @@ main(int argc, char *argv[]) {
     
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
-
+    
     if (argc != 3 && argc != 4) {
         std::cerr << "Usage: " << argv[0] << 
             " <xmitter_ttydev> <server_port> [f] [<logx_arg> ...]" << std::endl;
@@ -274,6 +276,9 @@ main(int argc, char *argv[]) {
         }
     }
     
+    time_t now = time(0);
+    ILOG << "ka_xmitd (" << getpid() << ") started " << ctime(&now);
+
     Xmitter = new KaXmitter(argv[1]);
     
     // Initialize our RPC server

@@ -49,7 +49,7 @@ KaXmitCtlMainWindow::_executeXmlRpcCommand(const std::string cmd,
     DLOG << "Executing '" << cmd << "()' command";
     if (! _xmlrpcClient.execute(cmd.c_str(), params, result)) {
         DLOG << "Error executing " << cmd << "() call to ka_xmitd";
-        _noConnection();
+        _noDaemon();
         return(false);
     }
     if (_xmlrpcClient.isFault()) {
@@ -112,6 +112,13 @@ KaXmitCtlMainWindow::_update() {
         _lastOperateTime = time(0);
     }
     
+    if (! _serialConnected()) {
+        _noXmitter();
+        return;
+    }
+    
+    centralWidget()->setEnabled(true);
+
     // boolean status values
     _ui.runupLabel->setEnabled(_hvpsRunup());
     _ui.standbyLabel->setEnabled(_standby());
@@ -199,18 +206,23 @@ KaXmitCtlMainWindow::_statusDouble(std::string  key) {
 }
  
 void
-KaXmitCtlMainWindow::_noConnection() {
+KaXmitCtlMainWindow::_noDaemon() {
     std::ostringstream ss;
     ss << "No connection to ka_xmitd @ " << _xmitterHost << ":" << _xmitterPort;
     statusBar()->showMessage(ss.str().c_str());
-    
-    _ui.runupLabel->setEnabled(false);
-    _ui.standbyLabel->setEnabled(false);
-    _ui.warmupLabel->setEnabled(false);
-    _ui.cooldownLabel->setEnabled(false);
-    _ui.hvpsOnLabel->setEnabled(false);
-    _ui.remoteEnabledLabel->setEnabled(false);
-    
+    _disableUi();
+}
+
+void
+KaXmitCtlMainWindow::_noXmitter() {
+    std::ostringstream ss;
+    ss << "No serial connection from ka_xmitd to xmitter!";
+    statusBar()->showMessage(ss.str().c_str());
+    _disableUi();
+}
+
+void
+KaXmitCtlMainWindow::_disableUi() {
     _ui.unitOnLabel->setPixmap(_greenLED_off);
     
     _ui.magCurrFaultIcon->setPixmap(_greenLED_off);
@@ -228,11 +240,8 @@ KaXmitCtlMainWindow::_noConnection() {
     _ui.hvpsCurrentValue->setText("0.0");
     _ui.temperatureValue->setText("0");
     _ui.autoResetValue->setText("0");
-    
-    _ui.powerButton->setEnabled(false);
-    _ui.faultResetButton->setEnabled(false);
-    _ui.standbyButton->setEnabled(false);
-    _ui.operateButton->setEnabled(false);
+
+    centralWidget()->setEnabled(false);
 }
 
 void

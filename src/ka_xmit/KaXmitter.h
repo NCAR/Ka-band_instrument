@@ -11,6 +11,7 @@
 #include <string>
 
 struct KaXmitStatus {
+    bool serialConnected;
     bool faultSummary;
     bool hvpsRunup;
     bool standby;
