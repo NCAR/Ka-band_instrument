@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>445</width>
-    <height>549</height>
+    <width>408</width>
+    <height>459</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,20 +15,32 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_3">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="margin">
+     <number>4</number>
+    </property>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_13">
+      <property name="spacing">
+       <number>4</number>
+      </property>
       <item>
        <widget class="QGroupBox" name="statusBox">
         <property name="title">
          <string>General Status</string>
         </property>
         <property name="flat">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
         <property name="checkable">
          <bool>false</bool>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
+         <property name="margin">
+          <number>4</number>
+         </property>
          <item>
           <widget class="QLabel" name="runupLabel">
            <property name="enabled">
@@ -262,9 +274,15 @@
          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
         </property>
         <property name="flat">
-         <bool>true</bool>
+         <bool>false</bool>
         </property>
         <layout class="QGridLayout" name="gridLayout_2">
+         <property name="margin">
+          <number>4</number>
+         </property>
+         <property name="horizontalSpacing">
+          <number>-1</number>
+         </property>
          <item row="0" column="0">
           <widget class="QLabel" name="blowerFaultIcon">
            <property name="sizePolicy">
@@ -291,6 +309,9 @@
            </property>
            <property name="text">
             <string>Blower</string>
+           </property>
+           <property name="indent">
+            <number>0</number>
            </property>
           </widget>
          </item>
@@ -449,6 +470,21 @@
     </item>
     <item>
      <widget class="QPlainTextEdit" name="logArea">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="maximumSize">
+       <size>
+        <width>16777215</width>
+        <height>120</height>
+       </size>
+      </property>
+      <property name="lineWrapMode">
+       <enum>QPlainTextEdit::WidgetWidth</enum>
+      </property>
       <property name="textInteractionFlags">
        <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
       </property>
@@ -456,6 +492,12 @@
     </item>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_14">
+      <property name="spacing">
+       <number>4</number>
+      </property>
+      <property name="margin">
+       <number>0</number>
+      </property>
       <item>
        <widget class="QLabel" name="unitOnLabel">
         <property name="enabled">
