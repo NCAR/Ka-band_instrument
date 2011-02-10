@@ -9,7 +9,7 @@
 
 #include "KaXmitCtlMainWindow.h"
 
-#include <QTimer>
+#include <QDateTime>
 
 LOGGING("MainWindow")
 
@@ -35,6 +35,9 @@ KaXmitCtlMainWindow::KaXmitCtlMainWindow(std::string xmitterHost,
     _autoResetCount(0) {
     // Set up the UI
     _ui.setupUi(this);
+    // Limit the log area to 1000 messages
+    _ui.logArea->setMaximumBlockCount(1000);
+    _logMessage("ka_xmitctl started");
     
     connect(&_updateTimer, SIGNAL(timeout()), this, SLOT(_update()));
     _updateTimer.start(1000);
@@ -215,9 +218,7 @@ KaXmitCtlMainWindow::_noDaemon() {
 
 void
 KaXmitCtlMainWindow::_noXmitter() {
-    std::ostringstream ss;
-    ss << "No serial connection from ka_xmitd to xmitter!";
-    statusBar()->showMessage(ss.str().c_str());
+    statusBar()->showMessage("No serial connection from ka_xmitd to xmitter!");
     _disableUi();
 }
 
@@ -266,13 +267,13 @@ KaXmitCtlMainWindow::_handlePulseInputFault() {
         ((_pulseInputFaultTimes[MAX_ENTRIES - 1] - _pulseInputFaultTimes[0]) > 100)) {
         _faultReset();
         _autoResetCount++;
-        statusBar()->showMessage("Pulse input fault auto reset");
+        _logMessage("Pulse input fault auto reset");
     } else {
         std::ostringstream ss;
-        ss << "Auto fault reset disabled after 10 faults in " << 
+        ss << "Pulse input fault auto reset disabled after 10 faults in " << 
             (_pulseInputFaultTimes[MAX_ENTRIES - 1] - _pulseInputFaultTimes[0]) << 
             " seconds!";
-        statusBar()->showMessage(ss.str().c_str());
+        _logMessage(ss.str().c_str());
         // Disable auto fault resets. They will be reenabled if the user
         // pushes the "Fault Reset" button.
         _doAutoFaultReset = false;
@@ -282,7 +283,14 @@ KaXmitCtlMainWindow::_handlePulseInputFault() {
     // operate mode, assuming that the pulse input fault moved it to "standby".
     if ((now - _lastOperateTime) < 2) {
         _operate();
-        statusBar()->showMessage("Pulse input fault auto reset (enabling 'Operate')");
+        _logMessage("Re-enabling 'Operate' after pulse input fault auto reset");
     }
     return;     
+}
+
+void
+KaXmitCtlMainWindow::_logMessage(std::string message) {
+    _ui.logArea->appendPlainText(
+            QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm: ") + 
+            message.c_str());
 }

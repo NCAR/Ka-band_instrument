@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>446</width>
-    <height>365</height>
+    <width>445</width>
+    <height>549</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,6 +21,12 @@
        <widget class="QGroupBox" name="statusBox">
         <property name="title">
          <string>General Status</string>
+        </property>
+        <property name="flat">
+         <bool>true</bool>
+        </property>
+        <property name="checkable">
+         <bool>false</bool>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
@@ -227,7 +233,7 @@
             <item row="4" column="0">
              <widget class="QLabel" name="autoResetTitle">
               <property name="text">
-               <string>Auto Fault Resets</string>
+               <string>Auto Pulse Fault Resets</string>
               </property>
              </widget>
             </item>
@@ -251,6 +257,12 @@
        <widget class="QGroupBox" name="faultStatusBox">
         <property name="title">
          <string>Fault Status</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+        </property>
+        <property name="flat">
+         <bool>true</bool>
         </property>
         <layout class="QGridLayout" name="gridLayout_2">
          <item row="0" column="0">
@@ -436,6 +448,13 @@
      </layout>
     </item>
     <item>
+     <widget class="QPlainTextEdit" name="logArea">
+      <property name="textInteractionFlags">
+       <set>Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>
+      </property>
+     </widget>
+    </item>
+    <item>
      <layout class="QHBoxLayout" name="horizontalLayout_14">
       <item>
        <widget class="QLabel" name="unitOnLabel">
@@ -534,7 +553,7 @@
     </item>
    </layout>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QStatusBar" name="statusBar"/>
   <action name="actionExit">
    <property name="text">
     <string>Exit</string>

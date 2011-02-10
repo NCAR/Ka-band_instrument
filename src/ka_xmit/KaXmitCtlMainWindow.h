@@ -46,6 +46,8 @@ private:
     void _noXmitter();
     // Special handling for pulse input faults
     void _handlePulseInputFault();
+    // Log a message
+    void _logMessage(std::string message);
     
     bool _serialConnected() { return(_statusBool("serial_connected")); }
     bool _faultSummary() { return(_statusBool("fault_summary")); }
