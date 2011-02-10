@@ -171,6 +171,10 @@ public:
     double rcvr_digital_gain() const { return _getDoubleVal("rcvr_digital_gain"); } /// dB
     double rcvr_gate0_delay() const { return _getDoubleVal("rcvr_gate0_delay"); }   /// seconds
     
+    /// Return the range to the center of gate 0, in meters
+    /// @return the range to the center of gate 0, in meters
+    double range_to_gate0() const { return _getDoubleVal("range_to_gate0"); }
+    
     double test_target_delay() const { return _getDoubleVal("test_target_delay"); } /// seconds
     double test_target_width() const { return _getDoubleVal("test_target_width"); } /// seconds
     

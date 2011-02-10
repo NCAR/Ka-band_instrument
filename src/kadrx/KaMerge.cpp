@@ -114,8 +114,7 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
     _config.burst_sample_delay() * lightSpeedMps / 2.0;
   _tsProc.pulse_width_us = _config.tx_pulse_width() * 1.0e6;
   _tsProc.gate_spacing_m = _config.rcvr_pulse_width() * 1.5e8;
-  _tsProc.start_range_m = (_tsProc.gate_spacing_m / 2.0) +
-    _config.rcvr_gate0_delay() * 1.5e8;
+  _tsProc.start_range_m = _config.range_to_gate0(); // center of gate 0
   _tsProc.pol_mode = IWRF_POL_MODE_HV_SIM;
 
   // initialize IWRF calibration struct from config

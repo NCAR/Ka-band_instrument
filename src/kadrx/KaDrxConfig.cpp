@@ -69,6 +69,7 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("sim_start_elev");
     keys.insert("sim_delta_elev");
     keys.insert("sim_az_rate");
+    keys.insert("range_to_gate0");
     return keys;
 }
 
@@ -451,6 +452,11 @@ KaDrxConfig::isValid(bool verbose) const {
     if (test_target_width() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'test_target_width' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (range_to_gate0() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'range_to_gate0' unset in DRX configuration" << std::endl;
         valid = false;
     }
     return valid;
