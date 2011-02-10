@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>408</width>
-    <height>459</height>
+    <height>467</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -16,7 +16,7 @@
   <widget class="QWidget" name="centralwidget">
    <layout class="QVBoxLayout" name="verticalLayout_3">
     <property name="spacing">
-     <number>0</number>
+     <number>4</number>
     </property>
     <property name="margin">
      <number>4</number>
@@ -481,6 +481,11 @@
         <width>16777215</width>
         <height>120</height>
        </size>
+      </property>
+      <property name="font">
+       <font>
+        <pointsize>8</pointsize>
+       </font>
       </property>
       <property name="lineWrapMode">
        <enum>QPlainTextEdit::WidgetWidth</enum>
