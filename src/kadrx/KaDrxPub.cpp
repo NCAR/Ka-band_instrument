@@ -363,8 +363,8 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     double normCrossProduct = _numerator / _denominator;  // normalized cross product proportional to frequency change
     double freqCorrection = 8.0e6 * normCrossProduct; // experimentally determined scale factor to convert correction to Hz
 
-    double ival = i[0] / _a2dCountsPerVolt;
-    double qval = q[0] / _a2dCountsPerVolt;
+    double ival = i[9] / _a2dCountsPerVolt;
+    double qval = q[9] / _a2dCountsPerVolt;
     double g0Power = ival * ival + qval * qval; // units of V^2
     double g0PowerDb = 10 * log10(g0Power);
     if (! (pulseSeqNum % 5000)) {
