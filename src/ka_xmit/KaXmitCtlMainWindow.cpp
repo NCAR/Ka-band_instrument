@@ -5,6 +5,7 @@
  *      Author: burghart
  */
 #include <sstream>
+#include <unistd.h>
 #include <logx/Logging.h>
 
 #include "KaXmitCtlMainWindow.h"
@@ -98,6 +99,12 @@ KaXmitCtlMainWindow::_operate() {
 }
 
 void
+KaXmitCtlMainWindow::_getStatus() {
+    if (! _executeXmlRpcCommand("getStatus", _NULL_XMLRPCVALUE, _statusDict))
+        _logMessage("getStatus failed!");
+}
+
+void
 KaXmitCtlMainWindow::on_operateButton_clicked() {
     _operate();
     _update();
@@ -105,9 +112,7 @@ KaXmitCtlMainWindow::on_operateButton_clicked() {
 
 void
 KaXmitCtlMainWindow::_update() {
-    if (! _executeXmlRpcCommand("getStatus", _NULL_XMLRPCVALUE, _statusDict)) {
-        return;
-    }
+    _getStatus();
 
     // Keep track of the latest time we saw the transmitter in "operate" mode.
     // If high voltage is enabled, consider the radar to be operating.
@@ -282,8 +287,24 @@ KaXmitCtlMainWindow::_handlePulseInputFault() {
     // If the radar was *very* recently in "operate" mode, return it to 
     // operate mode, assuming that the pulse input fault moved it to "standby".
     if ((now - _lastOperateTime) < 2) {
-        _operate();
-        _logMessage("Re-enabling 'Operate' after pulse input fault auto reset");
+        int i;
+        int MAXTRIES = 10;
+        for (i = 0; i < MAXTRIES; i++) {
+            // Sleep a moment and get updated status
+            usleep(100000);
+            _getStatus();
+            // If the fault was actually cleared, go back to "operate" mode.
+            if (! _faultSummary()) {
+                std::ostringstream ss;
+                ss << "Back to 'operate' after pulse input fault reset (" <<
+                    i << " loops)";
+                _logMessage(ss.str().c_str());
+                _operate();
+                break;
+            }
+        }
+        if (i == MAXTRIES)
+            _logMessage("Too many tries waiting for fault to clear!");
     }
     return;     
 }
