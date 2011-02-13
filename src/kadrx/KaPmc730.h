@@ -19,9 +19,23 @@ class KaPmc730 : public Pmc730 {
 public:
     /// Return a reference to Ka's singleton Pmc730 instance.
     static KaPmc730 & theKaPmc730();
+    
+    /**
+     * Get the current value in the PMC730 pulse counter.
+     */
+    static uint32_t getPulseCounter() { return(theKaPmc730()._getPulseCounter()); }
 private:
     KaPmc730();
     virtual ~KaPmc730();
+
+    /**
+     * Initialize the PMC730 for pulse counting, which uses DIO channel 2.
+     */
+    void _initPulseCounter();
+    /**
+     * Get the current value in the PMC730 pulse counter.
+     */
+    uint32_t _getPulseCounter();
     
     static KaPmc730 * _theKaPmc730;
 };
