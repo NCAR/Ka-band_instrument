@@ -64,8 +64,7 @@ bool _terminate = false;         ///< set true to signal the main loop to termin
 
 /////////////////////////////////////////////////////////////////////
 void sigHandler(int sig) {
-    std::cout << "Interrupt received...termination may take a few seconds" << 
-        std::endl;
+    ILOG << "Interrupt received...termination may take a few seconds";
     _terminate = true;
 }
 
@@ -85,7 +84,7 @@ void createDDSservices()
 	char **theArgv = argv.argv();
 	_publisher = new DDSPublisher(argv.argc(), theArgv);
 	if (_publisher->status()) {
-		std::cerr << "Unable to create a publisher, exiting." << std::endl;
+		ELOG << "Unable to create a publisher, exiting.";
 		exit(1);
 	}
 
@@ -108,7 +107,7 @@ void getConfigParams()
 	if (e) {
 		KaDir = e + KaDir;
 	} else {
-		std::cerr << "Environment variable KADIR must be set." << std::endl;
+		ELOG << "Environment variable KADIR must be set.";
 		exit(1);
 	}
 
@@ -180,7 +179,7 @@ void parseOptions(int argc,
 	if (vm.count("simulate"))
 	    _simulate = true;
 	if (vm.count("drxConfig") != 1) {
-	    std::cerr << "Exactly one DRX configuration file must be given!" << std::endl;
+	    ELOG << "Exactly one DRX configuration file must be given!";
 	    exit(1);
 	}
 }
@@ -194,7 +193,7 @@ makeRealTime()
 
 	// don't even try if we are not root.
 	if (id != 0) {
-		std::cerr << "Not root, unable to change scheduling priority" << std::endl;
+		WLOG << "Not root, unable to change scheduling priority";
 		return;
 	}
 
@@ -202,9 +201,7 @@ makeRealTime()
 	sparam.sched_priority = 50;
 
 	if (sched_setscheduler(0, SCHED_RR, &sparam)) {
-		std::cerr << "warning, unable to set scheduler parameters: ";
-		perror("");
-		std::cerr << "\n";
+		ELOG << "warning, unable to set scheduler parameters: " << strerror(errno);
 	}
 }
 
@@ -258,7 +255,7 @@ main(int argc, char** argv)
 	// Read the KA configuration file
     KaDrxConfig kaConfig(_drxConfig);
     if (! kaConfig.isValid()) {
-        std::cerr << "Exiting on incomplete configuration!" << std::endl;
+        ELOG << "Exiting on incomplete configuration!";
         exit(1);
     }
 
@@ -281,8 +278,8 @@ main(int argc, char** argv)
         int onePulseSize = sizeof(RadarDDS::SysHousekeeping) + kaConfig.gates() * 4;
         int maxTsLength = 65000 / onePulseSize;
         if (! maxTsLength) {
-            std::cerr << "Cannot adjust tsLength to meet OpenDDS 2.1 " <<
-                    "max sample size of 2^16 bytes" << std::endl;
+            ELOG << "Cannot adjust tsLength to meet OpenDDS 2.1 " <<
+                    "max sample size of 2^16 bytes";
             exit(1);
         } else if (_tsLength > maxTsLength) {
             int oldTsLength = _tsLength;
@@ -290,9 +287,8 @@ main(int argc, char** argv)
             _tsLength = 1;
             while ((_tsLength * 2) <= maxTsLength)
                 _tsLength *= 2;
-            std::cerr << "Adjusted tsLength from " << oldTsLength << " to " <<
-                    _tsLength << " to stay under OpenDDS 2.1 64 KB sample size limit." <<
-                    std::endl;
+            ELOG << "Adjusted tsLength from " << oldTsLength << " to " <<
+                    _tsLength << " to stay under OpenDDS 2.1 64 KB sample size limit.";
         }
     }
 
@@ -366,8 +362,7 @@ main(int argc, char** argv)
 	struct timespec sleepTime = { 1, 0 }; // 1 second, 0 nanoseconds
 	while (nanosleep(&sleepTime, &sleepTime)) {
 	    if (errno != EINTR) {
-	        std::cerr << "Error " << errno << " from nanosleep().  Aborting." <<
-                std::endl;
+	        ELOG << "Error " << errno << " from nanosleep().  Aborting.";
 	        abort();
 	    } else {
 	        // We were interrupted. Return to sleeping until the interval is done.
@@ -404,30 +399,27 @@ main(int argc, char** argv)
 		double currentTime = nowTime();
 		double elapsed = currentTime - startTime;
 		startTime = currentTime;
-
-        std::cout << std::setprecision(3) << std::setw(5) << "H channel " << 
+        
+        ILOG << std::setprecision(3) << std::setw(5) << "H channel " << 
                 hThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
                 " MB/s  ovr: " << hThread.downconverter()->overUnderCount() <<
                 " nopub: " << hThread.tsDiscards() <<
                 " drop: " << hThread.downconverter()->droppedPulses() <<
-                " sync errs: " << hThread.downconverter()->syncErrors() << 
-                std::endl;
+                " sync errs: " << hThread.downconverter()->syncErrors();
         
-        std::cout << std::setprecision(3) << std::setw(5) << "V channel " << 
+        ILOG << std::setprecision(3) << std::setw(5) << "V channel " << 
                 vThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
                 " MB/s  ovr: " << vThread.downconverter()->overUnderCount() <<
                 " nopub: " << vThread.tsDiscards() <<
                 " drop: " << vThread.downconverter()->droppedPulses() <<
-                " sync errs: " << vThread.downconverter()->syncErrors() << 
-                std::endl;
+                " sync errs: " << vThread.downconverter()->syncErrors();
         
-        std::cout << std::setprecision(3) << std::setw(5) << "burst channel " << 
+        ILOG << std::setprecision(3) << std::setw(5) << "burst channel " << 
                 burstThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
                 " MB/s  ovr: " << burstThread.downconverter()->overUnderCount() <<
                 " nopub: " << burstThread.tsDiscards() <<
                 " drop: " << burstThread.downconverter()->droppedPulses() <<
-                " sync errs: " << burstThread.downconverter()->syncErrors() << 
-                std::endl;
+                " sync errs: " << burstThread.downconverter()->syncErrors();
 	}
     
     // Stop the downconverter threads.
@@ -446,6 +438,6 @@ main(int argc, char** argv)
 	// stop the timers
 	sd3c.timersStartStop(false);
 
-	std::cout << "terminated on command" << std::endl;
+	ILOG << "terminated on command";
 }
 
