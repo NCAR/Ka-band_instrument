@@ -14,9 +14,6 @@ using namespace boost::posix_time;
 
 LOGGING("KaDrxPub")
 
-const double KaDrxPub::RAD_TO_DEG = 57.29577951308092;
-const double KaDrxPub::DEG_TO_RAD = 1.0 / KaDrxPub::RAD_TO_DEG;
-
 ////////////////////////////////////////////////////////////////////////////////
 KaDrxPub::KaDrxPub(
                 Pentek::p7142sd3c& sd3c,
@@ -389,7 +386,7 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
 double KaDrxPub::_argDeg(double ival, double qval)
   
 {
-  double arg = atan2(qval, ival) * RAD_TO_DEG;
+  double arg = atan2(qval, ival) * _RAD_TO_DEG;
   return arg;
 }
 

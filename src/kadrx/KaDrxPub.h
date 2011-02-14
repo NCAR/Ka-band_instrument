@@ -81,10 +81,10 @@ class KaDrxPub : public QThread {
 		/// @return a pointer to our downconverter object
 		Pentek::p7142sd3cDn* downconverter() { return _down; }
 
-  static const double RAD_TO_DEG;
-  static const double DEG_TO_RAD;
-		
 	private:
+        static const double _RAD_TO_DEG = 57.29577951308092;
+        static const double _DEG_TO_RAD = 0.017453292519943295;
+        
 		/// Return the current time in seconds since 1970/01/01 00:00:00 UTC.
 		/// Returned value has 1 ms precision.
 		/// @return the current time in seconds since 1970/01/01 00:00:00 UTC
