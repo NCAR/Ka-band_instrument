@@ -335,7 +335,7 @@ void
 KaOscControlPriv::newXmitSample(double g0Power, double freqOffset, 
     int64_t pulseSeqNum) {
     if (!(_pulsesRcvd % 5000))
-        ILOG << _pulsesRcvd << " pulses received, " << _pulsesDropped << " dropped";
+        DLOG << _pulsesRcvd << " pulses received, " << _pulsesDropped << " dropped";
     _pulsesRcvd++;
     // If a frequency adjustment is in progress, just drop this sample
     if (! _mutex.tryLock()) {
