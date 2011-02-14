@@ -24,6 +24,13 @@ public:
      * Get the current value in the PMC730 pulse counter.
      */
     static uint32_t getPulseCounter() { return(theKaPmc730()._getPulseCounter()); }
+    /**
+     * Set the transmitter trigger enable line (DIO channel 14) on or off.
+     * @param bool true iff TX trigger should be enabled
+     */
+    static void setTxTriggerEnable(bool enable) {
+        theKaPmc730()._setTxTriggerEnable(enable);
+    }
 private:
     KaPmc730();
     virtual ~KaPmc730();
@@ -36,6 +43,11 @@ private:
      * Get the current value in the PMC730 pulse counter.
      */
     uint32_t _getPulseCounter();
+    /**
+     * Set the transmitter trigger enable line (DIO channel 14) on or off.
+     * @param bool true iff TX trigger should be enabled
+     */
+    void _setTxTriggerEnable(bool enable);
     
     static KaPmc730 * _theKaPmc730;
 };

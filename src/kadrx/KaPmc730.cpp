@@ -92,3 +92,9 @@ KaPmc730::_getPulseCounter() {
     uint32_t* countPtr = reinterpret_cast<uint32_t*>(&signedCount);
     return(*countPtr);
 }
+
+void
+KaPmc730::_setTxTriggerEnable(bool enable) {
+    // Set the transmitter trigger enable signal, which is on DIO line 14
+    setDioLine(14, enable ? 1 : 0);
+}
