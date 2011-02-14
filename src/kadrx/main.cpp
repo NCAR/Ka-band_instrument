@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <math.h>
 #include <sched.h>
+#include <unistd.h>
 #include <sys/timeb.h>
 #include <ctime>
 #include <cerrno>
@@ -29,6 +30,7 @@ LOGGING("kadrx")
 
 #include "KaOscControl.h"
 #include "KaDrxPub.h"
+#include "KaPmc730.h"
 #include "p7142sd3c.h"
 #include "DDSPublisher.h"
 #include "KaTSWriter.h"
@@ -237,6 +239,43 @@ void startUpConverter(Pentek::p7142Up& upConverter,
 }
 
 ///////////////////////////////////////////////////////////
+void
+verifyTimersAndEnableTx() {
+    if (_simulate)
+        return;
+    // Wait until we see at least countThreshold pulse counts before we 
+    // enable the transmitter
+    const uint32_t CountThreshold = 50;
+    // Loop time and max # of loops to see our threshold number of counts
+    const float LoopTime = 0.02;    // seconds
+    const int MaxTries = 100;
+    
+    uint32_t initialCount = 0;
+    uint32_t pulsesSeen = 0;
+    // Loop until we get CountThreshold pulses
+    int i;
+    for (i = 0; i < MaxTries; i++) {
+        uint32_t pulseCount = KaPmc730::getPulseCounter();
+        if (i == 0)
+            initialCount = pulseCount;
+        pulsesSeen = pulseCount - initialCount;
+        if (pulsesSeen > CountThreshold) {
+            break;
+        }
+        usleep(useconds_t(1000000 * LoopTime));
+    }
+    ILOG << "Saw " << pulsesSeen << " timer pulses in " << i * LoopTime << 
+        " seconds";
+    if (i == MaxTries) {
+        ELOG << "Pentek timers don't seem to be running...";
+        exit(1);
+    }
+    // Enable the transmitter
+    ILOG << "Enabling transmitter";
+    KaPmc730::setTxTriggerEnable(true);
+}
+
+///////////////////////////////////////////////////////////
 int
 main(int argc, char** argv)
 {
@@ -296,6 +335,11 @@ main(int argc, char** argv)
 	if (_publish)
 		createDDSservices();
         
+    // Turn off transmitter trigger enable until we know we're generating
+    // timing signals (and hence that the T/R limiters are presumably 
+    // operating).
+    KaPmc730::setTxTriggerEnable(false);
+    
     // Instantiate our p7142sd3c
     Pentek::p7142sd3c sd3c(_devRoot, _simulate, kaConfig.tx_delay(),
         kaConfig.tx_pulse_width(), kaConfig.prt1(), kaConfig.prt2(),
@@ -382,6 +426,10 @@ main(int argc, char** argv)
 
 	// Start the timers, which will allow data to flow.
     sd3c.timersStartStop(true);
+    
+    // Verify that timers have started, by seeing that we have TX sync pulses
+    // being generated, then raise the TX enable line.
+    verifyTimersAndEnableTx();
 
 	double startTime = nowTime();
 	while (1) {
@@ -421,6 +469,9 @@ main(int argc, char** argv)
                 " drop: " << burstThread.downconverter()->droppedPulses() <<
                 " sync errs: " << burstThread.downconverter()->syncErrors();
 	}
+    
+    // Turn off transmitter trigger enable
+    KaPmc730::setTxTriggerEnable(false);
     
     // Stop the downconverter threads.
     hThread.terminate();
