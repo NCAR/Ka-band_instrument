@@ -377,7 +377,8 @@ KaOscControlPriv::_clearSum() {
 
 void
 KaOscControlPriv::_processXmitAverage() {
-    double g0PowerDbm = 10.0 * log10(_g0PowerAvg) + 30; // +30 for dBW to dBm
+ //   double g0PowerDbm = 10.0 * log10(_g0PowerAvg) + 30; // +30 for dBW to dBm
+    double g0PowerDbm = 10.0 * log10(_g0PowerAvg); // dBm
 
     ILOG << "New " << _nToSum << "-pulse average: G0 " << g0PowerDbm << 
         " dBm, freq offset " << _freqOffset;
