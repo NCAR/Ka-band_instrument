@@ -103,7 +103,7 @@ KaOscillator3::_adf4001Bitbang(uint32_t val) {
         // First read the muxout bit from the ADF4001 (on DIO channel 7) 
         // and append it to echoedBits. As long as muxout is MUX_SERIAL_DATA, 
         // the bit we read should be the bit we sent out 24 bits ago...
-        uint8_t muxoutBit = (_pmc730.getDio0_7() >> 7) & 0x1;
+        uint8_t muxoutBit = _pmc730.getDioLine(DIO_MUXOUT);
         echoedBits = (echoedBits << 1) | muxoutBit;
 
         // Send the next bit on the DATA line

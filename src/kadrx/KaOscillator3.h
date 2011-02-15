@@ -145,6 +145,7 @@ private:
      * The PMC730 DIO lines we use to communicate with the ADF4001 chip.
      */
     typedef enum {
+        DIO_MUXOUT   = 7,
         DIO_CLOCK    = 8,
         DIO_CLOCKINV = 9,
         DIO_DATA     = 10,
