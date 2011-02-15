@@ -101,8 +101,11 @@ private:
   int16_t *_iq;
   char *_pulseBuf;
   int _pulseBufLen;
-  double _a2dCountsPerVolt;
   bool _cohereIqToBurst;
+  
+  /// I and Q count scaling factor to get power in mW easily:
+  /// mW = (I_count / _iqScaleForMw)^2 + (Q_count / _iqScaleForMw)^2
+  double _iqScaleForMw;
 
   /// Burst IQ
 

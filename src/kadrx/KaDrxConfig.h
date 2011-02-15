@@ -193,9 +193,15 @@ public:
     
     int ddcType() const { return _getIntVal("ddc_type"); } /// 4 or 8
     
-    /// Scaling factor between A2D counts and volts
-    double a2d_counts_per_volt() const {
-        return _getDoubleVal("a2d_counts_per_volt");
+    // iqcount_scale_for_mw: count scaling factor to easily get power in mW from
+    // I and Q.  If I and Q are counts from the Pentek, the power at the A/D in 
+    // mW is:
+    //
+    //      (I / iqcount_scale_for_mw)^2 + (Q / iqcount_scale_for_mw)^2
+    //
+    // This value is determined empirically.
+    double iqcount_scale_for_mw() const {
+        return _getDoubleVal("iqcount_scale_for_mw");
     }
 
     /// should we cohere the IQ to the burst?

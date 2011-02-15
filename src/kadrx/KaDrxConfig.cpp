@@ -63,7 +63,7 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("burst_sample_width");
     keys.insert("burst_sample_frequency");
     keys.insert("afc_g0_threshold_dbm");
-    keys.insert("a2d_counts_per_volt");
+    keys.insert("iqcount_scale_for_mw");
     keys.insert("test_target_delay");
     keys.insert("test_target_width");
     keys.insert("sim_start_elev");
@@ -434,9 +434,9 @@ KaDrxConfig::isValid(bool verbose) const {
             std::cerr << "'pulse_interval_per_iwrf_meta_data' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (a2d_counts_per_volt() == UNSET_DOUBLE) {
+    if (iqcount_scale_for_mw() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'a2d_counts_per_volt' unset in DRX configuration" << std::endl;
+            std::cerr << "'iqcount_scale_for_mw' unset in DRX configuration" << std::endl;
         valid = false;
     }
     if (cohere_iq_to_burst() == UNSET_BOOL) {

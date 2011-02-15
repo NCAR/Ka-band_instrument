@@ -44,7 +44,14 @@ afc_g0_threshold_dbm    -20.0   # minimum G0 power for good frequency estimates
 afc_coarse_step         5000000 # Hz
 afc_fine_step           100000  # Hz
 
-a2d_counts_per_volt     32768.0    # full scale (32767) = 0.1 V
+# iqcount_scale_for_mw: count scaling factor to easily get power in mW from
+# I and Q.  If I and Q are counts from the Pentek, the power at the A/D in 
+# mW is:
+#
+#      (I / iqcount_scale_for_mw)^2 + (Q / iqcount_scale_for_mw)^2
+#
+# This value is determined empirically.
+iqcount_scale_for_mw	9465
 
 # FL1 location
 latitude                40.03794

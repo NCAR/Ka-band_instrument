@@ -61,7 +61,7 @@ KaDrxPub::KaDrxPub(
 
     // scaling between A2D counts and volts
 
-    _a2dCountsPerVolt = _config.a2d_counts_per_volt();
+    _iqScaleForMw = _config.iqcount_scale_for_mw();
 
     // Create our associated downconverter.
     double delay = _config.rcvr_gate0_delay();
@@ -360,8 +360,8 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     double normCrossProduct = _numerator / _denominator;  // normalized cross product proportional to frequency change
     double freqCorrection = 8.0e6 * normCrossProduct; // experimentally determined scale factor to convert correction to Hz
 
-    double ival = i[9] / _a2dCountsPerVolt;
-    double qval = q[9] / _a2dCountsPerVolt;
+    double ival = i[9] / _iqScaleForMw;
+    double qval = q[9] / _iqScaleForMw;
     double g0Power = ival * ival + qval * qval; // units of V^2
     double g0PowerDb = 10 * log10(g0Power);
     if (! (pulseSeqNum % 5000)) {
