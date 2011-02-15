@@ -96,6 +96,11 @@ public:
     
 private:
     /**
+     * The DIO line carrying indication that waveguide pressure outside the
+     * transmitter is valid.
+     */
+    static const int _DIO_WG_PRES_VALID = 5;
+    /**
      * Convert QEA crystal detector voltage to input power (in dBm), based
      * on a fixed table of calibration measurements.
      * @param voltage QEA crystal detector output, in V
@@ -150,8 +155,12 @@ private:
     float _hTxPowerVideo;           // H tx pulse power, dBm
     float _vTxPowerVideo;           // V tx pulse power, dBm
     float _testTargetPowerVideo;    // test target power, dBm
+    
     /// 5V power supply
     float _psVoltage;
+    
+    /// Valid pressure in waveguide outside the transmitter?
+    bool _wgPressureValid;
 };
 
 KaMonitor::KaMonitor() {
@@ -198,14 +207,16 @@ KaMonitorPriv::run() {
             "drx: " << _procDrxTemp() << " C";
         DLOG << std::fixed << std::setprecision(2) << 
             "5V PS: " << _psVoltage << " V";
+        DLOG << "wg pressure valid: " << (_wgPressureValid ? "true" : "false");
         usleep(1000000); // 1 s
     }
 }
 
 void
 KaMonitorPriv::_getNewValues() {
+    KaPmc730 & pmc730 = KaPmc730::theKaPmc730();
     // We get our data from analog channels 0-9 on the PMC-730 multi-IO card
-    std::vector<float> analogData = KaPmc730::theKaPmc730().readAnalogChannels(0, 9);
+    std::vector<float> analogData = pmc730.readAnalogChannels(0, 9);
     // Channels 0-2 give us RF power measurements
     _testTargetPowerVideo = _lookupQEAPower(analogData[0]);
     _vTxPowerVideo = _lookupQEAPower(analogData[1]);
@@ -229,6 +240,8 @@ KaMonitorPriv::_getNewValues() {
     }
     // Channel 9 gives us the voltage read from our 5V power supply
     _psVoltage = analogData[9];
+    // We read the "waveguide pressure valid" signal from DIO line 5
+    _wgPressureValid = pmc730.getDioLine(_DIO_WG_PRES_VALID);
 }
 
 double
