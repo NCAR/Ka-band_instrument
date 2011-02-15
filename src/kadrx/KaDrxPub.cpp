@@ -318,10 +318,6 @@ KaDrxPub::_configIsValid() const {
 ////////////////////////////////////////////////////////////////////////////////
 void
 KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
-    // No handling to perform if we're not doing AFC!
-    if (! _doAfc)
-        return;
-        
     // initialize variables
     const double DIS_WT = 0.01;
 
@@ -377,8 +373,11 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
     _g0FreqCorrHz = freqCorrection;
     _g0FreqHz = _config.rcvr_cntr_freq() + freqCorrection;
     
-    // Ship the G0 power and frequency offset values to the AFC
-    KaOscControl::theControl().newXmitSample(g0Power, freqCorrection, pulseSeqNum);
+    // Pass stuff on to oscillator control if we're doing AFC
+    if (_doAfc) {
+        KaOscControl::theControl().newXmitSample(g0Power, freqCorrection, 
+            pulseSeqNum);
+    }
 }
 
 // compute arg in degrees
