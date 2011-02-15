@@ -247,7 +247,7 @@ verifyTimersAndEnableTx() {
     // enable the transmitter
     const uint32_t CountThreshold = 50;
     // Loop time and max # of loops to see our threshold number of counts
-    const float LoopTime = 0.02;    // seconds
+    const float LoopTime = 0.05;    // seconds
     const int MaxTries = 100;
     
     uint32_t initialCount = 0;
