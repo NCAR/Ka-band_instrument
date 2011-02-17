@@ -135,9 +135,9 @@ KaXmitter::getStatus() {
     
     if (_simulate) {
         _status.serialConnected = true;
-        _status.magnetronCurrent = 0.2;
-        _status.hvpsCurrent = 0.3;
-        _status.temperature = 32;
+        _status.magnetronCurrent = 0.1 + (0.2 * random()) / RAND_MAX;
+        _status.hvpsCurrent = 0.2 + (0.2 * random()) / RAND_MAX;
+        _status.temperature = 30 + (2.0 * random()) / RAND_MAX;
         
         return(_status);
     }
