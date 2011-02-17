@@ -19,28 +19,28 @@ burst_sample_frequency  1.0e8   # hz
 staggered_prt           0       # boolean
 prt1                    1.0e-3  # s
 
-rcvr_bandwidth          1.37e6  # Hz
+rcvr_bandwidth          1.85e6  # Hz
 rcvr_digital_gain       -2.67   # dB
-rcvr_filter_mismatch    1.1     # dB
+rcvr_filter_mismatch    0.4     # dB
 rcvr_gate0_delay        5.5e-6  # s
 rcvr_noise_figure       8.9     # dB
-rcvr_pulse_width        5.0e-7    # s
+rcvr_pulse_width        5.0e-7  # s
 rcvr_rf_gain            39.48   # dB
 
 range_to_gate0          37.5    # m to center of gate
 
-tx_cntr_freq            3.5e10  # Hz
+tx_cntr_freq            34.65e9 # Hz
 tx_peak_power           58.78   # dBm
 tx_pulse_width          5.0e-7  # s
 tx_pulse_mod_delay      6.0e-7  # s
 tx_pulse_mod_width      6.0e-7  # s
 tx_delay                0.0     # s
 
-test_target_delay       75.0e-6 # s
-test_target_width       10.0e-6 # s
+test_target_delay       75.08e-6# s
+test_target_width       5.0e-6  # s
 
 afc_enabled             1
-afc_g0_threshold_dbm    -20.0   # minimum G0 power for good frequency estimates
+afc_g0_threshold_dbm    -20.0   # dBm, minimum G0 power for good frequency estimates
 afc_coarse_step         5000000 # Hz
 afc_fine_step           100000  # Hz
 
@@ -51,7 +51,7 @@ afc_fine_step           100000  # Hz
 #      (I / iqcount_scale_for_mw)^2 + (Q / iqcount_scale_for_mw)^2
 #
 # This value is determined empirically.
-iqcount_scale_for_mw	9465
+iqcount_scale_for_mw    9465
 
 # FL1 location
 latitude                40.03794
@@ -62,7 +62,7 @@ altitude                1609
 
 cohere_iq_to_burst      1
 
-# merge queue size
+# merge queue size (for merging H, V, and burst channel data)
 
 merge_queue_size        2048    # size of queue which acts as buffer
                                 # for the merge
