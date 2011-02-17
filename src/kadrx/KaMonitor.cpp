@@ -101,6 +101,11 @@ private:
      */
     static const int _DIO_WG_PRES_VALID = 5;
     /**
+     * DIO line 6 is connected to the alarm signal from the 100 MHz oscillator
+     * in the receiver box.
+     */
+    static const int _DIO_100MHZ_ALARM = 6;
+    /**
      * Convert QEA crystal detector voltage to input power (in dBm), based
      * on a fixed table of calibration measurements.
      * @param voltage QEA crystal detector output, in V
@@ -161,6 +166,9 @@ private:
     
     /// Valid pressure in waveguide outside the transmitter?
     bool _wgPressureValid;
+
+    /// 100 MHz oscillator OK?
+    bool _100MhzOscLocked;
 };
 
 KaMonitor::KaMonitor() {
@@ -208,6 +216,7 @@ KaMonitorPriv::run() {
         DLOG << std::fixed << std::setprecision(2) << 
             "5V PS: " << _psVoltage << " V";
         DLOG << "wg pressure valid: " << (_wgPressureValid ? "true" : "false");
+        DLOG << "100 MHz oscillator locked: " << (_100MhzOscLocked ? "true" : "false");
         usleep(1000000); // 1 s
     }
 }
@@ -242,6 +251,9 @@ KaMonitorPriv::_getNewValues() {
     _psVoltage = analogData[9];
     // We read the "waveguide pressure valid" signal from DIO line 5
     _wgPressureValid = pmc730.getDioLine(_DIO_WG_PRES_VALID);
+    // Get the 100 MHz oscillator locked signal from DIO line 6
+    // (Things are OK when this line is high)
+    _100MhzOscLocked = pmc730.getDioLine(_DIO_100MHZ_ALARM);
 }
 
 double
