@@ -394,8 +394,9 @@ main(int argc, char** argv)
         WLOG << "AFC is disabled!";
     }
     
-    // catch a control-C
+    // catch a SIGINT (from control-C) or SIGTERM (the default from 'kill')
     signal(SIGINT, sigHandler);
+    signal(SIGTERM, sigHandler);
 
     // Start the downconverter threads.
     hThread.start();
