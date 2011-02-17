@@ -78,11 +78,11 @@ public:
     /**
      * Minimum output frequency
      */
-    static const unsigned int OSC3_MIN_FREQ = 107000000;
+    static const unsigned int OSC3_MIN_FREQ = 107200000;
     /**
      * Maximum output frequency
      */
-    static const unsigned int OSC3_MAX_FREQ = 108000000;
+    static const unsigned int OSC3_MAX_FREQ = 107800000;
     /**
      * "Simulated" Pmc730.
      */
