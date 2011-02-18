@@ -68,8 +68,8 @@ public:
     
     /**
      * Step value for output frequencies.
+     * Note that this frequency *must* divide evenly into OSC3_REF_FREQ!
      */
-    // Note that this frequency *must* divide evenly into OSC3_REF_FREQ!
     static const unsigned int OSC3_FREQ_STEP = 50000;           // 50 kHz
     /**
      * Default output frequency
@@ -78,11 +78,11 @@ public:
     /**
      * Minimum output frequency
      */
-    static const unsigned int OSC3_MIN_FREQ = 107200000;
+    static const unsigned int OSC3_MIN_FREQ = 107000000;
     /**
      * Maximum output frequency
      */
-    static const unsigned int OSC3_MAX_FREQ = 107800000;
+    static const unsigned int OSC3_MAX_FREQ = 108000000;
     /**
      * "Simulated" Pmc730.
      */
