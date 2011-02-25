@@ -209,6 +209,11 @@ public:
       return _getBoolVal("cohere_iq_to_burst");
     }
 
+    /// should we comnine every second gate
+    int combine_every_second_gate() const {
+      return _getBoolVal("combine_every_second_gate");
+    }
+
     /// simulation of angles
 
     int simulate_antenna_angles() const {

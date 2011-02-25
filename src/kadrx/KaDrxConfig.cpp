@@ -100,6 +100,7 @@ std::set<std::string> KaDrxConfig::_createBoolLegalKeys() {
     keys.insert("staggered_prt");
     keys.insert("ldr_mode");
     keys.insert("cohere_iq_to_burst");
+    keys.insert("combine_every_second_gate");
     keys.insert("simulate_antenna_angles");
     return keys;
 }
@@ -442,6 +443,11 @@ KaDrxConfig::isValid(bool verbose) const {
     if (cohere_iq_to_burst() == UNSET_BOOL) {
         if (verbose)
             std::cerr << "'cohere_iq_to_burst' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (combine_every_second_gate() == UNSET_BOOL) {
+        if (verbose)
+            std::cerr << "'combine_every_second_gate' unset in DRX configuration" << std::endl;
         valid = false;
     }
     if (test_target_delay() == UNSET_DOUBLE) {
