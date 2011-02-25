@@ -1,7 +1,7 @@
 # Example config file for Ka
 radar_id                Ka
 
-gates                   980
+gates                   800
 
 ldr_mode                1       # if 0, then ZDR mode is active
 
@@ -65,7 +65,7 @@ cohere_iq_to_burst      1
 # combine every second gate to reduce the number of gates to half
 # this also doubles the gate spacing
 
-combine_every_second_gate 0
+combine_every_second_gate 1
 
 # merge queue size
 
