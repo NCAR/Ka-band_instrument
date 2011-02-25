@@ -66,6 +66,7 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _iqScaleForMw = _config.iqcount_scale_for_mw();
 
   _cohereIqToBurst = _config.cohere_iq_to_burst();
+  _combineEverySecondGate = _config.combine_every_second_gate();
 
   // pulse seq num and times
 
@@ -116,6 +117,10 @@ KaMerge::KaMerge(const KaDrxConfig& config) :
   _tsProc.pulse_width_us = _config.tx_pulse_width() * 1.0e6;
   _tsProc.gate_spacing_m = _config.rcvr_pulse_width() * 1.5e8;
   _tsProc.start_range_m = _config.range_to_gate0(); // center of gate 0
+  if (_combineEverySecondGate) {
+    _tsProc.start_range_m += _tsProc.gate_spacing_m / 2.0;
+    _tsProc.gate_spacing_m *= 2.0;
+  }
   _tsProc.pol_mode = IWRF_POL_MODE_HV_SIM;
 
   // initialize IWRF calibration struct from config
@@ -335,6 +340,11 @@ void KaMerge::_readNextPulse()
          << nMissing << ", "
          << _prevPulseSeqNum << ", "
          << _pulseSeqNum << endl;
+  }
+
+  if (_combineEverySecondGate) {
+    _pulseH->combineEverySecondGate();
+    _pulseV->combineEverySecondGate();
   }
 
 }

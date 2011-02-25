@@ -52,6 +52,31 @@ void PulseData::set(int64_t pulseSeqNum,
 }
 
 /////////////////////////////////////////////////////////////////////////////
+// combine every second gate in the IQ data
+// to reduce the number of gates to half
+
+void PulseData::combineEverySecondGate()
+
+{
+
+  int nGatesHalf = _nGates / 2;
+
+  int16_t *iq = _iq;
+  int16_t *iqHalf = _iq;
+
+  for (int ii = 0; ii < nGatesHalf; ii++) {
+
+    memcpy(iqHalf, iq, 2 * sizeof(int16_t));
+    iq += 4;
+    iqHalf += 2;
+
+  }
+
+  _nGates = nGatesHalf;
+
+}
+
+/////////////////////////////////////////////////////////////////////////////
 // alloc or realloc space for the iq data
 
 void PulseData::_allocIq()

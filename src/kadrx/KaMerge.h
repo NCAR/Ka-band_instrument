@@ -102,6 +102,7 @@ private:
   char *_pulseBuf;
   int _pulseBufLen;
   bool _cohereIqToBurst;
+  bool _combineEverySecondGate;
   
   /// I and Q count scaling factor to get power in mW easily:
   /// mW = (I_count / _iqScaleForMw)^2 + (Q_count / _iqScaleForMw)^2

@@ -32,6 +32,11 @@ public:
            int nGates,
            const int16_t *iq);
 
+  // combine every second gate in the IQ data
+  // to reduce the number of gates to half
+
+  void combineEverySecondGate();
+
   // get methods
 
   inline int64_t getPulseSeqNum() const { return _pulseSeqNum; }
