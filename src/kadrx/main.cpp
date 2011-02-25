@@ -120,7 +120,8 @@ void getConfigParams()
 	std::string dcpsInfoRepo = "iiop://localhost:50000/DCPSInfoRepo";
 
 	// get parameters
-	_publish       = config.getBool  ("DDS/Publish",        true);
+	// _publish       = config.getBool  ("DDS/Publish", true);
+        _publish = false;
 	_ORB           = config.getString("DDS/ORBConfigFile",  orbFile);
 	_DCPS          = config.getString("DDS/DCPSConfigFile", dcpsFile);
 	_tsTopic       = config.getString("DDS/TopicTS",        "KATS");
