@@ -335,7 +335,7 @@ void KaMerge::_readNextPulse()
   }
 
   if (_pulseSeqNum != _prevPulseSeqNum + 1) {
-    int nMissing = _prevPulseSeqNum - _pulseSeqNum;
+    int nMissing = _pulseSeqNum - _prevPulseSeqNum - 1;
     cerr << "Missing pulses - nmiss, prevNum, thisNum: "
          << nMissing << ", "
          << _prevPulseSeqNum << ", "
