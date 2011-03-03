@@ -38,14 +38,19 @@ struct KaXmitStatus {
 
 class KaXmitter {
 public:
+    /**
+     * Construct a KaXmitter providing access to the Ka-band transmitter on
+     * the given serial port. If special serial port name KaXmitter::SIM_DEVICE
+     * is used, existence of the transmitter will be simulated.
+     * @param ttyDev the name of the serial port connected to the transmitter.
+     */
     KaXmitter(std::string ttyDev);
     virtual ~KaXmitter();
     
     /**
-     * Get current status values from the transmitter, updating our local
-     * values.
+     * Get current status values from the transmitter.
      */
-    const KaXmitStatus & getStatus();
+    KaXmitStatus getStatus();
     
     /**
      * Turn on the transmitter unit (does not enable high voltage and actual
@@ -102,6 +107,17 @@ private:
      */
     int _readSelect(unsigned int timeoutMsecs);
     
+    /**
+     * Fill a KaXmitStatus struct with 0.0/false values.
+     * @param status the KaXmitStatus to be cleared
+     */
+    void _clearStatus(KaXmitStatus & status);
+    
+    /**
+     * Initialize the simulated status struct.
+     */
+    void _initSimStatus();
+    
     // Command strings for the transmitter
     static const std::string _OPERATE_COMMAND;
     static const std::string _STANDBY_COMMAND;
@@ -110,11 +126,11 @@ private:
     static const std::string _POWEROFF_COMMAND;
     static const std::string _STATUS_COMMAND;
     
-    // The last status values obtained from the transmitter
-    KaXmitStatus _status;
-    
     // Are we simulating?
     bool _simulate;
+    
+    // Keep a local status struct to use when simulating.
+    KaXmitStatus _simStatus;
     
     // Our serial port device name (may be SIM_DEVICE)
     std::string _ttyDev;
