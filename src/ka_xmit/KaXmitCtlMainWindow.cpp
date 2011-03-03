@@ -30,10 +30,7 @@ KaXmitCtlMainWindow::KaXmitCtlMainWindow(std::string xmitterHost,
     _greenLED_off(":/greenLED_off.png"),
     _xmlrpcClient(_xmitterHost.c_str(), _xmitterPort),
     _statusDict(),
-    _lastOperateTime(0),
-    _pulseInputFaultTimes(),
-    _doAutoFaultReset(true),
-    _autoResetCount(0) {
+    _nextLogIndex(0) {
     // Set up the UI
     _ui.setupUi(this);
     // Limit the log area to 1000 messages
@@ -71,17 +68,10 @@ KaXmitCtlMainWindow::on_powerButton_clicked() {
     _update();
 }
 
-void KaXmitCtlMainWindow::_faultReset() {
-    XmlRpcValue result;
-    _executeXmlRpcCommand("faultReset", _NULL_XMLRPCVALUE, result);
-}
-    
 void
 KaXmitCtlMainWindow::on_faultResetButton_clicked() {
-    _faultReset();
-    // When a manual faultReset command is issued, re-enable auto-resets on 
-    // pulse faults again (assuming they've been disabled).
-    _doAutoFaultReset = true;
+    XmlRpcValue result;
+    _executeXmlRpcCommand("faultReset", _NULL_XMLRPCVALUE, result);
     _update();
 }
 
@@ -105,6 +95,22 @@ KaXmitCtlMainWindow::_getStatus() {
 }
 
 void
+KaXmitCtlMainWindow::_appendXmitdLogMsgs() {
+    XmlRpcValue startIndex = int(_nextLogIndex);
+    XmlRpcValue result;
+    if (! _executeXmlRpcCommand("getLogMessages", startIndex, result))
+        _logMessage("getLogMsgs failed!");
+    int nextIndex = int(result["nextIndex"]);
+    if (nextIndex != int(_nextLogIndex)) {
+        std::string msgs = std::string(result["logMessages"]);
+        // Append the returned messages to our log area
+        _ui.logArea->appendPlainText(std::string(result["logMessages"]).c_str());
+        // update _nextLogIndex
+        _nextLogIndex = (unsigned int)(nextIndex);
+    }
+}
+
+void
 KaXmitCtlMainWindow::on_operateButton_clicked() {
     _operate();
     _update();
@@ -112,14 +118,10 @@ KaXmitCtlMainWindow::on_operateButton_clicked() {
 
 void
 KaXmitCtlMainWindow::_update() {
+    _appendXmitdLogMsgs();
+    
     _getStatus();
 
-    // Keep track of the latest time we saw the transmitter in "operate" mode.
-    // If high voltage is enabled, consider the radar to be operating.
-    if (_hvpsRunup()) {
-        _lastOperateTime = time(0);
-    }
-    
     if (! _serialConnected()) {
         _noXmitter();
         return;
@@ -146,9 +148,23 @@ KaXmitCtlMainWindow::_update() {
     _ui.hvpsUnderVFaultIcon->setPixmap(_hvpsUnderVoltage() ? _redLED : _greenLED);
     _ui.hvpsOverVFaultIcon->setPixmap(_hvpsOverVoltage() ? _redLED : _greenLED);
     
-    // Text displays for voltage, currents, and temperature
-    QString txt;
+    // fault counts
+    _ui.magCurrFaultCount->setText(_countLabel(_magnetronCurrentFaultCount()));
+    _ui.blowerFaultCount->setText(_countLabel(_blowerFaultCount()));
+    _ui.interlockFaultCount->setText(_countLabel(_safetyInterlockCount()));
+    _ui.revPowerFaultCount->setText(_countLabel(_reversePowerFaultCount()));
+    _ui.pulseInputFaultCount->setText(_countLabel(_pulseInputFaultCount()));
+    _ui.hvpsCurrFaultCount->setText(_countLabel(_hvpsCurrentFaultCount()));
+    _ui.wgPresFaultCount->setText(_countLabel(_waveguidePressureFaultCount()));
+    _ui.hvpsUnderVFaultCount->setText(_countLabel(_hvpsUnderVoltageCount()));
+    _ui.hvpsOverVFaultCount->setText(_countLabel(_hvpsOverVoltageCount()));
     
+    QString txt;
+    txt.setNum(_autoPulseFaultResets());
+    _ui.autoResetCount->setText(txt);
+    
+    
+    // Text displays for voltage, currents, and temperature
     txt.setNum(_hvpsVoltage(), 'f', 1);
     _ui.hvpsVoltageValue->setText(txt);
     
@@ -161,9 +177,6 @@ KaXmitCtlMainWindow::_update() {
     txt.setNum(_temperature(), 'f', 0);
     _ui.temperatureValue->setText(txt);
     
-    txt.setNum(_autoResetCount);
-    _ui.autoResetValue->setText(txt);
-    
     // "unit on" light
     _ui.unitOnLabel->setPixmap(_unitOn() ? _greenLED : _greenLED_off);
     
@@ -171,8 +184,13 @@ KaXmitCtlMainWindow::_update() {
     _ui.powerButton->setEnabled(_remoteEnabled());
     if (_remoteEnabled() && _unitOn()) {
         _ui.faultResetButton->setEnabled(_faultSummary());
-        _ui.standbyButton->setEnabled(! _standby());
-        _ui.operateButton->setEnabled(! _hvpsRunup());
+        if (_faultSummary()) {
+            _ui.standbyButton->setEnabled(false);
+            _ui.operateButton->setEnabled(false);
+        } else {
+            _ui.standbyButton->setEnabled(_hvpsRunup() && ! _heaterWarmup());
+            _ui.operateButton->setEnabled(! _hvpsRunup() && ! _heaterWarmup());
+        }
     } else {
         _ui.faultResetButton->setEnabled(false);
         _ui.standbyButton->setEnabled(false);
@@ -184,11 +202,6 @@ KaXmitCtlMainWindow::_update() {
     } else {
         statusBar()->showMessage("Remote control is currently DISABLED");
     }
-    
-    // Special handling for pulse input faults
-    if (_pulseInputFault()) {
-        _handlePulseInputFault();
-    }
 }
 
 bool
@@ -199,6 +212,17 @@ KaXmitCtlMainWindow::_statusBool(std::string key) {
         abort();
     } else {
         return(bool(_statusDict[key]));
+    }
+}
+
+int
+KaXmitCtlMainWindow::_statusInt(std::string key) {
+    if (! _statusDict.hasMember(key)) {
+        ELOG << "Status dictionary does not contain requested key '" << key <<
+            "'!";
+        abort();
+    } else {
+        return(int(_statusDict[key]));
     }
 }
 
@@ -232,81 +256,32 @@ KaXmitCtlMainWindow::_disableUi() {
     _ui.unitOnLabel->setPixmap(_greenLED_off);
     
     _ui.magCurrFaultIcon->setPixmap(_greenLED_off);
+    _ui.magCurrFaultCount->setText("");
     _ui.blowerFaultIcon->setPixmap(_greenLED_off);
+    _ui.blowerFaultCount->setText("");
     _ui.interlockFaultIcon->setPixmap(_greenLED_off);
+    _ui.interlockFaultCount->setText("");
     _ui.revPowerFaultIcon->setPixmap(_greenLED_off);
+    _ui.revPowerFaultCount->setText("");
     _ui.pulseInputFaultIcon->setPixmap(_greenLED_off);
+    _ui.pulseInputFaultCount->setText("");
     _ui.hvpsCurrFaultIcon->setPixmap(_greenLED_off);
+    _ui.hvpsCurrFaultCount->setText("");
     _ui.wgPresFaultIcon->setPixmap(_greenLED_off);
+    _ui.wgPresFaultCount->setText("");
     _ui.hvpsUnderVFaultIcon->setPixmap(_greenLED_off);
+    _ui.hvpsUnderVFaultCount->setText("");
     _ui.hvpsOverVFaultIcon->setPixmap(_greenLED_off);
+    _ui.hvpsOverVFaultCount->setText("");
     
     _ui.hvpsVoltageValue->setText("0.0");
     _ui.magCurrentValue->setText("0.0");
     _ui.hvpsCurrentValue->setText("0.0");
     _ui.temperatureValue->setText("0");
-    _ui.autoResetValue->setText("0");
+    
+    _ui.autoResetCount->setText("");
 
     centralWidget()->setEnabled(false);
-}
-
-void
-KaXmitCtlMainWindow::_handlePulseInputFault() {
-    // If auto-resets are disabled, just return now
-    if (! _doAutoFaultReset)
-        return;
-
-    // Get current time
-    time_t now = time(0);
-
-    // Push the time of this fault on to our deque
-    _pulseInputFaultTimes.push_back(now);
-    
-    // Keep no more than MAX_ENTRIES fault time entries.
-    const unsigned int MAX_ENTRIES = 10;
-    if (_pulseInputFaultTimes.size() == (MAX_ENTRIES + 1))
-        _pulseInputFaultTimes.pop_front();
-    // Issue a "faultReset" command unless the time span for the last 
-    // MAX_ENTRIES faults is less than 100 seconds.
-    if (_pulseInputFaultTimes.size() < MAX_ENTRIES || 
-        ((_pulseInputFaultTimes[MAX_ENTRIES - 1] - _pulseInputFaultTimes[0]) > 100)) {
-        _faultReset();
-        _autoResetCount++;
-        _logMessage("Pulse input fault auto reset");
-    } else {
-        std::ostringstream ss;
-        ss << "Pulse input fault auto reset disabled after 10 faults in " << 
-            (_pulseInputFaultTimes[MAX_ENTRIES - 1] - _pulseInputFaultTimes[0]) << 
-            " seconds!";
-        _logMessage(ss.str().c_str());
-        // Disable auto fault resets. They will be reenabled if the user
-        // pushes the "Fault Reset" button.
-        _doAutoFaultReset = false;
-    }
-    // The pulse input fault puts the radar into "standby" mode. 
-    // If the radar was *very* recently in "operate" mode, return it to 
-    // operate mode, assuming that the pulse input fault moved it to "standby".
-    if ((now - _lastOperateTime) < 2) {
-        int i;
-        int MAXTRIES = 10;
-        for (i = 0; i < MAXTRIES; i++) {
-            // Sleep a moment and get updated status
-            usleep(100000);
-            _getStatus();
-            // If the fault was actually cleared, go back to "operate" mode.
-            if (! _faultSummary()) {
-                std::ostringstream ss;
-                ss << "Back to 'operate' after pulse input fault reset (" <<
-                    i << " loops)";
-                _logMessage(ss.str().c_str());
-                _operate();
-                break;
-            }
-        }
-        if (i == MAXTRIES)
-            _logMessage("Too many tries waiting for fault to clear!");
-    }
-    return;     
 }
 
 void
