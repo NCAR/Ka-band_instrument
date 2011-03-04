@@ -3,20 +3,20 @@ radar_id                Ka
 
 gates                   980
 
-ldr_mode                1       # if 0, then ZDR mode is active
+ldr_mode                true    # if false, then ZDR mode is active
 
 ant_gain                45.9    # dB , H-ch 
 ant_hbeam_width         0.86    # deg
 ant_vbeam_width         0.91    # deg
 
-external_clock          1       # boolean
-external_start_trigger  1       # boolean
+external_clock          true
+external_start_trigger  true
 
 burst_sample_delay      1.55e-6 # s
 burst_sample_width      5.0e-7  # s
 burst_sample_frequency  1.0e8   # hz
 
-staggered_prt           0       # boolean
+staggered_prt           false
 prt1                    1.0e-3  # s
 
 rcvr_bandwidth          1.37e6  # Hz
@@ -39,7 +39,7 @@ tx_delay                0.0     # s
 test_target_delay       75.08e-6# s
 test_target_width       5.0e-6  # s
 
-afc_enabled             1
+afc_enabled             true
 afc_g0_threshold_dbm    -20.0   # minimum G0 power for good frequency estimates
 afc_coarse_step         5000000 # Hz
 afc_fine_step           100000  # Hz
@@ -51,7 +51,7 @@ afc_fine_step           100000  # Hz
 #      (I / iqcount_scale_for_mw)^2 + (Q / iqcount_scale_for_mw)^2
 #
 # This value is determined empirically.
-iqcount_scale_for_mw	9465
+iqcount_scale_for_mw    9465
 
 # FL1 location
 latitude                40.03794
@@ -60,12 +60,12 @@ altitude                1609
 
 # processing the IQ data - should we cohere to the burst?
 
-cohere_iq_to_burst      1
+cohere_iq_to_burst      true
 
 # combine every second gate to reduce the number of gates to half
 # this also doubles the gate spacing
 
-combine_every_second_gate 1
+combine_every_second_gate           true
 
 # merge queue size
 
@@ -82,8 +82,13 @@ pulse_interval_per_iwrf_meta_data   5000    # how often to send out meta data
 
 # simulation of antenna angles
 
-simulate_antenna_angles 1
+simulate_antenna_angles true
 sim_n_elev              10
 sim_start_elev          0.5     # deg
 sim_delta_elev          1.5     # deg
 sim_az_rate             10.0    # deg/s
+
+# Pei format time series files
+
+write_pei_files         false
+max_pei_gates           400

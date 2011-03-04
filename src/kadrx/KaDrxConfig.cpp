@@ -86,6 +86,7 @@ std::set<std::string> KaDrxConfig::_createIntLegalKeys() {
     keys.insert("iwrf_server_tcp_port");
     keys.insert("pulse_interval_per_iwrf_meta_data");
     keys.insert("sim_n_elev");
+    keys.insert("max_pei_gates");
     return keys;
 }
 
@@ -102,6 +103,7 @@ std::set<std::string> KaDrxConfig::_createBoolLegalKeys() {
     keys.insert("cohere_iq_to_burst");
     keys.insert("combine_every_second_gate");
     keys.insert("simulate_antenna_angles");
+    keys.insert("write_pei_files");
     return keys;
 }
 
@@ -198,7 +200,11 @@ KaDrxConfig::KaDrxConfig(std::string configFile) {
             _intVals[key] = iVal;
         } else if (_BoolLegalKeys.find(key) != _BoolLegalKeys.end()) {
             bool bVal;
-            if ((valueStream >> bVal).fail()) {
+            if (strValue == "true") {
+                bVal = true;
+            } else if (strValue == "false") {
+                bVal = false;
+            } else if ((valueStream >> bVal).fail()) {
                 std::cerr << "Bad bool value '" << strValue << "' for key " <<
                     key << " in config file" << std::endl;
                 exit(1);
@@ -463,6 +469,16 @@ KaDrxConfig::isValid(bool verbose) const {
     if (range_to_gate0() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'range_to_gate0' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (write_pei_files() == UNSET_BOOL) {
+        if (verbose)
+            std::cerr << "'write_pei_files' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (max_pei_gates() == UNSET_INT) {
+        if (verbose)
+            std::cerr << "'max_pei_gates' unset in DRX configuration" << std::endl;
         valid = false;
     }
     return valid;

@@ -214,6 +214,16 @@ public:
       return _getBoolVal("combine_every_second_gate");
     }
 
+    /// write Pei format time series files?
+    int write_pei_files() const {
+        return _getBoolVal("write_pei_files");
+    }
+    
+    /// maximum number of gates to write in Pei format files
+    int max_pei_gates() const {
+        return _getIntVal("max_pei_gates");
+    }
+    
     /// simulation of angles
 
     int simulate_antenna_angles() const {
