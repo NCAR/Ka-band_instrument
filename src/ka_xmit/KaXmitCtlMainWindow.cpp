@@ -135,7 +135,7 @@ KaXmitCtlMainWindow::_update() {
         return;
     }
     
-    centralWidget()->setEnabled(true);
+    _enableUi();
 
     // boolean status values
     _ui.runupLabel->setEnabled(_hvpsRunup());
