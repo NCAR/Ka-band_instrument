@@ -14,6 +14,9 @@ using namespace boost::posix_time;
 
 LOGGING("KaDrxPub")
 
+// 1970-01-01 00:00:00 UTC
+static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1), time_duration(0, 0, 0));
+
 ////////////////////////////////////////////////////////////////////////////////
 KaDrxPub::KaDrxPub(
                 Pentek::p7142sd3c& sd3c,
@@ -53,7 +56,10 @@ KaDrxPub::KaDrxPub(
      _g0IvalNorm(-9999.0),
      _g0QvalNorm(-9999.0),
      _g0FreqHz(-9999.0),
-     _g0FreqCorrHz(-9999.0)
+     _g0FreqCorrHz(-9999.0),
+     _doPeiFile(config.write_pei_files()),
+     _peiFile(0),
+     _maxPeiGates(config.max_pei_gates())
 {
     // Bail out if we're not configured legally.
     if (! _configIsValid())
@@ -126,7 +132,56 @@ void KaDrxPub::run() {
       _handleBurst(reinterpret_cast<const int16_t *>(buf), pulseSeqNum);
     }
 
-    // add data to the merge queue
+    //
+    // If requested, write IQ data to a simple "Pei format" time series file.
+    // Pei format is written as a series of pulses, where each pulse is
+    // in the form:
+    // 
+    // time|PRF|pulse_width|n_gates|I(0)|Q(0)|I(1)|Q(1)|...|I(n_gates-1)|Q(n_gates-1)
+    //
+    // time - pulse time in seconds since 1970-01-01 00:00:00 UTC, 8-byte IEEE float
+    // PRF - PRF in Hz, 4-byte IEEE float
+    // pulse_width - receiver pulse width in seconds, 4-byte IEEE float
+    // n_gates - gate count, 4-byte int
+    // I(n) - inphase counts for gate n, 2-byte int
+    // Q(n) - quadrature counts for gate n, 2-byte int
+    //
+    // All values are written little-endian
+    //
+    if (_doPeiFile) {
+        if (! _peiFile) {
+            char filename[256];
+            ptime pulsePtime = _down->timeOfPulse(pulseSeqNum);
+            boost::gregorian::date pulseDate = pulsePtime.date();
+            time_duration pulseTime = pulsePtime.time_of_day();
+            sprintf(filename, "chan%d_%4d%02d%02d_%02d%02d%02d_pei", _chanId,
+                int(pulseDate.year()), int(pulseDate.month()), int(pulseDate.day()),
+                pulseTime.hours(), pulseTime.minutes(), pulseTime.seconds());
+            if ((_peiFile = fopen(filename, "a+")) < 0) {
+                ELOG << "Error opening Pei file '" << filename;
+                abort();
+            }
+        }
+
+        int16_t *iqData = (int16_t*)buf;
+        time_duration timeFromEpoch = _down->timeOfPulse(pulseSeqNum) - Epoch1970;
+    
+        double timeSecs = timeFromEpoch.total_seconds() + 
+            double(timeFromEpoch.fractional_seconds()) / time_duration::ticks_per_second();
+        fwrite((char*)&timeSecs, sizeof(double), 1, _peiFile);
+    
+        float prf = 1.0 / _sd3c.prt();
+        fwrite((char*)&prf, sizeof(float), 1, _peiFile);
+        
+        float pulseWidth = _down->rcvrPulseWidth();
+        fwrite((char*)&pulseWidth, sizeof(float), 1, _peiFile);
+        
+        int peiGates = (_nGates < _maxPeiGates) ? _nGates : _maxPeiGates;
+        fwrite((char*)&peiGates, sizeof(int), 1, _peiFile);
+        
+        // Write I and Q (4 bytes total per gate) for all gates
+        fwrite((char*)iqData, 4, peiGates, _peiFile);
+    }
 
     _addToMerge(reinterpret_cast<const int16_t *>(buf), pulseSeqNum);
 
@@ -145,11 +200,6 @@ double KaDrxPub::_nowTime() {
   ftime(&timeB);
   return timeB.time + timeB.millitm/1000.0;
 }
-
-////////////////////////////////////////////////////////////////////////////////
-
-// 1970-01-01 00:00:00 UTC
-static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1), time_duration(0, 0, 0));
 
 ////////////////////////////////////////////////////////////////////////////////
 void

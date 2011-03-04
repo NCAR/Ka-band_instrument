@@ -4,6 +4,7 @@
 #include "KaDrxConfig.h"
 #include "p7142sd3c.h"
 
+#include <cstdio>
 #include <QThread>
 #include <KaTSWriter.h>
 
@@ -179,7 +180,15 @@ class KaDrxPub : public QThread {
         void _handleBurst(const int16_t *iq_data, int64_t pulseSeqNum);
 
         double _argDeg(double ival, double qval);
-  
+
+        // Are we generating a Pei file of time series data?
+        bool _doPeiFile;
+
+        // Our Pei file
+        FILE* _peiFile;
+        
+        // Maximum number of gates to write to the Pei file
+        unsigned int _maxPeiGates;
 };
 
 #endif /*KADRXPUB_H_*/
