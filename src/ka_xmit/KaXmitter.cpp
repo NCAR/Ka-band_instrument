@@ -47,6 +47,7 @@ KaXmitter::KaXmitter(std::string ttyDev) :
         _simulate(ttyDev == SIM_DEVICE),
         _ttyDev(ttyDev),
         _fd(-1) {
+    ILOG << "KaXmitter on device " << ttyDev;
     // Open the serial port
     if (! _simulate) {
         DLOG << "Opening " << _ttyDev;
