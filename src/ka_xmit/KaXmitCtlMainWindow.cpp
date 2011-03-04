@@ -118,8 +118,16 @@ KaXmitCtlMainWindow::on_operateButton_clicked() {
 
 void
 KaXmitCtlMainWindow::_update() {
+    // Update the current time string
+    char timestring[32];
+    time_t now = time(0);
+    strftime(timestring, sizeof(timestring) - 1, "%F %T", gmtime(&now));
+    _ui.clockLabel->setText(timestring);
+    
+    // Append new log messages from ka_xmitd
     _appendXmitdLogMsgs();
     
+    // Get status from ka_xmitd
     _getStatus();
 
     if (! _serialConnected()) {

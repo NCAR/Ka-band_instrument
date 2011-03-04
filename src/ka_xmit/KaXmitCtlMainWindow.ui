@@ -707,6 +707,13 @@ COUNT</string>
      </widget>
     </item>
     <item>
+     <widget class="QLabel" name="clockLabel">
+      <property name="text">
+       <string>0000-00-00 00:00:00</string>
+      </property>
+     </widget>
+    </item>
+    <item>
      <layout class="QHBoxLayout" name="horizontalLayout_14">
       <property name="spacing">
        <number>4</number>
