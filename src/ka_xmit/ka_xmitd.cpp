@@ -492,16 +492,17 @@ handlePulseInputFault() {
 
 int
 main(int argc, char *argv[]) {
-    // Append our log to local syslog
-    log4cpp::SyslogAppender syslogAppender("SyslogAppender", "ka_xmitd", LOG_DAEMON);
-    localCategory().addAppender(syslogAppender);
-    
-    // Append our log to the recent history
-    localCategory().addAppender(RecentLogHistory);
-
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
     
+    // Append our log to local syslog
+    log4cpp::SyslogAppender syslogAppender("SyslogAppender", "ka_xmitd", LOG_DAEMON);
+    log4cpp::Category::getRoot().addAppender(syslogAppender);
+    
+    // Append our log to the recent history
+    log4cpp::Category::getRoot().addAppender(RecentLogHistory);
+
+    // Check the remaining args
     if (argc != 3 && argc != 4) {
         std::cerr << "Usage: " << argv[0] << 
             " <xmitter_ttydev> <server_port> [f] [<logx_arg> ...]" << std::endl;
@@ -528,17 +529,15 @@ main(int argc, char *argv[]) {
     }
     
     time_t now = time(0);
-    ILOG << "ka_xmitd (" << getpid() << ") started " << ctime(&now);
+    char timestring[40];
+    strftime(timestring, sizeof(timestring) - 1, "%F %T", gmtime(&now));
+    ILOG << "ka_xmitd (" << getpid() << ") started " << timestring;
 
     // start with all-zero status
     memset(&XmitStatus, 0, sizeof(XmitStatus));
     
     // Instantiate our transmitter, communicating over the given serial port
     Xmitter = new KaXmitter(argv[1]);
-    
-    // Append the transmitter's log to syslog and to the recent history
-    log4cpp::Category::getInstance("KaXmitter").addAppender(syslogAppender);
-    log4cpp::Category::getInstance("KaXmitter").addAppender(RecentLogHistory);
     
     // Initialize our RPC server
     RpcServer.bindAndListen(atoi(argv[2]));
