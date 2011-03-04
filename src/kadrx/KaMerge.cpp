@@ -329,8 +329,8 @@ void KaMerge::_readNextPulse()
   _timeSecs = _pulseH->getTimeSecs();
   _nanoSecs = _pulseH->getNanoSecs();
   
-  if (! (_pulseSeqNum % 100)) {
-    DLOG << "got 100 pulses, seqNum, secs, nanoSecs: "
+  if (! (_pulseSeqNum % 1000)) {
+    DLOG << "got 1000 pulses, seqNum, secs, nanoSecs: "
          << _pulseSeqNum << ", " << _timeSecs << ", " << _nanoSecs;
   }
 
@@ -692,7 +692,7 @@ void KaMerge::_sendIwrfPulsePacket()
   }
   
   if (_sock->writeBuffer(_pulseBuf, _pulseBufLen)) {
-    cerr << "ERROR - KaMerge::_sendIwrfMetaData()" << endl;
+    cerr << "ERROR - KaMerge::_sendIwrfPulsePacket()" << endl;
     cerr << "  Writing pulse packet" << endl;
     cerr << "  " << _sock->getErrStr() << endl;
     _closeSocketToClient();
@@ -776,7 +776,7 @@ void KaMerge::_sendIwrfBurstPacket()
   }
   
   if (_sock->writeBuffer(_burstBuf, _burstBufLen)) {
-    cerr << "ERROR - KaMerge::_sendIwrfMetaData()" << endl;
+    cerr << "ERROR - KaMerge::_sendIwrfBurstPacket()" << endl;
     cerr << "  Writing burst packet" << endl;
     cerr << "  " << _sock->getErrStr() << endl;
     _closeSocketToClient();
@@ -829,6 +829,7 @@ int KaMerge::_openServer()
     return -1;
   }
 
+  DLOG << "====>> TCP server opened <<====";
   _serverIsOpen = true;
   return 0;
 
@@ -859,6 +860,8 @@ int KaMerge::_openSocketToClient()
   if (_sock == NULL) {
     return -1;
   }
+
+  DLOG << "====>> Connected to client <<====";
 
   return 0;
   
