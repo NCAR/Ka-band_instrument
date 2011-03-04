@@ -261,6 +261,9 @@ KaXmitCtlMainWindow::_noXmitter() {
 
 void
 KaXmitCtlMainWindow::_disableUi() {
+    _ui.statusBox->setEnabled(false);
+    _ui.faultStatusBox->setEnabled(false);
+
     _ui.unitOnLabel->setPixmap(_greenLED_off);
     
     _ui.magCurrFaultIcon->setPixmap(_greenLED_off);
@@ -288,8 +291,12 @@ KaXmitCtlMainWindow::_disableUi() {
     _ui.temperatureValue->setText("0");
     
     _ui.autoResetCount->setText("");
+}
 
-    centralWidget()->setEnabled(false);
+void
+KaXmitCtlMainWindow::_enableUi() {
+    _ui.faultStatusBox->setEnabled(true);
+    _ui.statusBox->setEnabled(true);
 }
 
 void

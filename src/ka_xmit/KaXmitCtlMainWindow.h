@@ -36,6 +36,8 @@ private:
         const XmlRpc::XmlRpcValue & params, XmlRpc::XmlRpcValue & result);
     // Disable the UI
     void _disableUi();
+    // Enable the UI
+    void _enableUi();
     // Send an "operate" command to the transmitter
     void _operate();
     // Send a "status" command, leaving the results in _statusDict.
