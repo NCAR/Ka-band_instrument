@@ -69,9 +69,6 @@ combine_every_second_gate           true
 
 # merge queue size
 
-#merge_queue_size        2048    # size of queue which acts as buffer
-                                # for the merge
-
 merge_queue_size        20000   # size of queue which acts as buffer
                                 # for the merge
 
