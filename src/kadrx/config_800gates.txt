@@ -5,9 +5,9 @@ gates                   800
 
 ldr_mode                1       # if 0, then ZDR mode is active
 
-ant_gain                46.2    # dB
-ant_hbeam_width         0.75    # deg
-ant_vbeam_width         0.68    # deg
+ant_gain                45.9    # dB , H-ch 
+ant_hbeam_width         0.86    # deg
+ant_vbeam_width         0.91    # deg
 
 external_clock          1       # boolean
 external_start_trigger  1       # boolean
@@ -23,20 +23,20 @@ rcvr_bandwidth          1.37e6  # Hz
 rcvr_digital_gain       -2.67   # dB
 rcvr_filter_mismatch    1.1     # dB
 rcvr_gate0_delay        5.5e-6  # s
-rcvr_noise_figure       8.9     # dB
+rcvr_noise_figure       8.3     # dB , H-ch
 rcvr_pulse_width        5.0e-7    # s
-rcvr_rf_gain            39.48   # dB
+rcvr_rf_gain            36.16   # dB , H-ch
 
 range_to_gate0          37.5    # m to center of gate
 
 tx_cntr_freq            3.5e10  # Hz
-tx_peak_power           58.78   # dBm
+tx_peak_power           76.99   # dBm
 tx_pulse_width          5.0e-7  # s
 tx_pulse_mod_delay      6.0e-7  # s
 tx_pulse_mod_width      6.0e-7  # s
 tx_delay                0.0     # s
 
-test_target_delay       75.08e-6# s
+test_target_delay       395.08e-6# s
 test_target_width       5.0e-6  # s
 
 afc_enabled             1
@@ -69,12 +69,16 @@ combine_every_second_gate 1
 
 # merge queue size
 
-merge_queue_size        2048    # size of queue which acts as buffer
+#merge_queue_size        2048    # size of queue which acts as buffer
                                 # for the merge
+
+merge_queue_size        20000   # size of queue which acts as buffer
+                                # for the merge
+
 # IWRF data export
 
 iwrf_server_tcp_port                12000   # TCP port
-pulse_interval_per_iwrf_meta_data   100     # how often to send out meta data
+pulse_interval_per_iwrf_meta_data   5000    # how often to send out meta data
 
 # simulation of antenna angles
 

@@ -69,8 +69,12 @@ combine_every_second_gate 1
 
 # merge queue size
 
-merge_queue_size        2048    # size of queue which acts as buffer
+#merge_queue_size        2048    # size of queue which acts as buffer
                                 # for the merge
+
+merge_queue_size        20000   # size of queue which acts as buffer
+                                # for the merge
+
 # IWRF data export
 
 iwrf_server_tcp_port                12000   # TCP port
