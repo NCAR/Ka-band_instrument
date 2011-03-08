@@ -169,6 +169,9 @@ private:
 
     /// 100 MHz oscillator OK?
     bool _100MhzOscLocked;
+
+    /// GPS time server alarm state
+    bool _gpsClockAlarm;
 };
 
 KaMonitor::KaMonitor() {
@@ -217,6 +220,7 @@ KaMonitorPriv::run() {
             "5V PS: " << _psVoltage << " V";
         DLOG << "wg pressure valid: " << (_wgPressureValid ? "true" : "false");
         DLOG << "100 MHz oscillator locked: " << (_100MhzOscLocked ? "true" : "false");
+        DLOG << "GPS time server alarm: " << (_gpsClockAlarm ? "true" : "false");
         usleep(1000000); // 1 s
     }
 }
@@ -250,10 +254,12 @@ KaMonitorPriv::_getNewValues() {
     // Channel 9 gives us the voltage read from our 5V power supply
     _psVoltage = analogData[9];
     // We read the "waveguide pressure valid" signal from DIO line 5
-    _wgPressureValid = pmc730.getDioLine(_DIO_WG_PRES_VALID);
+    _wgPressureValid = pmc730.wgPressureValid();
     // Get the 100 MHz oscillator locked signal from DIO line 6
     // (Things are OK when this line is high)
-    _100MhzOscLocked = pmc730.getDioLine(_DIO_100MHZ_ALARM);
+    _100MhzOscLocked = pmc730.oscillator100MhzLocked();
+    // Get the GPS time server alarm state
+    _gpsClockAlarm = pmc730.gpsClockAlarm();
 }
 
 double

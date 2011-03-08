@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-class Pmc730;
+class KaPmc730;
 
 /**
  * @brief Class for programming Ka oscillator #3 (nominally 107.5 MHz)
@@ -63,7 +63,7 @@ public:
      * @param testReadback If true, echoed bits are read back from the PLL
      *      chip to validate oscillator programming.
      */
-    KaOscillator3(Pmc730 & pmc730, bool testReadback = true);
+    KaOscillator3(KaPmc730 & kaPmc730, bool testReadback = true);
     virtual ~KaOscillator3();
     
     /**
@@ -84,9 +84,9 @@ public:
      */
     static const unsigned int OSC3_MAX_FREQ = 108000000;
     /**
-     * "Simulated" Pmc730.
+     * "Simulated" KaPmc730.
      */
-    static Pmc730 & SIM_PMC730;
+    static KaPmc730 & SIM_KAPMC730;
     
     /**
      * Set oscillator 3 frequency. The selected frequency must be a multiple
@@ -142,72 +142,6 @@ private:
     static const unsigned int OSC3_REF_FREQ = 10000000;         // 10 MHz
     
     /**
-     * The PMC730 DIO lines we use to communicate with the ADF4001 chip.
-     */
-    typedef enum {
-        DIO_MUXOUT   = 7,
-        DIO_CLOCK    = 8,
-        DIO_CLOCKINV = 9,
-        DIO_DATA     = 10,
-        DIO_DATAINV  = 11,
-        DIO_LE       = 12,
-        DIO_LEINV    = 13
-    } DIOLine_t;
-    
-    /**
-     * Set the selected bit in the source byte and return the result.
-     * @param src the source byte
-     * @param bitnum the number of the bit to set; 0 for least significant bit
-     * @return a byte copied from src, but with the selected bit set
-     */
-    static uint8_t 
-    _turnBitOn(uint8_t src, unsigned int bitnum) {
-        uint8_t mask = (1 << bitnum);
-        return(src | mask);
-    }
-
-    /**
-     * Unset the selected bit in the source byte and return the result.
-     * @param src the source byte
-     * @param bitnum the number of the bit to unset; 0 for least significant bit
-     * @return a byte copied from src, but with the selected bit unset
-     */
-    static uint8_t
-    _turnBitOff(uint8_t src, unsigned int bitnum) {
-        uint8_t mask = (1 << bitnum);
-        return(src & ~mask);
-    }
-
-    /**
-     * Send a differential signal over two selected PMC730 DIO lines. 
-     * Line dioPosLine will get the positive signal, and line dioNegLine will 
-     * get the inverted signal.
-     * @param signalHigh if true, a high signal will be sent, otherwise low
-     * @param dioPosLine the DIO line for the positive signal
-     * @param dioNegLine the DIO line for the inverted signal
-     */
-    void _sendDifferentialSignal(bool signalHigh, DIOLine_t dioPosLine, 
-            DIOLine_t dioNegLine);
-    
-    /**
-     * Set the state of the ADF4001 clock line.
-     * @param signalHigh if true, the clock line will be set high, otherwise low
-     */
-    void _setClock(bool signalHigh);
-    
-    /**
-     * Set the state of the ADF4001 LE (latch enable) line.
-     * @param signalHigh if true, the LE will be set high, otherwise low
-     */
-    void _setLE(bool signalHigh);
-    
-    /**
-     * Set the state of the ADF4001 data line.
-     * @param signalHigh if true, the data line will be set high, otherwise low
-     */
-    void _setData(bool signalHigh);
-    
-    /**
      * Send out a 24-bit latch command to the ADF4001 PLL chip
      * @param val the 24-bit value to send to the PLL (only the low order 24 
      *      bits of val are sent to the PLL).
@@ -217,10 +151,10 @@ private:
      * Is our PMC-730 simulated? (I.e., is it a reference to NULL?)
      */
     bool _pmcSimulated() {
-        return(&_pmc730 == 0);
+        return(&_kaPmc730 == 0);
     }
         
-    Pmc730 & _pmc730;
+    KaPmc730 & _kaPmc730;
     /**
      * If _testReadback is true, echoed bits from the PLL chip are verified
      * against previously sent commands.

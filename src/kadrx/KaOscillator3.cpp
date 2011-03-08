@@ -7,37 +7,21 @@
 
 #include "KaOscillator3.h"
 #include "Adf4001.h"
-#include <Pmc730.h>
+#include "KaPmc730.h"
 #include <cassert>
 #include <iostream>
 #include <logx/Logging.h>
 
 LOGGING("KaOscillator3");
 
-Pmc730 & KaOscillator3::SIM_PMC730 = *(Pmc730*)0;
+KaPmc730 & KaOscillator3::SIM_KAPMC730 = *(KaPmc730*)0;
 
-KaOscillator3::KaOscillator3(Pmc730 & pmc730, bool testReadback) :
-    _pmc730(pmc730),
+KaOscillator3::KaOscillator3(KaPmc730 & kaPmc730, bool testReadback) :
+    _kaPmc730(kaPmc730),
     _testReadback(testReadback && ! _pmcSimulated()),
     _nDivider(0),
     _rDivider(0),
     _lastCommandSent(0) {
-    // Verify that the DIO lines we use to program the PLL are all set to output
-    if (! _pmcSimulated()) {
-        if (_pmc730.getDioDirection(DIO_CLOCK) != Pmc730::DIO_OUTPUT ||
-                _pmc730.getDioDirection(DIO_CLOCKINV) != Pmc730::DIO_OUTPUT ||
-                _pmc730.getDioDirection(DIO_DATA) != Pmc730::DIO_OUTPUT ||
-                _pmc730.getDioDirection(DIO_DATAINV) != Pmc730::DIO_OUTPUT ||
-                _pmc730.getDioDirection(DIO_LE) != Pmc730::DIO_OUTPUT ||
-                _pmc730.getDioDirection(DIO_LEINV) != Pmc730::DIO_OUTPUT) {
-            ELOG << __PRETTY_FUNCTION__ << ": PMC-730 DIO lines " << 
-                    DIO_CLOCK << ", " << DIO_CLOCKINV << ", " << 
-                    DIO_DATA << ", " << DIO_DATAINV << ", " <<
-                    DIO_LE << ", and " << DIO_LEINV << 
-                    " are not all set for output!";
-            abort();
-        }
-    }
     // Our frequency step must divide evenly into the reference frequency
     assert((OSC3_REF_FREQ % OSC3_FREQ_STEP) == 0);
     // Determine our fixed R divider value
@@ -51,49 +35,12 @@ KaOscillator3::~KaOscillator3() {
 }
 
 void
-KaOscillator3::_sendDifferentialSignal(bool signalHigh, DIOLine_t dioPosLine,
-        DIOLine_t dioNegLine) {
-    if (_pmcSimulated())
-        return;
-    // as written, this only works for DIO lines in the range 8-15!
-    assert(dioPosLine >=8 && dioPosLine <= 15 &&
-            dioNegLine >= 8 && dioNegLine <= 15);
-    // start from the current state of lines 8-15
-    uint8_t new8_15 = _pmc730.getDio8_15();
-    // change the two lines we care about
-    if (signalHigh) {
-        new8_15 = _turnBitOn(new8_15, dioPosLine - 8);
-        new8_15 = _turnBitOff(new8_15, dioNegLine - 8);
-    } else {
-        new8_15 = _turnBitOff(new8_15, dioPosLine - 8);
-        new8_15 = _turnBitOn(new8_15, dioNegLine - 8);
-    }
-    // ship out the new state
-    _pmc730.setDio8_15(new8_15);
-}
-
-void
-KaOscillator3::_setClock(bool signalHigh) {
-    _sendDifferentialSignal(signalHigh, DIO_CLOCK, DIO_CLOCKINV);
-}
-
-void
-KaOscillator3::_setLE(bool signalHigh) {
-    _sendDifferentialSignal(signalHigh, DIO_LE, DIO_LEINV);
-}
-
-void
-KaOscillator3::_setData(bool signalHigh) {
-    _sendDifferentialSignal(signalHigh, DIO_DATA, DIO_DATAINV);
-}
-
-void
 KaOscillator3::_adf4001Bitbang(uint32_t val) {
     if (_pmcSimulated())
         return;
     // Assure that CLOCK and LE lines are low when we start.
-    _setClock(0);
-    _setLE(0);
+    _kaPmc730.setPllClock(0);
+    _kaPmc730.setPllLatchEnable(0);
     
     // Buffer to hold echoed bits from the ADF4001
     uint32_t echoedBits = 0;
@@ -103,21 +50,21 @@ KaOscillator3::_adf4001Bitbang(uint32_t val) {
         // First read the muxout bit from the ADF4001 (on DIO channel 7) 
         // and append it to echoedBits. As long as muxout is MUX_SERIAL_DATA, 
         // the bit we read should be the bit we sent out 24 bits ago...
-        uint8_t muxoutBit = _pmc730.getDioLine(DIO_MUXOUT);
+        uint8_t muxoutBit = _kaPmc730.getPllMuxout();
         echoedBits = (echoedBits << 1) | muxoutBit;
 
         // Send the next bit on the DATA line
         unsigned int bit = (val >> bitnum) & 0x1;
-        _setData(bit);
+        _kaPmc730.setPllData(bit);
         // CLOCK high then low to clock in the bit
-        _setClock(1);
-        _setClock(0);
+        _kaPmc730.setPllClock(1);
+        _kaPmc730.setPllClock(0);
     }
     
     // Finally, set LE high to latch the whole thing
-    _setLE(1);
+    _kaPmc730.setPllLatchEnable(1);
     // ..and LE back to low to clean up
-    _setLE(0);
+    _kaPmc730.setPllLatchEnable(0);
     
     // Did we get a successful echo back of the last command we sent?
     DLOG << std::hex << "last command 0x" << _lastCommandSent << 

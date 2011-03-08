@@ -23,8 +23,34 @@ KaPmc730 * KaPmc730::_theKaPmc730 = 0;
 
 KaPmc730::KaPmc730() : Pmc730(0) {
     // For Ka, DIO lines 0-7 are used for input, 8-15 for output
-    setDioDirection0_7(Pmc730::DIO_INPUT);
-    setDioDirection8_15(Pmc730::DIO_OUTPUT);
+    setDioDirection0_7(DIO_INPUT);
+    setDioDirection8_15(DIO_OUTPUT);
+    // Verify that our defined input DIO lines are all actually set for input
+    if (getDioDirection(_KA_DIN_COUNTER) != DIO_INPUT ||
+            getDioDirection(_KA_DIN_GPSCLOCK_ALM) != DIO_INPUT ||
+            getDioDirection(_KA_DIN_WGPRES_OK) != DIO_INPUT ||
+            getDioDirection(_KA_DIN_OSC3) != DIO_INPUT) {
+        ELOG << __PRETTY_FUNCTION__ << ": Ka PMC-730 DIO lines " << 
+                _KA_DIN_COUNTER << ", " << _KA_DIN_GPSCLOCK_ALM << ", " << 
+                _KA_DIN_WGPRES_OK << ", and " << _KA_DIN_OSC3 << 
+                " are not all set for input!";
+        abort();
+    }
+    // Verify that our defined output DIO lines are all actually set for output
+    if (getDioDirection(_KA_DOUT_CLK_P) != DIO_OUTPUT ||
+            getDioDirection(_KA_DOUT_CLK_N) != DIO_OUTPUT ||
+            getDioDirection(_KA_DOUT_DATA_P) != DIO_OUTPUT ||
+            getDioDirection(_KA_DOUT_DATA_N) != DIO_OUTPUT ||
+            getDioDirection(_KA_DOUT_LE_P) != DIO_OUTPUT ||
+            getDioDirection(_KA_DOUT_LE_N) != DIO_OUTPUT ||
+            getDioDirection(_KA_DOUT_TXENABLE) != DIO_OUTPUT) {
+        ELOG << __PRETTY_FUNCTION__ << ": Ka PMC-730 DIO lines " << 
+                _KA_DOUT_CLK_P << ", " << _KA_DOUT_CLK_N << ", " << 
+                _KA_DOUT_DATA_P << ", " << _KA_DOUT_DATA_N << ", " <<
+                _KA_DOUT_LE_P << ", " << _KA_DOUT_LE_N << ", and " <<
+                _KA_DOUT_TXENABLE << " are not all set for output!";
+        abort();
+    }
     // Ka uses the PMC730 pulse counting function, which uses DIO channel 2
     _initPulseCounter();
 }
@@ -94,7 +120,21 @@ KaPmc730::_getPulseCounter() {
 }
 
 void
-KaPmc730::_setTxTriggerEnable(bool enable) {
-    // Set the transmitter trigger enable signal, which is on DIO line 14
-    setDioLine(14, enable ? 1 : 0);
+KaPmc730::_sendDifferentialSignal(bool signalHigh, DoutLine_t dioPosLine,
+        DoutLine_t dioNegLine) {
+    // as written, this only works for DIO lines in the range 8-15!
+    assert(dioPosLine >=8 && dioPosLine <= 15 &&
+            dioNegLine >= 8 && dioNegLine <= 15);
+    // start from the current state of lines 8-15
+    uint8_t new8_15 = getDio8_15();
+    // change the two lines we care about
+    if (signalHigh) {
+        new8_15 = _turnBitOn(new8_15, dioPosLine - 8);
+        new8_15 = _turnBitOff(new8_15, dioNegLine - 8);
+    } else {
+        new8_15 = _turnBitOff(new8_15, dioPosLine - 8);
+        new8_15 = _turnBitOn(new8_15, dioNegLine - 8);
+    }
+    // ship out the new state
+    setDio8_15(new8_15);
 }
