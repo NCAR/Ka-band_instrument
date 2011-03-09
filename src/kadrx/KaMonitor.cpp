@@ -96,16 +96,6 @@ public:
     
 private:
     /**
-     * The DIO line carrying indication that waveguide pressure outside the
-     * transmitter is valid.
-     */
-    static const int _DIO_WG_PRES_VALID = 5;
-    /**
-     * DIO line 6 is connected to the alarm signal from the 100 MHz oscillator
-     * in the receiver box.
-     */
-    static const int _DIO_100MHZ_ALARM = 6;
-    /**
      * Convert QEA crystal detector voltage to input power (in dBm), based
      * on a fixed table of calibration measurements.
      * @param voltage QEA crystal detector output, in V
