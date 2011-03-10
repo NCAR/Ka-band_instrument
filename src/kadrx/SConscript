@@ -3,7 +3,6 @@
 tools = Split("""
 logx
 pentek
-qtt_qtconfig
 boost_date_time
 boost_mutex
 boost_program_options
@@ -44,6 +43,7 @@ TtyOscillator.h
 """)
 
 env = Environment(tools = ['default'] + tools)
+env.EnableQt4Modules(['QtCore'])
 
 kadrx = env.Program('kadrx', sources)
 

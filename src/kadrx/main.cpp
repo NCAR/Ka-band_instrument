@@ -20,9 +20,6 @@
 
 LOGGING("kadrx")
 
-// For configuration management
-#include <QtConfig.h>
-
 #include "KaOscControl.h"
 #include "KaDrxPub.h"
 #include "KaPmc730.h"
@@ -35,17 +32,17 @@ using namespace std;
 using namespace boost::posix_time;
 namespace po = boost::program_options;
 
-std::string _devRoot;            ///< Device root e.g. /dev/pentek/0
+std::string _devRoot("/dev/pentek/p7142/0"); ///< Device root e.g. /dev/pentek/0
 std::string _drxConfig;          ///< DRX configuration file
 std::string _instance;           ///< application instance
 int _chans = KaDrxPub::KA_N_CHANNELS; ///< number of channels
-int _tsLength;                   ///< The time series length
+int _tsLength = 256;             ///< The time series length
 std::string _gaussianFile = "";  ///< gaussian filter coefficient file
 std::string _kaiserFile = "";    ///< kaiser filter coefficient file
 KaMerge* _merge = 0;             ///< The merge object - also IWRF TCP server
-bool _simulate;                  ///< Set true for simulate mode
-int _simWavelength;              ///< The simulated data wavelength, in samples
-int _simPauseMs;                 ///< The number of millisecnds to pause when reading in simulate mode.
+bool _simulate = false;          ///< Set true for simulate mode
+int _simWavelength = 5000;       ///< The simulated data wavelength, in samples
+int _simPauseMs = 20;            ///< The number of milliseconds to pause when reading in simulate mode.
 
 bool _terminate = false;         ///< set true to signal the main loop to terminate
 
@@ -53,22 +50,6 @@ bool _terminate = false;         ///< set true to signal the main loop to termin
 void sigHandler(int sig) {
     ILOG << "Interrupt received...termination may take a few seconds";
     _terminate = true;
-}
-
-//////////////////////////////////////////////////////////////////////
-///
-/// get parameters that are specified in the Qt configuration file.
-/// These can be overridden by command line specifications.
-void getConfigParams()
-{
-
-	QtConfig config("KaDrx", "KaDrx");
-	_devRoot       = config.getString("Device/DeviceRoot",  "/dev/pentek/p7142/0");
-	_tsLength      = config.getInt   ("Radar/TsLength",     256);
-	_simulate      = config.getBool  ("Simulate",           false);
-	_simPauseMs    = config.getInt   ("SimPauseMs",         20);
-	_simWavelength = config.getInt   ("SimWavelength",      5000);
-
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -90,6 +71,8 @@ void parseOptions(int argc,
 	("instance", po::value<std::string>(&_instance), "App instance for procmap")
 	("simulate",                                   "Enable simulation")
 	("simPauseMS",  po::value<int>(&_simPauseMs),  "Simulation pause interval (ms)")
+	("simWavelength", po::value<int>(&_simWavelength), "The simulated data wavelength, in samples")
+	("tsLength", po::value<int>(&_tsLength), "The time series length")
 			;
 	// If we get an option on the command line with no option name, it
 	// is treated like --drxConfig=<option> was given.
@@ -214,10 +197,7 @@ main(int argc, char** argv)
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
     
-	// get the configuration parameters from the configuration file
-	getConfigParams();
-
-	// parse the command line options, substituting for config params.
+	// parse the command line options
 	parseOptions(argc, argv);
 
         // set up registration with procmap if instance is specified
