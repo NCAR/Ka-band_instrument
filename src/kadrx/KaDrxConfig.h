@@ -16,8 +16,6 @@
 #include <vector>
 #include <cstdlib>
 #include <iostream>
-#include <kaddsC.h>
-
 
 class KaDrxConfig {
 public:
@@ -242,13 +240,6 @@ public:
       return _getDoubleVal("sim_az_rate"); /// deg/s
     }
 
-    /**
-     * Fill the given RadarDDS::SysHousekeeping struct from contents of the
-     * configuration. Some or all existing contents may be overwritten.
-     * @param hskp the RadarDDS::SysHousekeeping struct to be filled
-     */
-    void fillDdsSysHousekeeping(RadarDDS::SysHousekeeping& hskp) const;
-    
     /**
      * Validate that all metadata values required for product generation 
      * have been set.

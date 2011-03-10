@@ -23,8 +23,6 @@ KaDrxPub::KaDrxPub(
                 KaChannel chanId,
                 const KaDrxConfig& config,
                 KaMerge *merge,
-                KaTSWriter* tsWriter,
-                bool publish,
                 int tsLength,
                 std::string gaussianFile,
                 std::string kaiserFile,
@@ -39,14 +37,6 @@ KaDrxPub::KaDrxPub(
      _merge(merge),
      _pulseData(NULL),
      _burstData(NULL),
-     _publish(publish),
-     _tsWriter(tsWriter),
-     _tsDiscards(0),
-     _ddsSamplePulses(tsLength),    // for now, set to the # of pulses we get from the 7142
-     _ddsSeqInProgress(0),
-     _ndxInDdsSample(0),
-     _sampleNumber(0),
-     _baseDdsHskp(),
      _doAfc(_config.afc_enabled()),
      _numerator(0),
      _denominator(0),
@@ -91,8 +81,6 @@ KaDrxPub::KaDrxPub(
             " gates" << std::endl;
     }
 
-    // Fill our DDS base housekeeping values from the configuration
-    _config.fillDdsSysHousekeeping(_baseDdsHskp);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -185,11 +173,6 @@ void KaDrxPub::run() {
 
     _addToMerge(reinterpret_cast<const int16_t *>(buf), pulseSeqNum);
 
-    // publish to DDS if required
-    if (_publish) {
-      _publishDDS(buf, pulseSeqNum); 
-    }
-
   }
 
 }
@@ -260,71 +243,6 @@ void
 
 }
     
-////////////////////////////////////////////////////////////////////////////////
-void
-KaDrxPub::_publishDDS(char* buf, int64_t pulseSeqNum) {
-    
-	// bufPos is now pointing to the pulse data
-	// data length in bytes: 2-byte I and 2-byte Q for each gate
-	int datalen = 4 * _nGates;
-
-	// copy this pulse into our DDS sample-in-progress,
-	// and publish it when it's full.
-        // Make sure we have a DDS sample to fill
-        if (! _ddsSeqInProgress) {
-          // Get a free sample
-          _ddsSeqInProgress = _tsWriter->getEmptyItem();
-          // If no sample was available, discard everything we have and
-          // return.
-          if (! _ddsSeqInProgress) {
-            std::cerr << "Channel " << _chanId <<
-              " dropped data with no DDS samples available!" << std::endl;
-            _tsDiscards++;
-            return;
-          }
-          _ddsSeqInProgress->sampleNumber = _sampleNumber++;
-          _ddsSeqInProgress->chanId = _chanId;
-          _ddsSeqInProgress->tsList.length(_ddsSamplePulses);
-          _ndxInDdsSample = 0;
-        }
-        
-        //
-        // Copy this pulse into our DDS sample in progress
-        //
-        RadarDDS::KaTimeSeries & ts = _ddsSeqInProgress->tsList[_ndxInDdsSample++];
-        // Copy our fixed metadata into this pulse
-        ts.hskp = _baseDdsHskp;
-        // Then fill the non-fixed metadata
-        ts.data.length(_nGates * 2);   // I and Q for each gate, length is count of shorts
-        ts.hskp.chanId = _chanId;
-        ts.prt_seq_num = 1;   // single-PRT only for now
-        ts.pulseNum = pulseSeqNum;
-        time_duration timeFromEpoch = _down->timeOfPulse(pulseSeqNum) - Epoch1970;
-        // Calculate the timetag, which is usecs since 1970-01-01 00:00:00 UTC
-        ts.hskp.timetag = timeFromEpoch.total_seconds() * 1000000LL +
-          (timeFromEpoch.fractional_seconds() * 1000000LL) /
-          time_duration::ticks_per_second();
-        // Copy the per-gate data from the incoming buffer to the DDS
-        // sample data space.
-        memmove(ts.data.get_buffer(), buf, datalen);
-        
-        // Publish _ddsSeqInProgress if it's full
-        if (_ndxInDdsSample == _ddsSamplePulses) {
-          // publish it
-          _tsWriter->publishItem(_ddsSeqInProgress);
-          _ddsSeqInProgress = 0;
-        }
-        
-}
-
-////////////////////////////////////////////////////////////////////////////////
-unsigned long
-KaDrxPub::tsDiscards() {
-	unsigned long retval = _tsDiscards;
-	_tsDiscards = 0;
-	return retval;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 bool
 KaDrxPub::_configIsValid() const {

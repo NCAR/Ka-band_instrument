@@ -6,7 +6,6 @@
 
 #include <cstdio>
 #include <QThread>
-#include <KaTSWriter.h>
 
 class KaMerge;
 class PulseData;
@@ -64,8 +63,6 @@ class KaDrxPub : public QThread {
                 KaChannel chanId,
                 const KaDrxConfig& config,
                 KaMerge *merge,
-                KaTSWriter* tsWriter,
-                bool publish,
                 int tsLength,
                 std::string gaussianFile,
                 std::string kaiserFile,
@@ -96,13 +93,6 @@ class KaDrxPub : public QThread {
         /// channel. It contains all Is and Qs
         /// @param pulseSeqNum The pulse number. Will be zero for raw data.
         void _addToMerge(const int16_t *iq, int64_t pulseSeqNum);
-        
-        /// Publish a beam. A DDS sample is built and put into _ddsSeqInProgress.
-	/// When all of the samples have been filled in _ddsSeqInProgress, it is published.
-        /// @param buf The raw buffer of data from the downconverter
-        /// channel. It contains all Is and Qs
-	/// @param pulseSeqNum The pulse number. Will be zero for raw data.
-        void _publishDDS(char* buf, int64_t pulseSeqNum);
         
         /**
          * Return true iff the current configuration is valid.
@@ -138,27 +128,6 @@ class KaDrxPub : public QThread {
         PulseData *_pulseData;
         BurstData *_burstData;
         
-		/// Set true if we are going to publish the data
-		bool _publish;
-		/// The DDS time series writer
-		KaTSWriter* _tsWriter;
-		/// The number of unpublished blocks or partial blocks, due to no
-		/// empty items being available from DDS. It is reset to zero whenever 
-		/// tsDiscards() is called.
-		unsigned long _tsDiscards;
-		/// How many pulses are we putting in each published sample?
-		int _ddsSamplePulses;
-        /// The DDS time series sequence we're filling. Once it has 
-		/// _ddsSamplePulses pulses in it, we publish it.
-        RadarDDS::KaTimeSeriesSequence *_ddsSeqInProgress;
-        /// Where are we in _ddsSeqInProgress?
-        int _ndxInDdsSample;
-		/// The DDS sample number; increment when a sample is published.
-		long _sampleNumber;
-		/// Base DDS housekeeping with values that remain fixed for this
-		/// downconverter.
-		RadarDDS::SysHousekeeping _baseDdsHskp;
-		
         // Are we doing AFC?
         bool _doAfc;
         

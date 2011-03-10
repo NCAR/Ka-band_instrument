@@ -222,56 +222,6 @@ KaDrxConfig::KaDrxConfig(std::string configFile) {
 KaDrxConfig::~KaDrxConfig() {
 }
 
-void 
-KaDrxConfig::fillDdsSysHousekeeping(RadarDDS::SysHousekeeping& hskp) const {
-    // The non-bool values are easy, since we have special values to indicate
-    // the ones which weren't set.
-    hskp.actual_num_rcvrs = actual_num_rcvrs();
-    hskp.altitude = altitude();
-    hskp.ant_E_plane_angle = ant_E_plane_angle();
-    hskp.ant_H_plane_angle = ant_H_plane_angle();
-    hskp.ant_encoder_up = ant_encoder_up();
-    hskp.ant_gain = ant_gain();
-    hskp.ant_hbeam_width = ant_hbeam_width();
-    hskp.ant_pitch_up = ant_pitch_up();
-    hskp.ant_vbeam_width = ant_vbeam_width();
-    hskp.gates = gates();
-    hskp.latitude = latitude();
-    hskp.longitude = longitude();
-    hskp.prt1 = prt1();
-    hskp.prt2 = prt2();
-    hskp.radar_id = radar_id().c_str();
-    hskp.rcvr_cntr_freq = rcvr_cntr_freq();
-    hskp.rcvr_digital_gain = rcvr_digital_gain();
-    hskp.rcvr_filter_mismatch = rcvr_filter_mismatch();
-    hskp.rcvr_gate0_delay = rcvr_gate0_delay();
-    hskp.rcvr_if_gain = rcvr_if_gain();
-    hskp.rcvr_noise_figure = rcvr_noise_figure();
-    hskp.rcvr_pulse_width = rcvr_pulse_width();
-    hskp.rcvr_rf_gain = rcvr_rf_gain();
-    hskp.rcvr_switching_network_loss = rcvr_switching_network_loss();
-    hskp.rcvr_waveguide_loss = rcvr_waveguide_loss();
-    hskp.tx_chirp_bandwidth = tx_chirp_bandwidth();
-    hskp.tx_cntr_freq = tx_cntr_freq();
-    hskp.tx_peak_power = tx_peak_power();
-    hskp.tx_peak_pwr_coupling = tx_peak_pwr_coupling();
-    hskp.tx_pulse_width = tx_pulse_width();
-    hskp.tx_switching_network_loss = tx_switching_network_loss();
-    hskp.tx_upconverter_latency = tx_upconverter_latency();
-    hskp.tx_waveguide_loss = tx_waveguide_loss();
-    
-    // For the bool values, we need to set a default value if they are unset
-    if (pdpp() != UNSET_BOOL)
-        hskp.pdpp = pdpp();
-    else
-        hskp.pdpp = false;  // default to false if unset
-    
-    if (staggered_prt() != UNSET_BOOL)
-        hskp.staggered_prt = staggered_prt();
-    else
-        hskp.staggered_prt = false; // default to false if unset
-}
-
 bool
 KaDrxConfig::isValid(bool verbose) const {
     bool valid = true;

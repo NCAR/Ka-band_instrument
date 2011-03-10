@@ -1,7 +1,6 @@
 # -*- python -*-
 
 tools = Split("""
-kadds
 logx
 pentek
 qtt_qtconfig

@@ -21,19 +21,11 @@ LOGGING("kadrx")
 
 // For configuration management
 #include <QtConfig.h>
-// Proxy argc/argv
-#include <ArgvParams.h>
-
-// This is required for some tests below which try to work around issues
-// with OpenDDS 2.0/2.1
-#include <dds/Version.h>
 
 #include "KaOscControl.h"
 #include "KaDrxPub.h"
 #include "KaPmc730.h"
 #include "p7142sd3c.h"
-#include "DDSPublisher.h"
-#include "KaTSWriter.h"
 #include "KaDrxConfig.h"
 #include "KaMerge.h"
 #include "KaMonitor.h"
@@ -42,21 +34,12 @@ using namespace std;
 using namespace boost::posix_time;
 namespace po = boost::program_options;
 
-bool _publish;                   ///< set true if the pentek data should be published to DDS.
 std::string _devRoot;            ///< Device root e.g. /dev/pentek/0
 std::string _drxConfig;          ///< DRX configuration file
-int _chans = KaDrxPub::KA_N_CHANNELS;                  ///< number of channels
-std::string _ORB;                ///< path to the ORB configuration file.
-std::string _DCPS;               ///< path to the DCPS configuration file.
-std::string _DCPSInfoRepo;       ///< URL to access DCPSInfoRepo
-std::string _tsTopic;            ///< The published timeseries topic
-int _DCPSDebugLevel = 0;         ///< the DCPSDebugLevel
-int _DCPSTransportDebugLevel = 0;///< the DCPSTransportDebugLevel
+int _chans = KaDrxPub::KA_N_CHANNELS; ///< number of channels
 int _tsLength;                   ///< The time series length
 std::string _gaussianFile = "";  ///< gaussian filter coefficient file
 std::string _kaiserFile = "";    ///< kaiser filter coefficient file
-DDSPublisher* _publisher = 0;    ///< The publisher.
-KaTSWriter* _tsWriter = 0;       ///< The time series writer.
 KaMerge* _merge = 0;             ///< The merge object - also IWRF TCP server
 bool _simulate;                  ///< Set true for simulate mode
 int _simWavelength;              ///< The simulated data wavelength, in samples
@@ -68,30 +51,6 @@ bool _terminate = false;         ///< set true to signal the main loop to termin
 void sigHandler(int sig) {
     ILOG << "Interrupt received...termination may take a few seconds";
     _terminate = true;
-}
-
-/////////////////////////////////////////////////////////////////////
-void createDDSservices()
-{
-	ArgvParams argv("sd3cdrx");
-	argv["-DCPSInfoRepo"] = _DCPSInfoRepo;
-	argv["-DCPSConfigFile"] = _DCPS;
-	if (_DCPSDebugLevel > 0)
-		argv["-DCPSDebugLevel"] = _DCPSDebugLevel;
-	if (_DCPSTransportDebugLevel > 0)
-		argv["-DCPSTransportDebugLevel"] = _DCPSTransportDebugLevel;
-	argv["-ORBSvcConf"] = _ORB;
-
-	// create our DDS publisher
-	char **theArgv = argv.argv();
-	_publisher = new DDSPublisher(argv.argc(), theArgv);
-	if (_publisher->status()) {
-		ELOG << "Unable to create a publisher, exiting.";
-		exit(1);
-	}
-
-	// create the DDS time series writer
-	_tsWriter = new KaTSWriter(*_publisher, _tsTopic.c_str());
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -119,13 +78,6 @@ void getConfigParams()
 	std::string dcpsFile     = KaDir + "DDSClient.ini";
 	std::string dcpsInfoRepo = "iiop://localhost:50000/DCPSInfoRepo";
 
-	// get parameters
-	// _publish       = config.getBool  ("DDS/Publish", true);
-        _publish = false;
-	_ORB           = config.getString("DDS/ORBConfigFile",  orbFile);
-	_DCPS          = config.getString("DDS/DCPSConfigFile", dcpsFile);
-	_tsTopic       = config.getString("DDS/TopicTS",        "KATS");
-	_DCPSInfoRepo  = config.getString("DDS/DCPSInfoRepo",   dcpsInfoRepo);
 	_devRoot       = config.getString("Device/DeviceRoot",  "/dev/pentek/p7142/0");
 	_tsLength      = config.getInt   ("Radar/TsLength",     256);
 	_simulate      = config.getBool  ("Simulate",           false);
@@ -150,16 +102,8 @@ void parseOptions(int argc,
 	("help", "Describe options")
 	("devRoot", po::value<std::string>(&_devRoot), "Device root (e.g. /dev/pentek/0)")
 	("drxConfig", po::value<std::string>(&_drxConfig), "DRX configuration file")
-	("nopublish",                                  "Do not publish data")
 	("simulate",                                   "Enable simulation")
 	("simPauseMS",  po::value<int>(&_simPauseMs),  "Simulation pause interval (ms)")
-	("ORB", po::value<std::string>(&_ORB),         "ORB service configuration file (Corba ORBSvcConf arg)")
-	("DCPS", po::value<std::string>(&_DCPS),       "DCPS configuration file (OpenDDS DCPSConfigFile arg)")
-	("DCPSInfoRepo", po::value<std::string>(&_DCPSInfoRepo),
-	                                               "DCPSInfoRepo URL (OpenDDS DCPSInfoRepo arg)")
-	("DCPSDebugLevel", po::value<int>(&_DCPSDebugLevel), "DCPSDebugLevel")
-	("DCPSTransportDebugLevel", po::value<int>(&_DCPSTransportDebugLevel),
-			                                       "DCPSTransportDebugLevel")
 			;
 	// If we get an option on the command line with no option name, it
 	// is treated like --drxConfig=<option> was given.
@@ -177,8 +121,6 @@ void parseOptions(int argc,
 		exit(0);
 	}
 
-	if (vm.count("nopublish"))
-	    _publish = false;
 	if (vm.count("simulate"))
 	    _simulate = true;
 	if (vm.count("drxConfig") != 1) {
@@ -311,31 +253,6 @@ main(int argc, char** argv)
     // Reference to the singleton KaMonitor is sufficient to start it up...
     KaMonitor::theMonitor();
     
-    // For OpenDDS 2.1, keep the published sample size less than ~64 KB,
-    // since larger samples are a problem...
-    if (DDS_MAJOR_VERSION == 2 && DDS_MINOR_VERSION == 1) {
-        // this is just an approximation...
-        int onePulseSize = sizeof(RadarDDS::SysHousekeeping) + kaConfig.gates() * 4;
-        int maxTsLength = 65000 / onePulseSize;
-        if (! maxTsLength) {
-            ELOG << "Cannot adjust tsLength to meet OpenDDS 2.1 " <<
-                    "max sample size of 2^16 bytes";
-            exit(1);
-        } else if (_tsLength > maxTsLength) {
-            int oldTsLength = _tsLength;
-            // Set _tsLength to the greatest power of 2 which is <= maxTsLength
-            _tsLength = 1;
-            while ((_tsLength * 2) <= maxTsLength)
-                _tsLength *= 2;
-            ELOG << "Adjusted tsLength from " << oldTsLength << " to " <<
-                    _tsLength << " to stay under OpenDDS 2.1 64 KB sample size limit.";
-        }
-    }
-
-	// create the dds services
-	if (_publish)
-		createDDSservices();
-        
     // Turn off transmitter trigger enable until we know we're generating
     // timing signals (and hence that the T/R limiters are presumably 
     // operating).
@@ -367,16 +284,16 @@ main(int argc, char** argv)
 	// Create (but don't yet start) the downconversion threads.
     
     // H channel (0)
-    KaDrxPub hThread(sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, _merge, _tsWriter, _publish,
+    KaDrxPub hThread(sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, _merge,
         _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength); 
 
     // V channel (1)
-    KaDrxPub vThread(sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, _merge, _tsWriter, _publish,
+    KaDrxPub vThread(sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, _merge,
         _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength); 
 
     // Burst channel (2)
-    KaDrxPub burstThread(sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig, _merge, _tsWriter, 
-        _publish, _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength); 
+    KaDrxPub burstThread(sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig, _merge,
+        _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength); 
 
     // Create the upConverter.
     // Configure the DAC to use CMIX by fDAC/4 (coarse mixer mode = 9)
@@ -405,28 +322,28 @@ main(int argc, char** argv)
     burstThread.start();
 
     // wait awhile, so that the threads can all get to the first read.
-	struct timespec sleepTime = { 1, 0 }; // 1 second, 0 nanoseconds
-	while (nanosleep(&sleepTime, &sleepTime)) {
-	    if (errno != EINTR) {
-	        ELOG << "Error " << errno << " from nanosleep().  Aborting.";
-	        abort();
-	    } else {
-	        // We were interrupted. Return to sleeping until the interval is done.
-	        continue;
-	    }
-	}
+    struct timespec sleepTime = { 1, 0 }; // 1 second, 0 nanoseconds
+    while (nanosleep(&sleepTime, &sleepTime)) {
+      if (errno != EINTR) {
+        ELOG << "Error " << errno << " from nanosleep().  Aborting.";
+        abort();
+      } else {
+        // We were interrupted. Return to sleeping until the interval is done.
+        continue;
+      }
+    }
 
-	// Start filters on all downconverters
+    // Start filters on all downconverters
     sd3c.startFilters();
 
-	// Load the DAC memory bank 2, clear the DACM fifo, and enable the 
-	// DAC memory counters. This must take place before the timers are started.
-	startUpConverter(upConverter, sd3c.txPulseWidthCounts());
+    // Load the DAC memory bank 2, clear the DACM fifo, and enable the 
+    // DAC memory counters. This must take place before the timers are started.
+    startUpConverter(upConverter, sd3c.txPulseWidthCounts());
 
     // start the merge
     _merge->start();
 
-	// Start the timers, which will allow data to flow.
+    // Start the timers, which will allow data to flow.
     sd3c.timersStartStop(true);
     
     // Verify that timers have started, by seeing that we have TX sync pulses
@@ -453,21 +370,18 @@ main(int argc, char** argv)
         ILOG << std::setprecision(3) << std::setw(5) << "H channel " << 
                 hThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
                 " MB/s  ovr: " << hThread.downconverter()->overUnderCount() <<
-                " nopub: " << hThread.tsDiscards() <<
                 " drop: " << hThread.downconverter()->droppedPulses() <<
                 " sync errs: " << hThread.downconverter()->syncErrors();
         
         ILOG << std::setprecision(3) << std::setw(5) << "V channel " << 
                 vThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
                 " MB/s  ovr: " << vThread.downconverter()->overUnderCount() <<
-                " nopub: " << vThread.tsDiscards() <<
                 " drop: " << vThread.downconverter()->droppedPulses() <<
                 " sync errs: " << vThread.downconverter()->syncErrors();
         
         ILOG << std::setprecision(3) << std::setw(5) << "burst channel " << 
                 burstThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
                 " MB/s  ovr: " << burstThread.downconverter()->overUnderCount() <<
-                " nopub: " << burstThread.tsDiscards() <<
                 " drop: " << burstThread.downconverter()->droppedPulses() <<
                 " sync errs: " << burstThread.downconverter()->syncErrors();
 	}
@@ -485,12 +399,12 @@ main(int argc, char** argv)
     vThread.wait(1000);
     burstThread.wait(1000);
 
-	// stop the DAC
-	upConverter.stopDAC();
+    // stop the DAC
+    upConverter.stopDAC();
+    
+    // stop the timers
+    sd3c.timersStartStop(false);
 
-	// stop the timers
-	sd3c.timersStartStop(false);
-
-	ILOG << "terminated on command";
+    ILOG << "terminated on command";
 }
 
