@@ -16,6 +16,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <csignal>
 #include <logx/Logging.h>
+#include <toolsa/pmu.h>
 
 LOGGING("kadrx")
 
@@ -36,6 +37,7 @@ namespace po = boost::program_options;
 
 std::string _devRoot;            ///< Device root e.g. /dev/pentek/0
 std::string _drxConfig;          ///< DRX configuration file
+std::string _instance;           ///< application instance
 int _chans = KaDrxPub::KA_N_CHANNELS; ///< number of channels
 int _tsLength;                   ///< The time series length
 std::string _gaussianFile = "";  ///< gaussian filter coefficient file
@@ -61,23 +63,6 @@ void getConfigParams()
 {
 
 	QtConfig config("KaDrx", "KaDrx");
-
-	// set up the default configuration directory path
-	std::string KaDir("/conf/");
-	char* e = getenv("KADIR");
-	if (e) {
-		KaDir = e + KaDir;
-	} else {
-		ELOG << "Environment variable KADIR must be set.";
-		exit(1);
-	}
-
-	// and create the default DDS configuration file paths, since these
-	// depend upon KADIR
-	std::string orbFile      = KaDir + "ORBSvc.conf";
-	std::string dcpsFile     = KaDir + "DDSClient.ini";
-	std::string dcpsInfoRepo = "iiop://localhost:50000/DCPSInfoRepo";
-
 	_devRoot       = config.getString("Device/DeviceRoot",  "/dev/pentek/p7142/0");
 	_tsLength      = config.getInt   ("Radar/TsLength",     256);
 	_simulate      = config.getBool  ("Simulate",           false);
@@ -102,6 +87,7 @@ void parseOptions(int argc,
 	("help", "Describe options")
 	("devRoot", po::value<std::string>(&_devRoot), "Device root (e.g. /dev/pentek/0)")
 	("drxConfig", po::value<std::string>(&_drxConfig), "DRX configuration file")
+	("instance", po::value<std::string>(&_instance), "App instance for procmap")
 	("simulate",                                   "Enable simulation")
 	("simPauseMS",  po::value<int>(&_simPauseMs),  "Simulation pause interval (ms)")
 			;
@@ -234,6 +220,13 @@ main(int argc, char** argv)
 	// parse the command line options, substituting for config params.
 	parseOptions(argc, argv);
 
+        // set up registration with procmap if instance is specified
+        if (_instance.size() > 0) {
+          PMU_auto_init("kadrx", _instance.c_str(),
+                        PROCMAP_REGISTER_INTERVAL);
+          ILOG << "will register with procmap, instance: " << _instance;
+        }
+
 	// Read the KA configuration file
     KaDrxConfig kaConfig(_drxConfig);
     if (! kaConfig.isValid()) {
@@ -256,15 +249,18 @@ main(int argc, char** argv)
     // Turn off transmitter trigger enable until we know we're generating
     // timing signals (and hence that the T/R limiters are presumably 
     // operating).
+    PMU_auto_register("trigger enable");
     KaPmc730::setTxTriggerEnable(false);
     
     // Instantiate our p7142sd3c
+    PMU_auto_register("pentek initialize");
     Pentek::p7142sd3c sd3c(_devRoot, _simulate, kaConfig.tx_delay(),
         kaConfig.tx_pulse_width(), kaConfig.prt1(), kaConfig.prt2(),
         kaConfig.staggered_prt(), kaConfig.gates(), 1, false,
         Pentek::p7142sd3c::DDC10DECIMATE, kaConfig.external_start_trigger());
     
     // Use SD3C's general purpose timer 0 (timer 3) for transmit pulse modulation
+    PMU_auto_register("timers enable");
     sd3c.setGPTimer0(kaConfig.tx_pulse_mod_delay(), kaConfig.tx_pulse_mod_width());
     
     // Use SD3C's general purpose timer 1 (timer 5) for test target pulse.
@@ -284,6 +280,7 @@ main(int argc, char** argv)
 	// Create (but don't yet start) the downconversion threads.
     
     // H channel (0)
+    PMU_auto_register("set up threads");
     KaDrxPub hThread(sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, _merge,
         _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength); 
 
@@ -297,11 +294,13 @@ main(int argc, char** argv)
 
     // Create the upConverter.
     // Configure the DAC to use CMIX by fDAC/4 (coarse mixer mode = 9)
+    PMU_auto_register("create upconverter");
     Pentek::p7142Up & upConverter = *sd3c.addUpconverter("0C", 
         sd3c.adcFrequency(), sd3c.adcFrequency() / 4, 9); 
 
     // Set up oscillator control from the configuration. (The first reference 
     // to theControl() is what actually starts the oscillator control thread.)
+    PMU_auto_register("oscillator control");
     KaOscControl & oscControl = KaOscControl::theControl();
     if (kaConfig.afc_enabled()) {
         oscControl.setG0ThresholdDbm(kaConfig.afc_g0_threshold_dbm());
@@ -317,6 +316,7 @@ main(int argc, char** argv)
     signal(SIGTERM, sigHandler);
 
     // Start the downconverter threads.
+    PMU_auto_register("start threads");
     hThread.start();
     vThread.start();
     burstThread.start();
@@ -334,13 +334,16 @@ main(int argc, char** argv)
     }
 
     // Start filters on all downconverters
+    PMU_auto_register("start filters");
     sd3c.startFilters();
 
     // Load the DAC memory bank 2, clear the DACM fifo, and enable the 
     // DAC memory counters. This must take place before the timers are started.
+    PMU_auto_register("start upconverter");
     startUpConverter(upConverter, sd3c.txPulseWidthCounts());
 
     // start the merge
+    PMU_auto_register("start merge");
     _merge->start();
 
     // Start the timers, which will allow data to flow.

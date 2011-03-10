@@ -8,6 +8,7 @@
 #include <iomanip>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <radar/iwrf_functions.hh>
+#include <toolsa/pmu.h>
 
 using namespace boost::posix_time;
 using namespace std;
@@ -302,6 +303,8 @@ void KaMerge::run()
 
 void KaMerge::_readNextPulse()
 {
+
+  PMU_auto_register("reading pulses");
 
   // read next pulse data for each channel
 
