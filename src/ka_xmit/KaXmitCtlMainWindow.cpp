@@ -302,6 +302,6 @@ KaXmitCtlMainWindow::_enableUi() {
 void
 KaXmitCtlMainWindow::_logMessage(std::string message) {
     _ui.logArea->appendPlainText(
-            QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ") + 
+            QDateTime::currentDateTime().toUTC().toString("yyyy-MM-dd hh:mm:ss ") + 
             message.c_str());
 }
