@@ -34,6 +34,14 @@ public:
     }
 
     /**
+     * Set the transmitter's serial port reset line.
+     * @param bool if true, the transmitter's serial line reset will be enabled
+     */
+    static void setTxSerialReset(bool enable) {
+        theKaPmc730().setDioLine(_KA_DOUT_TXSERIALRESET, enable ? 1 : 0);
+    }
+    
+    /**
      * Set the state of oscillator3's ADF4001 PLL chip clock line.
      * (differential signal sent on DIO lines 8 and 9)
      * @param signalHigh if true, the clock line will be set high, otherwise low
@@ -125,7 +133,7 @@ private:
         _KA_DOUT_LE_P = 12,      // LE+ to oscillator 3 PLL
         _KA_DOUT_LE_N = 13,      // LE- to oscillator 3 PLL
         _KA_DOUT_TXENABLE = 14,  // transmitter trigger enable
-        _KA_DOUT_UNUSED15 = 15
+        _KA_DOUT_TXSERIALRESET = 15    // transmitter serial line reset
     } DoutLine_t;
     
     /**
