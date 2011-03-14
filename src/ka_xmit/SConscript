@@ -1,46 +1,53 @@
 # -*- python -*-
 
-tools = Split("""
+xmitdTools = Split("""
 logx
 doxygen
 xmlrpc
-qt4
 """)
 
-env = Environment(tools = ['default'] + tools)
-env.EnableQt4Modules(['QtCore', 'QtGui'])
+xmitdEnv = Environment(tools = ['default'] + xmitdTools)
 
 xmitd_sources = Split("""
 ka_xmitd.cpp
 KaXmitter.cpp
 """)
-ka_xmitd = env.Program('ka_xmitd', xmitd_sources)
+ka_xmitd = xmitdEnv.Program('ka_xmitd', xmitd_sources)
 Default(ka_xmitd)
+
+xmitctlTools = Split("""
+logx
+doxygen
+xmitclient
+qt4
+""")
+xmitctlEnv = Environment(tools = ['default'] + xmitctlTools)
+xmitctlEnv.EnableQt4Modules(['QtCore', 'QtGui'])
 
 xmitctl_sources = Split("""
 ka_xmitctl.cpp
 KaXmitCtlMainWindow.cpp
 qrc_KaXmitCtlMainWindow.cc
 """)
-ka_xmitctl = env.Program('ka_xmitctl', xmitctl_sources)
+ka_xmitctl = xmitctlEnv.Program('ka_xmitctl', xmitctl_sources)
 Default(ka_xmitctl)
 
 uifiles = Split("""
 KaXmitCtlMainWindow.ui
 """)
-env.Uic4(uifiles)
+xmitctlEnv.Uic4(uifiles)
 
 # This generates the rules for *.qrc -> qrc_*.cc
 qrcfiles = Split("""
 KaXmitCtlMainWindow.qrc
 """)
-env.Qrc(qrcfiles)
+xmitctlEnv.Qrc(qrcfiles)
 
 headers = Split("""
 KaXmitCtlMainWindow.h
 KaXmitter.h
 """)
 
-html = env.Apidocs(xmitd_sources + xmitctl_sources + headers, 
+html = xmitctlEnv.Apidocs(xmitd_sources + xmitctl_sources + headers, 
                    DOXYFILE_FILE = "Doxyfile")
 Default(html)

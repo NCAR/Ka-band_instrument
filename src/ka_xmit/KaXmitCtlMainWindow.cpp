@@ -4,32 +4,27 @@
  *  Created on: Jan 14, 2011
  *      Author: burghart
  */
+#include "KaXmitCtlMainWindow.h"
+#include "XmitClient.h"
+
 #include <sstream>
 #include <unistd.h>
 #include <logx/Logging.h>
-
-#include "KaXmitCtlMainWindow.h"
 
 #include <QDateTime>
 
 LOGGING("MainWindow")
 
-using namespace XmlRpc;
-
-const XmlRpcValue KaXmitCtlMainWindow::_NULL_XMLRPCVALUE;
 
 KaXmitCtlMainWindow::KaXmitCtlMainWindow(std::string xmitterHost, 
     int xmitterPort) :
     QMainWindow(),
     _ui(),
-    _xmitterHost(xmitterHost),
-    _xmitterPort(xmitterPort),
+    _xmitClient(xmitterHost, xmitterPort),
     _updateTimer(this),
     _redLED(":/redLED.png"),
     _greenLED(":/greenLED.png"),
     _greenLED_off(":/greenLED_off.png"),
-    _xmlrpcClient(_xmitterHost.c_str(), _xmitterPort),
-    _statusDict(),
     _nextLogIndex(0) {
     // Set up the UI
     _ui.setupUi(this);
@@ -44,75 +39,41 @@ KaXmitCtlMainWindow::KaXmitCtlMainWindow(std::string xmitterHost,
 KaXmitCtlMainWindow::~KaXmitCtlMainWindow() {
 }
 
-bool
-KaXmitCtlMainWindow::_executeXmlRpcCommand(const std::string cmd, 
-    const XmlRpcValue & params, XmlRpcValue & result) {
-    DLOG << "Executing '" << cmd << "()' command";
-    if (! _xmlrpcClient.execute(cmd.c_str(), params, result)) {
-        DLOG << "Error executing " << cmd << "() call to ka_xmitd";
-        _noDaemon();
-        return(false);
-    }
-    if (_xmlrpcClient.isFault()) {
-        ELOG << "XML-RPC fault on " << cmd << "() call";
-        abort();
-    }
-    return true;  
-}
-
 void
 KaXmitCtlMainWindow::on_powerButton_clicked() {
-    XmlRpcValue result;
-    _executeXmlRpcCommand((_unitOn() ? "powerOff" : "powerOn"),
-        _NULL_XMLRPCVALUE, result);
+    if (_status.unitOn()) {
+        _xmitClient.powerOff();
+    } else {
+        _xmitClient.powerOn();
+    }
     _update();
 }
 
 void
 KaXmitCtlMainWindow::on_faultResetButton_clicked() {
-    XmlRpcValue result;
-    _executeXmlRpcCommand("faultReset", _NULL_XMLRPCVALUE, result);
+    _xmitClient.faultReset();
     _update();
 }
 
 void
 KaXmitCtlMainWindow::on_standbyButton_clicked() {
-    XmlRpcValue result;
-    _executeXmlRpcCommand("standby", _NULL_XMLRPCVALUE, result);
+    _xmitClient.standby();
     _update();
 }
 
 void
-KaXmitCtlMainWindow::_operate() {
-    XmlRpcValue result;
-    _executeXmlRpcCommand("operate", _NULL_XMLRPCVALUE, result);
-}
-
-void
-KaXmitCtlMainWindow::_getStatus() {
-    if (! _executeXmlRpcCommand("getStatus", _NULL_XMLRPCVALUE, _statusDict))
-        _logMessage("getStatus failed!");
-}
-
-void
 KaXmitCtlMainWindow::_appendXmitdLogMsgs() {
-    XmlRpcValue startIndex = int(_nextLogIndex);
-    XmlRpcValue result;
-    if (! _executeXmlRpcCommand("getLogMessages", startIndex, result))
-        _logMessage("getLogMsgs failed!");
-    int nextIndex = int(result["nextIndex"]);
-    if (nextIndex != int(_nextLogIndex)) {
-        std::string msgs = std::string(result["logMessages"]);
-        // Append the returned messages to our log area
-        _ui.logArea->appendPlainText(std::string(result["logMessages"]).c_str());
-        // update _nextLogIndex
-        _nextLogIndex = (unsigned int)(nextIndex);
+    unsigned int firstIndex = _nextLogIndex;
+    std::string msgs;
+    _xmitClient.getLogMessages(firstIndex, msgs, _nextLogIndex);
+    if (_nextLogIndex != firstIndex) {
+        _ui.logArea->appendPlainText(msgs.c_str());
     }
 }
 
 void
 KaXmitCtlMainWindow::on_operateButton_clicked() {
-    _operate();
+    _xmitClient.operate();
     _update();
 }
 
@@ -128,9 +89,11 @@ KaXmitCtlMainWindow::_update() {
     _appendXmitdLogMsgs();
     
     // Get status from ka_xmitd
-    _getStatus();
-
-    if (! _serialConnected()) {
+    _status = XmitClient::XmitStatus(); // start with uninitialized status
+    if (! _xmitClient.getStatus(_status)) {
+        _noDaemon();
+        return;
+    } else if (! _status.serialConnected()) {
         _noXmitter();
         return;
     }
@@ -138,66 +101,66 @@ KaXmitCtlMainWindow::_update() {
     _enableUi();
 
     // boolean status values
-    _ui.runupLabel->setEnabled(_hvpsRunup());
-    _ui.standbyLabel->setEnabled(_standby());
-    _ui.warmupLabel->setEnabled(_heaterWarmup());
-    _ui.cooldownLabel->setEnabled(_cooldown());
-    _ui.hvpsOnLabel->setEnabled(_hvpsOn());
-    _ui.remoteEnabledLabel->setEnabled(_remoteEnabled());
+    _ui.runupLabel->setEnabled(_status.hvpsRunup());
+    _ui.standbyLabel->setEnabled(_status.standby());
+    _ui.warmupLabel->setEnabled(_status.heaterWarmup());
+    _ui.cooldownLabel->setEnabled(_status.cooldown());
+    _ui.hvpsOnLabel->setEnabled(_status.hvpsOn());
+    _ui.remoteEnabledLabel->setEnabled(_status.remoteEnabled());
     
     // fault lights
-    _ui.magCurrFaultIcon->setPixmap(_magnetronCurrentFault() ? _redLED : _greenLED);
-    _ui.blowerFaultIcon->setPixmap(_blowerFault() ? _redLED : _greenLED);
-    _ui.interlockFaultIcon->setPixmap(_safetyInterlock() ? _redLED : _greenLED);
-    _ui.revPowerFaultIcon->setPixmap(_reversePowerFault() ? _redLED : _greenLED);
-    _ui.pulseInputFaultIcon->setPixmap(_pulseInputFault() ? _redLED : _greenLED);
-    _ui.hvpsCurrFaultIcon->setPixmap(_hvpsCurrentFault() ? _redLED : _greenLED);
-    _ui.wgPresFaultIcon->setPixmap(_waveguidePressureFault() ? _redLED : _greenLED);
-    _ui.hvpsUnderVFaultIcon->setPixmap(_hvpsUnderVoltage() ? _redLED : _greenLED);
-    _ui.hvpsOverVFaultIcon->setPixmap(_hvpsOverVoltage() ? _redLED : _greenLED);
+    _ui.magCurrFaultIcon->setPixmap(_status.magnetronCurrentFault() ? _redLED : _greenLED);
+    _ui.blowerFaultIcon->setPixmap(_status.blowerFault() ? _redLED : _greenLED);
+    _ui.interlockFaultIcon->setPixmap(_status.safetyInterlock() ? _redLED : _greenLED);
+    _ui.revPowerFaultIcon->setPixmap(_status.reversePowerFault() ? _redLED : _greenLED);
+    _ui.pulseInputFaultIcon->setPixmap(_status.pulseInputFault() ? _redLED : _greenLED);
+    _ui.hvpsCurrFaultIcon->setPixmap(_status.hvpsCurrentFault() ? _redLED : _greenLED);
+    _ui.wgPresFaultIcon->setPixmap(_status.waveguidePressureFault() ? _redLED : _greenLED);
+    _ui.hvpsUnderVFaultIcon->setPixmap(_status.hvpsUnderVoltage() ? _redLED : _greenLED);
+    _ui.hvpsOverVFaultIcon->setPixmap(_status.hvpsOverVoltage() ? _redLED : _greenLED);
     
     // fault counts
-    _ui.magCurrFaultCount->setText(_countLabel(_magnetronCurrentFaultCount()));
-    _ui.blowerFaultCount->setText(_countLabel(_blowerFaultCount()));
-    _ui.interlockFaultCount->setText(_countLabel(_safetyInterlockCount()));
-    _ui.revPowerFaultCount->setText(_countLabel(_reversePowerFaultCount()));
-    _ui.pulseInputFaultCount->setText(_countLabel(_pulseInputFaultCount()));
-    _ui.hvpsCurrFaultCount->setText(_countLabel(_hvpsCurrentFaultCount()));
-    _ui.wgPresFaultCount->setText(_countLabel(_waveguidePressureFaultCount()));
-    _ui.hvpsUnderVFaultCount->setText(_countLabel(_hvpsUnderVoltageCount()));
-    _ui.hvpsOverVFaultCount->setText(_countLabel(_hvpsOverVoltageCount()));
+    _ui.magCurrFaultCount->setText(_countLabel(_status.magnetronCurrentFaultCount()));
+    _ui.blowerFaultCount->setText(_countLabel(_status.blowerFaultCount()));
+    _ui.interlockFaultCount->setText(_countLabel(_status.safetyInterlockCount()));
+    _ui.revPowerFaultCount->setText(_countLabel(_status.reversePowerFaultCount()));
+    _ui.pulseInputFaultCount->setText(_countLabel(_status.pulseInputFaultCount()));
+    _ui.hvpsCurrFaultCount->setText(_countLabel(_status.hvpsCurrentFaultCount()));
+    _ui.wgPresFaultCount->setText(_countLabel(_status.waveguidePressureFaultCount()));
+    _ui.hvpsUnderVFaultCount->setText(_countLabel(_status.hvpsUnderVoltageCount()));
+    _ui.hvpsOverVFaultCount->setText(_countLabel(_status.hvpsOverVoltageCount()));
     
     QString txt;
-    txt.setNum(_autoPulseFaultResets());
+    txt.setNum(_status.autoPulseFaultResets());
     _ui.autoResetCount->setText(txt);
     
     
     // Text displays for voltage, currents, and temperature
-    txt.setNum(_hvpsVoltage(), 'f', 1);
+    txt.setNum(_status.hvpsVoltage(), 'f', 1);
     _ui.hvpsVoltageValue->setText(txt);
     
-    txt.setNum(_magnetronCurrent(), 'f', 1);
+    txt.setNum(_status.magnetronCurrent(), 'f', 1);
     _ui.magCurrentValue->setText(txt);
     
-    txt.setNum(_hvpsCurrent(), 'f', 1);
+    txt.setNum(_status.hvpsCurrent(), 'f', 1);
     _ui.hvpsCurrentValue->setText(txt);
     
-    txt.setNum(_temperature(), 'f', 0);
+    txt.setNum(_status.temperature(), 'f', 0);
     _ui.temperatureValue->setText(txt);
     
     // "unit on" light
-    _ui.unitOnLabel->setPixmap(_unitOn() ? _greenLED : _greenLED_off);
+    _ui.unitOnLabel->setPixmap(_status.unitOn() ? _greenLED : _greenLED_off);
     
     // enable/disable buttons
-    _ui.powerButton->setEnabled(_remoteEnabled());
-    if (_remoteEnabled() && _unitOn()) {
-        _ui.faultResetButton->setEnabled(_faultSummary());
-        if (_faultSummary()) {
+    _ui.powerButton->setEnabled(_status.remoteEnabled());
+    if (_status.remoteEnabled() && _status.unitOn()) {
+        _ui.faultResetButton->setEnabled(_status.faultSummary());
+        if (_status.faultSummary()) {
             _ui.standbyButton->setEnabled(false);
             _ui.operateButton->setEnabled(false);
         } else {
-            _ui.standbyButton->setEnabled(_hvpsRunup() && ! _heaterWarmup());
-            _ui.operateButton->setEnabled(! _hvpsRunup() && ! _heaterWarmup());
+            _ui.standbyButton->setEnabled(_status.hvpsRunup() && ! _status.heaterWarmup());
+            _ui.operateButton->setEnabled(! _status.hvpsRunup() && ! _status.heaterWarmup());
         }
     } else {
         _ui.faultResetButton->setEnabled(false);
@@ -205,51 +168,31 @@ KaXmitCtlMainWindow::_update() {
         _ui.operateButton->setEnabled(false);
     }
     
-    if (_remoteEnabled()) {
+    if (_status.remoteEnabled()) {
         statusBar()->clearMessage();
     } else {
         statusBar()->showMessage("Remote control is currently DISABLED");
     }
 }
 
-bool
-KaXmitCtlMainWindow::_statusBool(std::string key) {
-    if (! _statusDict.hasMember(key)) {
-        ELOG << "Status dictionary does not contain requested key '" << key <<
-            "'!";
-        abort();
-    } else {
-        return(bool(_statusDict[key]));
-    }
-}
-
-int
-KaXmitCtlMainWindow::_statusInt(std::string key) {
-    if (! _statusDict.hasMember(key)) {
-        ELOG << "Status dictionary does not contain requested key '" << key <<
-            "'!";
-        abort();
-    } else {
-        return(int(_statusDict[key]));
-    }
-}
-
-double
-KaXmitCtlMainWindow::_statusDouble(std::string  key) {
-    if (! _statusDict.hasMember(key)) {
-        ELOG << "Status dictionary does not contain requested key '" << key <<
-            "'!";
-        abort();
-    } else {
-        return(double(_statusDict[key]));
-    }
-}
- 
 void
 KaXmitCtlMainWindow::_noDaemon() {
+    // Note lack of daemon connection in the status bar
     std::ostringstream ss;
-    ss << "No connection to ka_xmitd @ " << _xmitterHost << ":" << _xmitterPort;
+    ss << "No connection to ka_xmitd @ " << _xmitClient.getXmitdHost() << ":" <<
+            _xmitClient.getXmitdPort();
     statusBar()->showMessage(ss.str().c_str());
+    // If we've been in contact with a ka_xmitd, log that we lost contact
+    if (_nextLogIndex > 0) {
+        ss.seekp(0); // start over in the ostringstream
+        ss << "Lost contact with ka_xmitd @ " << _xmitClient.getXmitdHost() <<
+                ":" << _xmitClient.getXmitdPort();
+        _logMessage(ss.str());
+    }
+    // If we lose contact with ka_xmitd, reset _nextLogIndex to zero so we
+    // start fresh when we connect again
+    _nextLogIndex = 0;
+    // Disable the UI when we are out of contact
     _disableUi();
 }
 
