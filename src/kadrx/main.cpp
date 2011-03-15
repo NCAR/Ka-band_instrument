@@ -43,6 +43,8 @@ KaMerge* _merge = 0;             ///< The merge object - also IWRF TCP server
 bool _simulate = false;          ///< Set true for simulate mode
 int _simWavelength = 5000;       ///< The simulated data wavelength, in samples
 int _simPauseMs = 20;            ///< The number of milliseconds to pause when reading in simulate mode.
+std::string _xmitdHost("kadrx"); ///< The host on which ka_xmitd is running
+int _xmitdPort = 8080;           ///< The port on which ka_xmitd is listening
 
 bool _terminate = false;         ///< set true to signal the main loop to terminate
 
@@ -73,6 +75,8 @@ void parseOptions(int argc,
 	("simPauseMS",  po::value<int>(&_simPauseMs),  "Simulation pause interval (ms)")
 	("simWavelength", po::value<int>(&_simWavelength), "The simulated data wavelength, in samples")
 	("tsLength", po::value<int>(&_tsLength), "The time series length")
+	("xmitdHost", po::value<std::string>(&_xmitdHost), "Host machine for ka_xmitd")
+	("xmitdPort", po::value<int>(&_xmitdPort), "Port for contacting ka_xmitd")
 			;
 	// If we get an option on the command line with no option name, it
 	// is treated like --drxConfig=<option> was given.
@@ -223,8 +227,9 @@ main(int argc, char** argv)
 
     _merge = new KaMerge(kaConfig);
     
-    // Reference to the singleton KaMonitor is sufficient to start it up...
-    KaMonitor::theMonitor();
+    // Start our status monitoring thread.
+    KaMonitor kaMonitor(_xmitdHost, _xmitdPort);
+    kaMonitor.start();
     
     // Turn off transmitter trigger enable until we know we're generating
     // timing signals (and hence that the T/R limiters are presumably 

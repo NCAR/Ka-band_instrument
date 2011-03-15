@@ -8,9 +8,11 @@
 #include "KaMonitor.h"
 #include "KaPmc730.h"
 
-#include <QThread>
+#include <XmitClient.h>
+
+#include <QDateTime>
 #include <QTimer>
-#include <QMutex>
+#include <QMutexLocker>
 
 #include <iomanip>
 #include <cmath>
@@ -22,8 +24,8 @@
 LOGGING("KaMonitor")
 
 /* 
- * Quinstar QEA crystal detector calibration measurements from 11/04/2010, 
- * input power in dBm vs. output volts.
+ * Quinstar QEA crystal RF power detector calibration measurements from 
+ * 11/04/2010, input power in dBm vs. output volts.
  */
 static const float QEA_Cal[][2] = {
   {-34.72, 2.48E-03},
@@ -79,146 +81,136 @@ static const float QEA_Cal[][2] = {
 };
 static const int QEA_CalLen = (sizeof(QEA_Cal) / (sizeof(*QEA_Cal)));
 
-// Pointer to our singleton instance
-KaMonitor * KaMonitor::_theMonitor = 0;
-
-/// KaMonitorPriv is the private implementation class for KaMonitor, subclassed 
-/// from QThread. The object polls various temperatures and rx video powers 
-/// on a regular (1 Hz) basis, and provides access to the status via XML-RPC
-/// methods.
-class KaMonitorPriv : public QThread {
-public:
-    KaMonitorPriv();
-    
-    ~KaMonitorPriv();
-    
-    void run();
-    
-private:
-    /**
-     * Convert QEA crystal detector voltage to input power (in dBm), based
-     * on a fixed table of calibration measurements.
-     * @param voltage QEA crystal detector output, in V
-     * @return power measured by the QEA crystal detector, in dBm
-     */
-    double _lookupQEAPower(double voltage);
-    /**
-     * Return the temperature, in C, based on temperature sensor voltage.
-     * @param voltage voltage from temperature sensor
-     * @return the temperature, in C
-     */
-    double _voltsToTemp(double voltage) {
-        // Temperature sensor voltage = 0.01 * T(Kelvin)
-        // Convert volts to Kelvin, then to Celsius
-        return((100 * voltage) - 273.15);
-    }
-    /**
-     * Get new values for all of our sensor data
-     */
-    void _getNewValues();
-    /**
-     * Return the average of values in a deque<float>, or -99.9 if the deque
-     * is empty.
-     * @return the average of values in a deque<float>, or -99.9 if the deque
-     *      is empty.
-     */
-    float _dequeAverage(std::deque<float> & list);
-    
-    /// Thread access mutex
-    QMutex _mutex;
-    
-    /// Temperature accessors
-    float _procEnclosureTemp() { return _dequeAverage(_procEnclosureTemps); } // C
-    float _procDrxTemp() { return _dequeAverage(_procDrxTemps); } // C
-    float _txEnclosureTemp() { return _dequeAverage(_txEnclosureTemps); } // C
-    float _rxTopTemp() { return _dequeAverage(_rxTopTemps); } // C
-    float _rxBackTemp() { return _dequeAverage(_rxBackTemps); } // C
-    float _rxFrontTemp() { return _dequeAverage(_rxFrontTemps); } // C
-    
-    /// window size for moving temperature averages
-    static const unsigned int TEMP_AVERAGING_LEN = 20;
-    
-    /// Deques to hold temperature lists
-    std::deque<float> _procEnclosureTemps;
-    std::deque<float> _procDrxTemps;
-    std::deque<float> _txEnclosureTemps;
-    std::deque<float> _rxTopTemps;
-    std::deque<float> _rxBackTemps;
-    std::deque<float> _rxFrontTemps;
-    
-    /// Video power monitors
-    float _hTxPowerVideo;           // H tx pulse power, dBm
-    float _vTxPowerVideo;           // V tx pulse power, dBm
-    float _testTargetPowerVideo;    // test target power, dBm
-    
-    /// 5V power supply
-    float _psVoltage;
-    
-    /// Valid pressure in waveguide outside the transmitter?
-    bool _wgPressureValid;
-
-    /// 100 MHz oscillator OK?
-    bool _100MhzOscLocked;
-
-    /// GPS time server alarm state
-    bool _gpsClockAlarm;
-};
-
-KaMonitor::KaMonitor() {
-    // Instantiate our private thread and start it.
-    _privImpl = new KaMonitorPriv();
-    _privImpl->start();
+KaMonitor::KaMonitor(std::string xmitdHost, int xmitdPort) :
+    QThread(),
+    _mutex(QMutex::Recursive),
+    _xmitClient(xmitdHost, xmitdPort) {
 }
 
 KaMonitor::~KaMonitor() {
-    _privImpl->terminate();
-    if (! _privImpl->wait(5000)) {
-        ELOG << "KaMonitorPriv thread failed to stop in 5 seconds. Exiting anyway.";
+    terminate();
+    if (! wait(5000)) {
+        ELOG << "KaMonitor thread failed to stop in 5 seconds. Exiting anyway.";
     }
 }
 
-KaMonitorPriv::KaMonitorPriv() :
-    QThread(),
-    _mutex(QMutex::Recursive) {
+float
+KaMonitor::procEnclosureTemp() const {
+    QMutexLocker locker(&_mutex);
+    return _dequeAverage(_procEnclosureTemps);
 }
 
-KaMonitorPriv::~KaMonitorPriv() {
+float
+KaMonitor::procDrxTemp() const {
+    QMutexLocker locker(&_mutex);
+    return _dequeAverage(_procDrxTemps);
+}
+
+float
+KaMonitor::txEnclosureTemp() const {
+    QMutexLocker locker(&_mutex);
+    return _dequeAverage(_txEnclosureTemps);
+}
+
+float
+KaMonitor::rxTopTemp() const {
+    QMutexLocker locker(&_mutex);
+    return _dequeAverage(_rxTopTemps);
+}
+
+float
+KaMonitor::rxBackTemp() const {
+    QMutexLocker locker(&_mutex);
+    return _dequeAverage(_rxBackTemps);
+}
+
+float
+KaMonitor::rxFrontTemp() const {
+    QMutexLocker locker(&_mutex);
+    return _dequeAverage(_rxFrontTemps);
+}
+
+float
+KaMonitor::hTxPowerVideo() const {
+    QMutexLocker locker(&_mutex);
+    return _hTxPowerVideo;
+}
+
+float
+KaMonitor::vTxPowerVideo() const {
+    QMutexLocker locker(&_mutex);
+    return _vTxPowerVideo;
+}
+
+float
+KaMonitor::testTargetPowerVideo() const {
+    QMutexLocker locker(&_mutex);
+    return _testTargetPowerVideo;
+}
+
+float
+KaMonitor::psVoltage() const {
+    QMutexLocker locker(&_mutex);
+    return _psVoltage;
+}
+
+bool
+KaMonitor::wgPressureGood() const {
+    QMutexLocker locker(&_mutex);
+    return _wgPressureGood;
+}
+
+bool
+KaMonitor::locked100MHz() const {
+    QMutexLocker locker(&_mutex);
+    return _locked100MHz;
+}
+
+bool
+KaMonitor::gpsTimeServerGood() const {
+    QMutexLocker locker(&_mutex);
+    return _gpsTimeServerGood;
+}
+
+XmitClient::XmitStatus
+KaMonitor::transmitterStatus() const {
+    QMutexLocker locker(&_mutex);
+    return _xmitStatus;
 }
 
 void
-KaMonitorPriv::run() {
+KaMonitor::run() {
+    QDateTime lastUpdateTime(QDateTime::fromTime_t(0));
+    
     // Since we have no event loop, allow thread termination via the terminate()
     // method.
     setTerminationEnabled(true);
   
     while (true) {
-        _getNewValues();
-        DLOG << std::fixed << std::setprecision(1) <<
-            "TT: " << _testTargetPowerVideo << " dBm, " <<
-            "V: " << _vTxPowerVideo << " dBm, " <<
-            "H: " << _hTxPowerVideo << " dBm";
-        DLOG << std::fixed << std::setprecision(1) << 
-            "rx front: " << _rxFrontTemp() <<  " C, " << 
-            "back: " << _rxBackTemp() << " C, " << 
-            "top: " << _rxTopTemp() << " C";
-        DLOG << std::fixed << std::setprecision(1) << 
-            "tx enclosure: " << _txEnclosureTemp() << " C";
-        DLOG << std::fixed << std::setprecision(1) << 
-            "proc enclosure: " << _procEnclosureTemp() << " C, " << 
-            "drx: " << _procDrxTemp() << " C";
-        DLOG << std::fixed << std::setprecision(2) << 
-            "5V PS: " << _psVoltage << " V";
-        DLOG << "wg pressure valid: " << (_wgPressureValid ? "true" : "false");
-        DLOG << "100 MHz oscillator locked: " << (_100MhzOscLocked ? "true" : "false");
-        DLOG << "GPS time server alarm: " << (_gpsClockAlarm ? "true" : "false");
-        usleep(1000000); // 1 s
+        // Sleep if necessary to get ~1 second between updates
+        QDateTime now = QDateTime::currentDateTime().toUTC();
+        int msecsSinceUpdate = lastUpdateTime.daysTo(now) * 1000 * 86400 +
+                lastUpdateTime.time().msecsTo(now.time());
+        if (msecsSinceUpdate < 1000) {
+            usleep((1000 - msecsSinceUpdate) * 1000);
+        }
+        
+        // Get new values from the multi-IO card and from ka_xmitd
+        _getMultiIoValues();
+        
+        // Get transmitter status.
+        _getXmitStatus();
+        
+        lastUpdateTime = QDateTime::currentDateTime().toUTC();
     }
 }
 
 void
-KaMonitorPriv::_getNewValues() {
+KaMonitor::_getMultiIoValues() {
+    QMutexLocker locker(&_mutex);
+
     KaPmc730 & pmc730 = KaPmc730::theKaPmc730();
-    // We get our data from analog channels 0-9 on the PMC-730 multi-IO card
+    // Get data from analog channels 0-9 on the PMC-730 multi-IO card
     std::vector<float> analogData = pmc730.readAnalogChannels(0, 9);
     // Channels 0-2 give us RF power measurements
     _testTargetPowerVideo = _lookupQEAPower(analogData[0]);
@@ -243,17 +235,52 @@ KaMonitorPriv::_getNewValues() {
     }
     // Channel 9 gives us the voltage read from our 5V power supply
     _psVoltage = analogData[9];
+    
     // We read the "waveguide pressure valid" signal from DIO line 5
-    _wgPressureValid = pmc730.wgPressureValid();
+    _wgPressureGood = pmc730.wgPressureValid();
+    
     // Get the 100 MHz oscillator locked signal from DIO line 6
     // (Things are OK when this line is high)
-    _100MhzOscLocked = pmc730.oscillator100MhzLocked();
+    _locked100MHz = pmc730.oscillator100MhzLocked();
+    
     // Get the GPS time server alarm state
-    _gpsClockAlarm = pmc730.gpsClockAlarm();
+    _gpsTimeServerGood = ! pmc730.gpsClockAlarm();
+
+    DLOG << std::fixed << std::setprecision(1) <<
+        "TT: " << _testTargetPowerVideo << " dBm, " <<
+        "V: " << _vTxPowerVideo << " dBm, " <<
+        "H: " << _hTxPowerVideo << " dBm";
+    DLOG << std::fixed << std::setprecision(1) << 
+        "rx front: " << rxFrontTemp() <<  " C, " << 
+        "back: " << rxBackTemp() << " C, " << 
+        "top: " << rxTopTemp() << " C";
+    DLOG << std::fixed << std::setprecision(1) << 
+        "tx enclosure: " << txEnclosureTemp() << " C";
+    DLOG << std::fixed << std::setprecision(1) << 
+        "proc enclosure: " << procEnclosureTemp() << " C, " << 
+        "drx: " << procDrxTemp() << " C";
+    DLOG << std::fixed << std::setprecision(2) << 
+        "5V PS: " << _psVoltage << " V";
+    DLOG << "wg pressure OK: " << (_wgPressureGood ? "true" : "false");
+    DLOG << "100 MHz oscillator locked: " << (_locked100MHz ? "true" : "false");
+    DLOG << "GPS time server OK: " << (_gpsTimeServerGood ? "true" : "false");
+}
+
+void
+KaMonitor::_getXmitStatus() {
+    // Get the status first (which may take a little while under some 
+    // circumstances), then get the mutex and set our member variable. This 
+    // way, we don't have the mutex locked very long at all....
+    XmitClient::XmitStatus xmitStatus;
+    _xmitClient.getStatus(xmitStatus);
+    
+    _mutex.lock();
+    _xmitStatus = xmitStatus;
+    _mutex.unlock();
 }
 
 double
-KaMonitorPriv::_lookupQEAPower(double voltage) {
+KaMonitor::_lookupQEAPower(double voltage) {
     // If we're below the lowest voltage in the cal table, just return the
     // lowest power in the cal table.
     if (voltage < QEA_Cal[0][1]) {
@@ -288,13 +315,13 @@ KaMonitorPriv::_lookupQEAPower(double voltage) {
 }
 
 float
-KaMonitorPriv::_dequeAverage(std::deque<float> & list) {
+KaMonitor::_dequeAverage(const std::deque<float> & list) {
     unsigned int nPoints = list.size();
     if (nPoints == 0)
         return(-99.9);
         
     float sum = 0.0;
     for (unsigned int i = 0; i < nPoints; i++)
-        sum += list[i];
+        sum += list.at(i);
     return(sum / nPoints); 
 }
