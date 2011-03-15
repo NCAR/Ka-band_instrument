@@ -10,14 +10,13 @@
 #include <deque>
 #include <ctime>
 
-#include <XmlRpc.h>
-
 #include <QMainWindow>
 #include <QPixmap>
 #include <QTimer>
 
+#include <XmitClient.h>
+
 #include "ui_KaXmitCtlMainWindow.h"
-#include "XmitClient.h"
 
 class KaXmitCtlMainWindow : public QMainWindow {
     Q_OBJECT
@@ -61,13 +60,10 @@ private:
 
     Ui::KaXmitCtlMainWindow _ui;
     XmitClient _xmitClient;
-//    std::string _xmitterHost;
-//    int _xmitterPort;
     QTimer _updateTimer;
     QPixmap _redLED;
     QPixmap _greenLED;
     QPixmap _greenLED_off;
-//    XmlRpc::XmlRpcClient _xmlrpcClient;
     // Last status read
     XmitClient::XmitStatus _status;
     

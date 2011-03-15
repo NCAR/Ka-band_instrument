@@ -5,7 +5,6 @@
  *      Author: burghart
  */
 #include "KaXmitCtlMainWindow.h"
-#include "XmitClient.h"
 
 #include <sstream>
 #include <unistd.h>
