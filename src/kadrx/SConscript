@@ -10,6 +10,7 @@ doxygen
 qt4
 pmc730
 rapradar
+xmitclient
 """)
 
 sources = Split("""
