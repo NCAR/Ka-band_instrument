@@ -90,7 +90,7 @@ logx::RecentHistoryAppender RecentLogHistory("RecentHistoryAppender", 50);
 ///   <tr>
 ///     <td>heater_warmup</td>
 ///     <td>bool</td>
-///     <td>heater 3-minute warmup is in progress</td>
+///     <td>heater 30-minute warmup is in progress</td>
 ///   </tr>
 ///   <tr>
 ///     <td>cooldown</td>
