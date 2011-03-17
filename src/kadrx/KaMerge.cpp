@@ -22,9 +22,10 @@ static const ptime Epoch1970(boost::gregorian::date(1970, 1, 1),
 
 ///////////////////////////////////////////////////////////////////////////
 
-KaMerge::KaMerge(const KaDrxConfig& config) :
+KaMerge::KaMerge(const KaDrxConfig& config, const KaMonitor& kaMonitor) :
         QThread(),
-        _config(config)
+        _config(config),
+        _kaMonitor(kaMonitor)
 {
 
   // initialize
@@ -236,7 +237,12 @@ KaMerge::~KaMerge()
 void KaMerge::run()
 
 {
-
+  // Time of the last status packet we generated
+  time_t lastStatusTime = 0;
+  
+  // Interval between generating status packets, in seconds
+  const int StatusInterval = 2;
+  
   // Since we have no event loop,
   // allow thread termination via the terminate() method.
 
@@ -293,6 +299,15 @@ void KaMerge::run()
     // send out the IWRF pulse packet
     
     _sendIwrfPulsePacket();
+    
+    // If it's been long enough since our last status packet, generate a new
+    // one now.
+    time_t now = time(0);
+    if ((now - lastStatusTime) >= StatusInterval) {
+        _assembleStatusPacket();
+        _sendStatusPacket();
+        lastStatusTime = now;
+    }
     
   } // while
 
@@ -811,6 +826,20 @@ void KaMerge::_allocBurstBuf()
 
   memset(_burstIq, 0, _nSamplesBurst * 2 * sizeof(int16_t));
 
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// assemble IWRF status packet
+
+void KaMerge::_assembleStatusPacket() {
+    // @TODO fill this in!
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// send out the IWRF status packet
+
+void KaMerge::_sendStatusPacket() {
+    // @TODO fill this in!
 }
 
 //////////////////////////////////////////////////

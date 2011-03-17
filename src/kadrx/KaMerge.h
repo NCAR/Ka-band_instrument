@@ -5,6 +5,7 @@
 #include "CircBuffer.h"
 #include "PulseData.h"
 #include "BurstData.h"
+#include "KaMonitor.h"
 #include <radar/iwrf_data.h>
 #include <toolsa/ServerSocket.hh>
 #include <QThread>
@@ -37,10 +38,11 @@ public:
   /**
    * Constructor.
    * @param config KaDrxConfig defining the desired configuration.
-   * @param publish should we publish data via DDS?
+   * @param kaMonitor reference to a KaMonitor thread which will be the source
+   * of Ka-band status information
    */
 
-    KaMerge(const KaDrxConfig& config);
+    KaMerge(const KaDrxConfig& config, const KaMonitor& kaMonitor);
   
   /// Destructor
 
@@ -75,6 +77,9 @@ private:
   /// configuration
 
   const KaDrxConfig &_config;
+  
+  /// KaMonitor which will supply Ka-band status information
+  const KaMonitor &_kaMonitor;
 
   /// The queue size - for buffering IQ data
 
@@ -180,6 +185,9 @@ private:
   void _assembleIwrfBurstPacket();
   void _sendIwrfBurstPacket();
   void _allocBurstBuf();
+  
+  void _assembleStatusPacket();
+  void _sendStatusPacket();
   
   int _openServer();
   int _openSocketToClient();

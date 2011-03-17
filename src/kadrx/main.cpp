@@ -223,13 +223,12 @@ main(int argc, char** argv)
 
     signal(SIGPIPE, SIG_IGN);
 
-    // create the merge object
-
-    _merge = new KaMerge(kaConfig);
-    
     // Start our status monitoring thread.
     KaMonitor kaMonitor(_xmitdHost, _xmitdPort);
     kaMonitor.start();
+
+    // create the merge object
+    _merge = new KaMerge(kaConfig, kaMonitor);
     
     // Turn off transmitter trigger enable until we know we're generating
     // timing signals (and hence that the T/R limiters are presumably 
