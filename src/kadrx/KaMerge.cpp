@@ -9,6 +9,7 @@
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <radar/iwrf_functions.hh>
 #include <toolsa/pmu.h>
+#include <toolsa/TaXml.hh>
 
 using namespace boost::posix_time;
 using namespace std;
@@ -62,6 +63,11 @@ KaMerge::KaMerge(const KaDrxConfig& config, const KaMonitor& kaMonitor) :
   _burstIq = NULL;
   _burstBuf = NULL;
   _burstBufLen = 0;
+
+  // status xml
+
+  _statusBuf = NULL;
+  _statusBufLen = 0;
 
   // I and Q count scaling factor to get power in mW easily:
   // mW = (I_count / _iqScaleForMw)^2 + (Q_count / _iqScaleForMw)^2
@@ -305,7 +311,7 @@ void KaMerge::run()
     time_t now = time(0);
     if ((now - lastStatusTime) >= StatusInterval) {
         _assembleStatusPacket();
-        _sendStatusPacket();
+        _sendIwrfStatusXmlPacket();
         lastStatusTime = now;
     }
     
@@ -831,15 +837,200 @@ void KaMerge::_allocBurstBuf()
 /////////////////////////////////////////////////////////////////////////////
 // assemble IWRF status packet
 
-void KaMerge::_assembleStatusPacket() {
-    // @TODO fill this in!
+void KaMerge::_assembleStatusPacket()
+
+{
+
+  // assemble the xml
+
+  string xmlStr = _assembleStatusXml();
+  int xmlLen = xmlStr.size() + 1; // null terminated
+
+  // allocate buffer
+
+  _allocStatusBuf(xmlLen);
+
+  // set header
+
+  iwrf_status_xml_t hdr;
+  iwrf_status_xml_init(hdr);
+  hdr.xml_len = xmlLen;
+
+  // copy data into buffer
+
+  memcpy(_statusBuf, &hdr, sizeof(iwrf_status_xml_t));
+  memcpy(_statusBuf + sizeof(iwrf_status_xml_t), xmlStr.c_str(), xmlLen);
+
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// assemble status XML
+// returns the XML string
+
+string KaMerge::_assembleStatusXml()
+
+{
+
+  string xml;
+
+  // main block
+
+  xml += TaXml::writeStartTag("KaStatus", 0);
+
+  // transmit block
+  
+  xml += TaXml::writeStartTag("KaTransmitterStatus", 1);
+
+  const XmitClient::XmitStatus &xs = _kaMonitor.transmitterStatus();
+
+  xml += TaXml::writeBoolean
+    ("SerialConnected", 2, xs.serialConnected());
+  xml += TaXml::writeBoolean
+    ("FaultSummary", 2, xs.faultSummary());
+  xml += TaXml::writeBoolean
+    ("HvpsRunup", 2, xs.hvpsRunup());
+  xml += TaXml::writeBoolean
+    ("Standby", 2, xs.standby());
+  xml += TaXml::writeBoolean
+    ("HeaterWarmup", 2, xs.heaterWarmup());
+  xml += TaXml::writeBoolean
+    ("Cooldown", 2, xs.cooldown());
+  xml += TaXml::writeBoolean
+    ("UnitOn", 2, xs.unitOn());
+  xml += TaXml::writeBoolean
+    ("MagnetronCurrentFault", 2, xs.magnetronCurrentFault());
+  xml += TaXml::writeBoolean
+    ("BlowerFault", 2, xs.blowerFault());
+  xml += TaXml::writeBoolean
+    ("HvpsOn", 2, xs.hvpsOn());
+  xml += TaXml::writeBoolean
+    ("RemoteEnabled", 2, xs.remoteEnabled());
+  xml += TaXml::writeBoolean
+    ("SafetyInterlock", 2, xs.safetyInterlock());
+  xml += TaXml::writeBoolean
+    ("ReversePowerFault", 2, xs.reversePowerFault());
+  xml += TaXml::writeBoolean
+    ("PulseInputFault", 2, xs.pulseInputFault());
+  xml += TaXml::writeBoolean
+    ("HvpsCurrentFault", 2, xs.hvpsCurrentFault());
+  xml += TaXml::writeBoolean
+    ("WaveguidePressureFault", 2, xs.waveguidePressureFault
+     ());
+  xml += TaXml::writeBoolean
+    ("HvpsUnderVoltage", 2, xs.hvpsUnderVoltage());
+  xml += TaXml::writeBoolean
+    ("HvpsOverVoltage", 2, xs.hvpsOverVoltage());
+  
+  xml += TaXml::writeBoolean
+    ("HvpsVoltage", 2, xs.hvpsVoltage());
+  xml += TaXml::writeBoolean
+    ("MagnetronCurrent", 2, xs.magnetronCurrent());
+  xml += TaXml::writeBoolean
+    ("HvpsCurrent", 2, xs.hvpsCurrent());
+  xml += TaXml::writeBoolean
+    ("Temperature", 2, xs.temperature());
+  
+  xml += TaXml::writeInt
+    ("MagnetronCurrentFaultCount", 2, xs.magnetronCurrentFaultCount());
+  xml += TaXml::writeInt
+    ("BlowerFaultCount", 2, xs.blowerFaultCount());
+  xml += TaXml::writeInt
+    ("SafetyInterlockCount", 2, xs.safetyInterlockCount());
+  xml += TaXml::writeInt
+    ("ReversePowerFaultCount", 2, xs.reversePowerFaultCount());
+  xml += TaXml::writeInt
+    ("PulseInputFaultCount", 2, xs.pulseInputFaultCount());
+  xml += TaXml::writeInt
+    ("HvpsCurrentFaultCount", 2, xs.hvpsCurrentFaultCount());
+  xml += TaXml::writeInt
+    ("WaveguidePressureFaultCount", 2, xs.waveguidePressureFaultCount());
+  xml += TaXml::writeInt
+    ("HvpsUnderVoltageCount", 2, xs.hvpsUnderVoltageCount());
+  xml += TaXml::writeInt
+    ("HvpsOverVoltageCount", 2, xs.hvpsOverVoltageCount());
+  xml += TaXml::writeInt
+    ("AutoPulseFaultResets", 2, xs.autoPulseFaultResets());
+
+  xml += TaXml::writeEndTag("KaTransmitterStatus", 1);
+
+  // receive block
+
+  const KaMonitor &km = _kaMonitor;
+
+  xml += TaXml::writeStartTag("KaReceiverStatus", 1);
+
+  xml += TaXml::writeDouble
+    ("ProcEnclosureTemp", 2, km.procEnclosureTemp());
+  xml += TaXml::writeDouble
+    ("ProcDrxTemp", 2, km.procDrxTemp());
+  xml += TaXml::writeDouble
+    ("TxEnclosureTemp", 2, km.txEnclosureTemp());
+  xml += TaXml::writeDouble
+    ("RxTopTemp", 2, km.rxTopTemp());
+  xml += TaXml::writeDouble
+    ("RxBackTemp", 2, km.rxBackTemp());
+  xml += TaXml::writeDouble
+    ("RxFrontTemp", 2, km.rxFrontTemp());
+  xml += TaXml::writeDouble
+    ("HTxPowerVideo", 2, km.hTxPowerVideo());
+  xml += TaXml::writeDouble
+    ("VTxPowerVideo", 2, km.vTxPowerVideo());
+  xml += TaXml::writeDouble
+    ("TestTargetPowerVideo", 2, km.testTargetPowerVideo());
+  xml += TaXml::writeDouble
+    ("PsVoltage", 2, km.psVoltage());
+  
+  xml += TaXml::writeBoolean
+    ("WgPressureGood", 2, km.wgPressureGood());
+  xml += TaXml::writeBoolean
+    ("Locked100MHz", 2, km.locked100MHz());
+  xml += TaXml::writeBoolean
+    ("GpsTimeServerGood", 2, km.gpsTimeServerGood());
+  
+  xml += TaXml::writeEndTag("KaReceiverStatus", 1);
+
+  xml += TaXml::writeEndTag("KaStatus", 0);
+
+  return xml;
+
 }
 
 /////////////////////////////////////////////////////////////////////////////
 // send out the IWRF status packet
 
-void KaMerge::_sendStatusPacket() {
-    // @TODO fill this in!
+void KaMerge::_sendIwrfStatusXmlPacket()
+
+{
+
+  // check that socket to client is open
+
+  if (_openSocketToClient()) {
+    return;
+  }
+  
+  if (_sock->writeBuffer(_statusBuf, _statusBufLen)) {
+    cerr << "ERROR - KaMerge::_sendIwrfStatusXmlPacket()" << endl;
+    cerr << "  Writing status xml packet" << endl;
+    cerr << "  " << _sock->getErrStr() << endl;
+    _closeSocketToClient();
+    return;
+  }
+
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// allocate status buffer
+
+void KaMerge::_allocStatusBuf(size_t xmlLen)
+{
+  int nBytesNeeded = xmlLen + sizeof(iwrf_status_xml);
+  if (nBytesNeeded > _statusBufLen) {
+    if (_statusBuf) {
+      delete[] _statusBuf;
+    }
+    _statusBuf = new char[nBytesNeeded];
+    _statusBufLen = nBytesNeeded;
+  }
 }
 
 //////////////////////////////////////////////////

@@ -122,6 +122,11 @@ private:
   int _burstBufLen;
   double _burstSampleFreqHz;
 
+  /// Status XML
+
+  char *_statusBuf;
+  int _statusBufLen;
+
   /// pulse sequence number and times
   
   int64_t _pulseSeqNum;
@@ -187,7 +192,9 @@ private:
   void _allocBurstBuf();
   
   void _assembleStatusPacket();
-  void _sendStatusPacket();
+  string _assembleStatusXml();
+  void _sendIwrfStatusXmlPacket();
+  void _allocStatusBuf(size_t xmlLen);
   
   int _openServer();
   int _openSocketToClient();
