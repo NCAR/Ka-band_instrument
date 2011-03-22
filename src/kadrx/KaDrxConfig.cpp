@@ -104,6 +104,8 @@ std::set<std::string> KaDrxConfig::_createBoolLegalKeys() {
     keys.insert("combine_every_second_gate");
     keys.insert("simulate_antenna_angles");
     keys.insert("write_pei_files");
+    keys.insert("simulate_pmc730");
+    keys.insert("simulate_tty_oscillators");
     return keys;
 }
 
@@ -429,6 +431,16 @@ KaDrxConfig::isValid(bool verbose) const {
     if (max_pei_gates() == UNSET_INT) {
         if (verbose)
             std::cerr << "'max_pei_gates' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (simulate_pmc730() == UNSET_BOOL) {
+        if (verbose)
+            std::cerr << "'simulate_pmc730' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (simulate_tty_oscillators() == UNSET_BOOL) {
+        if (verbose)
+            std::cerr << "'simulate_tty_oscillators' unset in DRX configuration" << std::endl;
         valid = false;
     }
     return valid;

@@ -82,13 +82,13 @@ void parseOptions(int argc,
 	// is treated like --drxConfig=<option> was given.
 	po::positional_options_description pd;
 	pd.add("drxConfig", 1);
-	
+
 	po::variables_map vm;
 	po::store(po:: command_line_parser(argc, argv).options(descripts).positional(pd).run(), vm);
 	po::notify(vm);
 
 	if (vm.count("help")) {
-		std::cout << "Usage: " << argv[0] << 
+		std::cout << "Usage: " << argv[0] <<
 			" [OPTION]... [--drxConfig] <configFile>" << std::endl;
 		std::cout << descripts << std::endl;
 		exit(0);
@@ -133,7 +133,7 @@ double nowTime()
 }
 
 ///////////////////////////////////////////////////////////
-void startUpConverter(Pentek::p7142Up& upConverter, 
+void startUpConverter(Pentek::p7142Up& upConverter,
         unsigned int pulsewidth_counts) {
 
 	// create the signal
@@ -159,13 +159,13 @@ void
 verifyTimersAndEnableTx() {
     if (_simulate)
         return;
-    // Wait until we see at least countThreshold pulse counts before we 
+    // Wait until we see at least countThreshold pulse counts before we
     // enable the transmitter
     const uint32_t CountThreshold = 50;
     // Loop time and max # of loops to see our threshold number of counts
     const float LoopTime = 0.05;    // seconds
     const int MaxTries = 100;
-    
+
     uint32_t initialCount = 0;
     uint32_t pulsesSeen = 0;
     // Loop until we get CountThreshold pulses
@@ -180,7 +180,7 @@ verifyTimersAndEnableTx() {
         }
         usleep(useconds_t(1000000 * LoopTime));
     }
-    ILOG << "Saw " << pulsesSeen << " timer pulses in " << i * LoopTime << 
+    ILOG << "Saw " << pulsesSeen << " timer pulses in " << i * LoopTime <<
         " seconds";
     if (i == MaxTries) {
         ELOG << "Pentek timers don't seem to be running...";
@@ -197,19 +197,18 @@ main(int argc, char** argv)
 {
 	// try to change scheduling to real-time
 	makeRealTime();
-    
+
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
-    
+
 	// parse the command line options
 	parseOptions(argc, argv);
 
-        // set up registration with procmap if instance is specified
-        if (_instance.size() > 0) {
-          PMU_auto_init("kadrx", _instance.c_str(),
-                        PROCMAP_REGISTER_INTERVAL);
-          ILOG << "will register with procmap, instance: " << _instance;
-        }
+	// set up registration with procmap if instance is specified
+	if (_instance.size() > 0) {
+		PMU_auto_init("kadrx", _instance.c_str(), PROCMAP_REGISTER_INTERVAL);
+		ILOG << "will register with procmap, instance: " << _instance;
+	}
 
 	// Read the KA configuration file
     KaDrxConfig kaConfig(_drxConfig);
@@ -217,6 +216,9 @@ main(int argc, char** argv)
         ELOG << "Exiting on incomplete configuration!";
         exit(1);
     }
+
+    // Make sure our KaPmc730 is created in simulation mode if requested
+    KaPmc730::doSimulate(kaConfig.simulate_pmc730());
 
     // set to ignore SIGPIPE errors which occur when sockets
     // are broken between client and server
@@ -229,72 +231,68 @@ main(int argc, char** argv)
 
     // create the merge object
     _merge = new KaMerge(kaConfig, kaMonitor);
-    
+
     // Turn off transmitter trigger enable until we know we're generating
-    // timing signals (and hence that the T/R limiters are presumably 
+    // timing signals (and hence that the T/R limiters are presumably
     // operating).
     PMU_auto_register("trigger enable");
     KaPmc730::setTxTriggerEnable(false);
-    
+
     // Instantiate our p7142sd3c
     PMU_auto_register("pentek initialize");
     Pentek::p7142sd3c sd3c(_devRoot, _simulate, kaConfig.tx_delay(),
         kaConfig.tx_pulse_width(), kaConfig.prt1(), kaConfig.prt2(),
         kaConfig.staggered_prt(), kaConfig.gates(), 1, false,
         Pentek::p7142sd3c::DDC10DECIMATE, kaConfig.external_start_trigger());
-    
+
     // Use SD3C's general purpose timer 0 (timer 3) for transmit pulse modulation
     PMU_auto_register("timers enable");
     sd3c.setGPTimer0(kaConfig.tx_pulse_mod_delay(), kaConfig.tx_pulse_mod_width());
-    
+
     // Use SD3C's general purpose timer 1 (timer 5) for test target pulse.
     sd3c.setGPTimer1(kaConfig.test_target_delay(), kaConfig.test_target_width());
-    
+
     // Use SD3C's general purpose timer 2 (timer 6) for T/R LIMITER trigger.
     // It must be *low* from T0 to 500 ns after the transmit pulse ends, and
     // high for the rest of the PRT.
-    double trLimiterWidth = kaConfig.tx_pulse_mod_delay() + 
+    double trLimiterWidth = kaConfig.tx_pulse_mod_delay() +
         kaConfig.tx_pulse_mod_width() + 7.0e-7;
     sd3c.setGPTimer2(0.0, trLimiterWidth, true);
-    
+
     // Use SD3C's general purpose timer 3 (timer 7) for PIN SW trigger.
     // This signal is the inverse of the T/R LIMITER signal above.
     sd3c.setGPTimer3(0.0, trLimiterWidth, false);
-    
+
 	// Create (but don't yet start) the downconversion threads.
-    
+
     // H channel (0)
     PMU_auto_register("set up threads");
     KaDrxPub hThread(sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, _merge,
-        _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength); 
+        _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength);
 
     // V channel (1)
     KaDrxPub vThread(sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, _merge,
-        _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength); 
+        _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength);
 
     // Burst channel (2)
     KaDrxPub burstThread(sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig, _merge,
-        _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength); 
+        _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength);
 
     // Create the upConverter.
     // Configure the DAC to use CMIX by fDAC/4 (coarse mixer mode = 9)
     PMU_auto_register("create upconverter");
-    Pentek::p7142Up & upConverter = *sd3c.addUpconverter("0C", 
-        sd3c.adcFrequency(), sd3c.adcFrequency() / 4, 9); 
+    Pentek::p7142Up & upConverter = *sd3c.addUpconverter("0C",
+        sd3c.adcFrequency(), sd3c.adcFrequency() / 4, 9);
 
-    // Set up oscillator control from the configuration. (The first reference 
-    // to theControl() is what actually starts the oscillator control thread.)
+    // Set up oscillator control/AFC
     PMU_auto_register("oscillator control");
-    KaOscControl & oscControl = KaOscControl::theControl();
-    if (kaConfig.afc_enabled()) {
-        oscControl.setG0ThresholdDbm(kaConfig.afc_g0_threshold_dbm());
-        oscControl.setCoarseStep(kaConfig.afc_coarse_step());
-        oscControl.setFineStep(kaConfig.afc_fine_step());
-        oscControl.setMaxDataLatency(burstThread.downconverter()->dataInterruptPeriod());
-    } else {
+    KaOscControl::createTheControl(kaConfig, 
+            burstThread.downconverter()->dataInterruptPeriod());
+    
+    if (! kaConfig.afc_enabled()) {
         WLOG << "AFC is disabled!";
     }
-    
+
     // catch a SIGINT (from control-C) or SIGTERM (the default from 'kill')
     signal(SIGINT, sigHandler);
     signal(SIGTERM, sigHandler);
@@ -321,7 +319,7 @@ main(int argc, char** argv)
     PMU_auto_register("start filters");
     sd3c.startFilters();
 
-    // Load the DAC memory bank 2, clear the DACM fifo, and enable the 
+    // Load the DAC memory bank 2, clear the DACM fifo, and enable the
     // DAC memory counters. This must take place before the timers are started.
     PMU_auto_register("start upconverter");
     startUpConverter(upConverter, sd3c.txPulseWidthCounts());
@@ -332,7 +330,7 @@ main(int argc, char** argv)
 
     // Start the timers, which will allow data to flow.
     sd3c.timersStartStop(true);
-    
+
     // Verify that timers have started, by seeing that we have TX sync pulses
     // being generated, then raise the TX enable line.
     verifyTimersAndEnableTx();
@@ -353,34 +351,34 @@ main(int argc, char** argv)
 		double currentTime = nowTime();
 		double elapsed = currentTime - startTime;
 		startTime = currentTime;
-        
-        ILOG << std::setprecision(3) << std::setw(5) << "H channel " << 
+
+        ILOG << std::setprecision(3) << std::setw(5) << "H channel " <<
                 hThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
                 " MB/s  ovr: " << hThread.downconverter()->overUnderCount() <<
                 " drop: " << hThread.downconverter()->droppedPulses() <<
                 " sync errs: " << hThread.downconverter()->syncErrors();
-        
-        ILOG << std::setprecision(3) << std::setw(5) << "V channel " << 
+
+        ILOG << std::setprecision(3) << std::setw(5) << "V channel " <<
                 vThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
                 " MB/s  ovr: " << vThread.downconverter()->overUnderCount() <<
                 " drop: " << vThread.downconverter()->droppedPulses() <<
                 " sync errs: " << vThread.downconverter()->syncErrors();
-        
-        ILOG << std::setprecision(3) << std::setw(5) << "burst channel " << 
+
+        ILOG << std::setprecision(3) << std::setw(5) << "burst channel " <<
                 burstThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
                 " MB/s  ovr: " << burstThread.downconverter()->overUnderCount() <<
                 " drop: " << burstThread.downconverter()->droppedPulses() <<
                 " sync errs: " << burstThread.downconverter()->syncErrors();
 	}
-    
+
     // Turn off transmitter trigger enable
     KaPmc730::setTxTriggerEnable(false);
-    
+
     // Stop the downconverter threads.
     hThread.terminate();
     vThread.terminate();
     burstThread.terminate();
-    
+
     // Wait for threads' termination (up to 1 second for each)
     hThread.wait(1000);
     vThread.wait(1000);
@@ -388,7 +386,7 @@ main(int argc, char** argv)
 
     // stop the DAC
     upConverter.stopDAC();
-    
+
     // stop the timers
     sd3c.timersStartStop(false);
 

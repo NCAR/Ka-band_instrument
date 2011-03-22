@@ -239,6 +239,16 @@ public:
     double sim_az_rate() const {
       return _getDoubleVal("sim_az_rate"); /// deg/s
     }
+    
+    // Simulate existence of the PMC-730 multi-IO card?
+    int simulate_pmc730() const {
+    	return _getBoolVal("simulate_pmc730");
+    }
+
+    // Simulate the TTY oscillators (oscillators 0, 1, and 2)?
+    int simulate_tty_oscillators() const {
+    	return _getBoolVal("simulate_tty_oscillators");
+    }
 
     /**
      * Validate that all metadata values required for product generation 

@@ -14,11 +14,9 @@
 
 LOGGING("KaOscillator3");
 
-KaPmc730 & KaOscillator3::SIM_KAPMC730 = *(KaPmc730*)0;
-
-KaOscillator3::KaOscillator3(KaPmc730 & kaPmc730, bool testReadback) :
-    _kaPmc730(kaPmc730),
-    _testReadback(testReadback && ! _pmcSimulated()),
+KaOscillator3::KaOscillator3(bool testReadback) :
+    _kaPmc730(KaPmc730::theKaPmc730()),
+    _testReadback(testReadback && ! _kaPmc730.simulating()),
     _nDivider(0),
     _rDivider(0),
     _lastCommandSent(0) {

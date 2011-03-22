@@ -32,7 +32,11 @@ KaOscControl * KaOscControl::_theControl = 0;
 /// programmable oscillators it controls.
 class KaOscControlPriv : public QThread {
 public:
-    KaOscControlPriv();
+    /// Instantiate
+    /// @param config the KaDrxConfig in use, which will provide AFC parameters
+    /// @param maxDataLatency maximum data latency time expected for burst data,
+    ///     in seconds
+    KaOscControlPriv(const KaDrxConfig & config, double maxDataLatency);
     
     ~KaOscControlPriv();
     
@@ -47,24 +51,6 @@ public:
     /// @param pulseSeqNum pulse number, counted since transmitter startup
     void newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqNum);
     
-    /// Set the G0 threshold power for reliable calculated frequencies, in dBm
-    /// @param thresh G0 threshold power, in dBm
-    void setG0ThresholdDbm(double thresh);
-    
-    /// Set the AFC fine step in Hz. 
-    /// @param step AFC fine step in Hz
-    void setFineStep(unsigned int step);
-
-    /// Set the AFC coarse step in Hz. 
-    /// @param step AFC coarse step in Hz
-    void setCoarseStep(unsigned int step);
-
-    /// Set the maximum data latency for the burst data, in seconds. After
-    /// an oscillator adjustment is applied, the processing thread sleeps for
-    /// this amount of time so that the next data allowed in will be from after
-    /// the oscillators are at their new frequencies.
-    void setMaxDataLatency(double maxDataLatency);
-
 private:
     /// Actually process averaged xmit info to perform the AFC for three 
     /// oscillators. Note that the caller must hold a lock on _mutex when this
@@ -88,6 +74,18 @@ private:
         unsigned int osc1ScaledFreq, unsigned int osc2ScaledFreq, 
         unsigned int osc3ScaledFreq);
     
+    /// Set the G0 threshold power for reliable calculated frequencies, in dBm
+    /// @param thresh G0 threshold power, in dBm
+    void _setG0ThresholdDbm(double thresh);
+    
+    /// Set the AFC fine step in Hz. 
+    /// @param step AFC fine step in Hz
+    void _setFineStep(unsigned int step);
+
+    /// Set the AFC coarse step in Hz. 
+    /// @param step AFC coarse step in Hz
+    void _setCoarseStep(unsigned int step);
+
     /// Thread access mutex
     QMutex _mutex;
     
@@ -157,9 +155,9 @@ private:
     double _maxDataLatency;
 };
 
-KaOscControl::KaOscControl() {
+KaOscControl::KaOscControl(const KaDrxConfig & config, double maxDataLatency) {
     // Instantiate our private thread and start it.
-    _privImpl = new KaOscControlPriv();
+    _privImpl = new KaOscControlPriv(config, maxDataLatency);
     _privImpl->start();
 }
 
@@ -171,41 +169,40 @@ KaOscControl::~KaOscControl() {
 }
 
 void
+KaOscControl::createTheControl(const KaDrxConfig & config, 
+        double maxDataLatency) {
+	if (_theControl) {
+		ELOG << "Multiple calls to KaOscControl::createTheControl()!";
+		abort();
+	}
+	_theControl = new KaOscControl(config, maxDataLatency);
+}
+
+KaOscControl &
+KaOscControl::theControl() {
+    if (! _theControl) {
+    	ELOG << __PRETTY_FUNCTION__ << 
+			": illegal call before the singleton has been created!";
+    	abort();
+    }
+    return(*_theControl);
+}
+void
 KaOscControl::newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqNum) {
     _privImpl->newXmitSample(g0Power, freqOffset, pulseSeqNum);
 }
 
-void
-KaOscControl::setG0ThresholdDbm(double thresh)  { 
-    _privImpl->setG0ThresholdDbm(thresh);
-}
-
-void
-KaOscControl::setCoarseStep(unsigned int step)  { 
-    _privImpl->setCoarseStep(step);
-}
-
-void
-KaOscControl::setFineStep(unsigned int step)  { 
-    _privImpl->setFineStep(step);
-}
-
-void
-KaOscControl::setMaxDataLatency(double maxDataLatency) {
-    _privImpl->setMaxDataLatency(maxDataLatency);
-}
-
-KaOscControlPriv::KaOscControlPriv() :
-    QThread(),
+KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config, 
+        double maxDataLatency) : QThread(),
     _mutex(QMutex::NonRecursive),   // must be non-recursive for QWaitCondition!
     _afcMode(AFC_SEARCHING),
-    _osc0("/dev/ttydp00", 0, 100000, 15000, 16000),
-    _osc1("/dev/ttydp01", 1, 10000, 12750, 13750),
-    _osc2("/dev/ttydp02", 2, 1000000, 16000, 17000),
-    _osc3(KaPmc730::theKaPmc730()),
-    _g0ThreshDbm(-25.0),     // -25.0 dBm G0 threshold power for good frequencies
-    _coarseStep(500000),    // 500 kHz coarse step (SEARCHING)
-    _fineStep(100000),      // 100 kHz fine step (TRACKING)
+    _osc0(config.simulate_tty_oscillators() ? TtyOscillator::SIM_OSCILLATOR : "/dev/ttydp00",
+    		0, 100000, 15000, 16000),
+    _osc1(config.simulate_tty_oscillators() ? TtyOscillator::SIM_OSCILLATOR : "/dev/ttydp01",
+    		1, 10000, 12750, 13750),
+    _osc2(config.simulate_tty_oscillators() ? TtyOscillator::SIM_OSCILLATOR : "/dev/ttydp02",
+    		2, 1000000, 16000, 17000),
+    _osc3(),
     _nToSum(10),
     _nSummed(0),
     _g0PowerSum(0.0),
@@ -214,9 +211,18 @@ KaOscControlPriv::KaOscControlPriv() :
     _lastRcvdPulse(0),
     _pulsesRcvd(0),
     _pulsesDropped(0),
-    _maxDataLatency(0.0) {
+    _maxDataLatency(maxDataLatency) {
     // Enable termination via terminate(), since we don't have a Qt event loop.
     setTerminationEnabled(true);
+    
+    // Set AFC parameters from the configuration
+    if (config.afc_enabled()) {
+        _setG0ThresholdDbm(config.afc_g0_threshold_dbm());
+        _setCoarseStep(config.afc_coarse_step());
+        _setFineStep(config.afc_fine_step());
+        ILOG << "AFC maximum data latency is " << maxDataLatency << " seconds";
+    }
+    
     // Set the initial oscillator frequencies
     unsigned int osc0ScaledFreq = (_osc0.getScaledMinFreq());   // 1.5000 GHz
     unsigned int osc1ScaledFreq = (132500000 / _osc1.getFreqStep());    // 132.50 MHz
@@ -283,14 +289,14 @@ KaOscControlPriv::run() {
 }
 
 void
-KaOscControlPriv::setG0ThresholdDbm(double thresh) {
+KaOscControlPriv::_setG0ThresholdDbm(double thresh) {
     QMutexLocker locker(&_mutex);
     ILOG << "Setting AFC G0 threshold at " << thresh << " dBm";
     _g0ThreshDbm = thresh;
 }
 
 void
-KaOscControlPriv::setCoarseStep(unsigned int step) {
+KaOscControlPriv::_setCoarseStep(unsigned int step) {
     QMutexLocker locker(&_mutex);
     // Make sure the requested step is a multiple of the frequency steps of
     // all oscillators we're controlling
@@ -308,7 +314,7 @@ KaOscControlPriv::setCoarseStep(unsigned int step) {
 }
 
 void
-KaOscControlPriv::setFineStep(unsigned int step) {
+KaOscControlPriv::_setFineStep(unsigned int step) {
     QMutexLocker locker(&_mutex);
     // Make sure the requested step is a multiple of the frequency steps of
     // all oscillators we're controlling
@@ -323,12 +329,6 @@ KaOscControlPriv::setFineStep(unsigned int step) {
     }
     ILOG << "Setting AFC fine step to " << step << " Hz";
     _fineStep = step;
-}
-
-void
-KaOscControlPriv::setMaxDataLatency(double maxDataLatency) {
-    ILOG << "Setting AFC maximum data latency to " << maxDataLatency << " seconds";
-    _maxDataLatency = maxDataLatency;
 }
 
 void

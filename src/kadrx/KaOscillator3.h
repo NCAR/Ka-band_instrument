@@ -55,15 +55,13 @@ class KaPmc730;
 class KaOscillator3 {
 public:
     /**
-     * Constructor for a real oscillator 3, with communication via the
-     * given PMC-730 card.
-     * @param pmc730 Reference to the PMC730 card through which oscillator 3
-     *      is connected. Set to SIM_PMC730 to simulate existence of a
-     *      PMC-730 card.
-     * @param testReadback If true, echoed bits are read back from the PLL
-     *      chip to validate oscillator programming.
+     * Constructor for an object controlling Ka-band oscillator 3, with 
+     * communication via the PMC-730 card.
+     * @param testReadback If true (and the PMC-730 is not being simulated), 
+     * 		echoed bits are read back from the PLL chip to validate oscillator 
+     * 		programming.
      */
-    KaOscillator3(KaPmc730 & kaPmc730, bool testReadback = true);
+    KaOscillator3(bool testReadback = true);
     virtual ~KaOscillator3();
     
     /**
@@ -83,10 +81,6 @@ public:
      * Maximum output frequency
      */
     static const unsigned int OSC3_MAX_FREQ = 108000000;
-    /**
-     * "Simulated" KaPmc730.
-     */
-    static KaPmc730 & SIM_KAPMC730;
     
     /**
      * Set oscillator 3 frequency. The selected frequency must be a multiple

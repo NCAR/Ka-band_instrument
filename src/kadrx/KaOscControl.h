@@ -10,6 +10,8 @@
 
 #include <sys/types.h>
 
+#include "KaDrxConfig.h"
+
 class KaOscControlPriv;
 
 /// Singleton object to handle Ka-band AFC, controlling three adjustable 
@@ -18,32 +20,16 @@ class KaOscControlPriv;
 /// oscillators based on those values.
 class KaOscControl {
 public:
-    // Get a reference to the singleton instance of KaOscControl.
-    static KaOscControl & theControl() {
-        if (! _theControl) {
-            _theControl = new KaOscControl();
-        }
-        return(*_theControl);
-    }
+	/// Instantiate the singleton
+    /// @param config the KaDrxConfig in use, which will provide AFC parameters
+    /// @param maxDataLatency maximum data latency time expected for burst data,
+    ///     in seconds
+	static void createTheControl(const KaDrxConfig & config, double maxDataLatency);
+	
+    /// Get a reference to the singleton instance of KaOscControl. It must have
+	/// first been created by a call to createTheControl().
+    static KaOscControl & theControl();
     
-    /// Set the G0 threshold power for reliable calculated frequencies, in dBm
-    /// @param thresh G0 threshold power, in dBm
-    void setG0ThresholdDbm(double thresh);
-    
-    /// Set the AFC fine step in Hz. 
-    /// @param step AFC fine step in Hz
-    void setFineStep(unsigned int step);
-
-    /// Set the AFC coarse step in Hz. 
-    /// @param step AFC coarse step in Hz
-    void setCoarseStep(unsigned int step);
-    
-    /// Set the maximum data latency for the burst data, in seconds. After
-    /// an oscillator adjustment is applied, the processing thread sleeps for
-    /// this amount of time so that the next data allowed in will be from after
-    /// the oscillators are at their new frequencies.
-    void setMaxDataLatency(double maxDataLatency);
-
     /// Accept an incoming set of averaged transmit pulse information comprising
     /// g0 power, and calculated frequency offset. This information will be used
     /// to adjust oscillator frequencies. If this KaOscControl is currently in the 
@@ -53,8 +39,11 @@ public:
     /// @param pulseSeqNum pulse number, counted since transmitter startup
     void newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqNum);
 protected:
-    /// constructor for the singleton instance
-    KaOscControl();
+    /// constructor
+    /// @param config the KaDrxConfig in use, which will provide AFC parameters
+    /// @param maxDataLatency maximum data latency time expected for burst data,
+    ///     in seconds
+    KaOscControl(const KaDrxConfig & config, double maxDataLatency);
     
     /// destructor for the singleton instance
     ~KaOscControl();
