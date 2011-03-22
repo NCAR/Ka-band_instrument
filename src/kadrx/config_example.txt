@@ -97,3 +97,4 @@ simulate_pmc730         false
 # Enable/disable simulated TTY oscillators (oscillators 0, 1, and 2)
 
 simulate_tty_oscillators    false
+
