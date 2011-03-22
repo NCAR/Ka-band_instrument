@@ -10,10 +10,10 @@
 
 #include "Pmc730.h"
 
-/// Control a singleton instance of Pmc730 for the one PMC730 card on the 
-/// Ka-band DRX machine. At some point, this can actually subclass Pmc730 and 
-/// gain specialized methods related to the specific connections to the PMC730 
-/// on the Ka-band radar (e.g., PMC730 DIO line 8 is connected to the PLL CLOCK+ 
+/// Control a singleton instance of Pmc730 for the one PMC730 card on the
+/// Ka-band DRX machine. At some point, this can actually subclass Pmc730 and
+/// gain specialized methods related to the specific connections to the PMC730
+/// on the Ka-band radar (e.g., PMC730 DIO line 8 is connected to the PLL CLOCK+
 /// input on the downconverter board).
 class KaPmc730 : public Pmc730 {
 public:
@@ -77,7 +77,7 @@ public:
     }
 
     /**
-     * Return true iff waveguide pressure between the Ka transmitter and the 
+     * Return true iff waveguide pressure between the Ka transmitter and the
      * antenna is OK.
      * @return true iff waveguide pressure between the Ka transmitter and the
      * antenna is OK.
@@ -103,10 +103,25 @@ public:
     static bool gpsClockAlarm() {
         return(theKaPmc730().getDioLine(_KA_DIN_GPSCLOCK_ALM));
     }
-    
+
+    /**
+     * Static method to change whether the singleton instance will be created
+     * as a simulated PMC-730. This must be called before the singleton is
+     * instantiated.
+     * @param simulate If true, the singleton will be created as a simulated
+     * PMC-730.
+     */
+    static void doSimulate(bool simulate);
+
 private:
     KaPmc730();
     virtual ~KaPmc730();
+
+    /**
+     * If _doSimulate is true when the singleton is instantiated, it will be
+     * created as a simulated PMC-730.
+     */
+    static bool _DoSimulate;
 
     /**
      * Input DIO lines
@@ -147,14 +162,14 @@ private:
     uint32_t _getPulseCounter();
     
     /**
-     * Send a differential signal over two selected PMC730 DIO lines. 
-     * Line dioPosLine will get the positive signal, and line dioNegLine will 
+     * Send a differential signal over two selected PMC730 DIO lines.
+     * Line dioPosLine will get the positive signal, and line dioNegLine will
      * get the inverted signal.
      * @param signalHigh if true, a high signal will be sent, otherwise low
      * @param dioPosLine the output line for the positive signal
      * @param dioNegLine the output line for the inverted signal
      */
-    void _sendDifferentialSignal(bool signalHigh, DoutLine_t dioPosLine, 
+    void _sendDifferentialSignal(bool signalHigh, DoutLine_t dioPosLine,
             DoutLine_t dioNegLine);
     
     /**
@@ -182,6 +197,10 @@ private:
     }
     
     static KaPmc730 * _theKaPmc730;
+
+    // Keep the time of day of instantiation (in seconds). This allows us to
+    // return a reasonable pulse count if we're simulating.
+    double _startTimeOfDay;
 };
 
 #endif /* KAPMC730_H_ */

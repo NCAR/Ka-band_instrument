@@ -6,6 +6,7 @@
  */
 
 #include "KaPmc730.h"
+#include <sys/time.h>
 /*
  * Include Acromag headers.
  */
@@ -18,10 +19,19 @@ extern "C" {
 
 LOGGING("KaPmc730");
 
+// Static to tell whether the singleton is created as a simulated PMC-730
+bool KaPmc730::_DoSimulate = false;
+
 // Our singleton instance
 KaPmc730 * KaPmc730::_theKaPmc730 = 0;
 
-KaPmc730::KaPmc730() : Pmc730(0) {
+KaPmc730::KaPmc730() : Pmc730(_DoSimulate ? -1 : 0) {
+	// Get the time of day of instantiation (in seconds). This allows us to
+    // return a reasonable pulse count if we're simulating.
+	struct timeval startTv;
+	gettimeofday(&startTv, NULL);
+	_startTimeOfDay = startTv.tv_sec + 1.0e-6 * startTv.tv_usec;
+
     // For Ka, DIO lines 0-7 are used for input, 8-15 for output
     setDioDirection0_7(DIO_INPUT);
     setDioDirection8_15(DIO_OUTPUT);
@@ -30,9 +40,9 @@ KaPmc730::KaPmc730() : Pmc730(0) {
             getDioDirection(_KA_DIN_GPSCLOCK_ALM) != DIO_INPUT ||
             getDioDirection(_KA_DIN_WGPRES_OK) != DIO_INPUT ||
             getDioDirection(_KA_DIN_OSC3) != DIO_INPUT) {
-        ELOG << __PRETTY_FUNCTION__ << ": Ka PMC-730 DIO lines " << 
-                _KA_DIN_COUNTER << ", " << _KA_DIN_GPSCLOCK_ALM << ", " << 
-                _KA_DIN_WGPRES_OK << ", and " << _KA_DIN_OSC3 << 
+        ELOG << __PRETTY_FUNCTION__ << ": Ka PMC-730 DIO lines " <<
+                _KA_DIN_COUNTER << ", " << _KA_DIN_GPSCLOCK_ALM << ", " <<
+                _KA_DIN_WGPRES_OK << ", and " << _KA_DIN_OSC3 <<
                 " are not all set for input!";
         abort();
     }
@@ -44,8 +54,8 @@ KaPmc730::KaPmc730() : Pmc730(0) {
             getDioDirection(_KA_DOUT_LE_P) != DIO_OUTPUT ||
             getDioDirection(_KA_DOUT_LE_N) != DIO_OUTPUT ||
             getDioDirection(_KA_DOUT_TXENABLE) != DIO_OUTPUT) {
-        ELOG << __PRETTY_FUNCTION__ << ": Ka PMC-730 DIO lines " << 
-                _KA_DOUT_CLK_P << ", " << _KA_DOUT_CLK_N << ", " << 
+        ELOG << __PRETTY_FUNCTION__ << ": Ka PMC-730 DIO lines " <<
+                _KA_DOUT_CLK_P << ", " << _KA_DOUT_CLK_N << ", " <<
                 _KA_DOUT_DATA_P << ", " << _KA_DOUT_DATA_N << ", " <<
                 _KA_DOUT_LE_P << ", " << _KA_DOUT_LE_N << ", and " <<
                 _KA_DOUT_TXENABLE << " are not all set for output!";
@@ -58,7 +68,19 @@ KaPmc730::KaPmc730() : Pmc730(0) {
 KaPmc730::~KaPmc730() {
 }
 
-KaPmc730 & 
+void
+KaPmc730::doSimulate(bool simulate) {
+	if (_theKaPmc730) {
+		ELOG << __PRETTY_FUNCTION__ <<
+			" has no effect after the KaPmc730 has been created!";
+		return;
+	}
+	DLOG << "Singleton KaPmc730 will be created with simulate set to " <<
+		(simulate ? "TRUE" : "FALSE");
+	_DoSimulate = simulate;
+}
+
+KaPmc730 &
 KaPmc730::theKaPmc730() {
     if (! _theKaPmc730) {
         _theKaPmc730 = new KaPmc730();
@@ -68,6 +90,9 @@ KaPmc730::theKaPmc730() {
 
 void
 KaPmc730::_initPulseCounter() {
+	if (_simulate)
+		return;
+
     // Initialize the PMC730 counter/timer for:
     // - pulse counting
     // - input polarity high
@@ -94,7 +119,7 @@ KaPmc730::_initPulseCounter() {
         ELOG << __PRETTY_FUNCTION__ << ": disabling PMC730 counter/timer interrupts";
         abort();
     }
-    // Set counter constant 0 (maximum count value) to 2^32-1, so we can count 
+    // Set counter constant 0 (maximum count value) to 2^32-1, so we can count
     // up to the full 32 bits. This must be non-zero, or you'll never see any
     // pulses counted!
     if (SetCounterConstant(&_card, 0, 0xFFFFFFFFul) != Success) {
@@ -109,6 +134,16 @@ KaPmc730::_initPulseCounter() {
 
 uint32_t
 KaPmc730::_getPulseCounter() {
+	// If simulating, just return a count of milliseconds since we were
+	// instantiated.
+	if (_simulate) {
+		struct timeval tv;
+		gettimeofday(&tv, NULL);
+		double diff = (tv.tv_sec + 1.0e-6 * tv.tv_usec) - _startTimeOfDay;
+		if (diff < 0.0)
+			diff += 86400; // seconds in a day
+		return(uint32_t(1000 * diff));
+	}
     // Read the current count value from the counter readback register.
     int32_t signedCount = input_long(_card.nHandle, 
         (long*)&_card.brd_ptr->CounterReadBack);
