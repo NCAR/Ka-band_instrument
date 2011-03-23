@@ -848,6 +848,10 @@ void KaMerge::_assembleStatusPacket()
   string xmlStr = _assembleStatusXml();
   int xmlLen = xmlStr.size() + 1; // null terminated
 
+  DLOG << "========= Status XML ========";
+  DLOG << xmlStr;
+  DLOG << "======= End status XML ======";
+
   // allocate buffer
 
   _allocStatusBuf(xmlLen);
@@ -924,13 +928,13 @@ string KaMerge::_assembleStatusXml()
   xml += TaXml::writeBoolean
     ("HvpsOverVoltage", 2, xs.hvpsOverVoltage());
   
-  xml += TaXml::writeBoolean
+  xml += TaXml::writeDouble
     ("HvpsVoltage", 2, xs.hvpsVoltage());
-  xml += TaXml::writeBoolean
+  xml += TaXml::writeDouble
     ("MagnetronCurrent", 2, xs.magnetronCurrent());
-  xml += TaXml::writeBoolean
+  xml += TaXml::writeDouble
     ("HvpsCurrent", 2, xs.hvpsCurrent());
-  xml += TaXml::writeBoolean
+  xml += TaXml::writeDouble
     ("Temperature", 2, xs.temperature());
   
   xml += TaXml::writeInt
