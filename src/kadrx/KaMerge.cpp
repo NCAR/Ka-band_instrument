@@ -67,6 +67,7 @@ KaMerge::KaMerge(const KaDrxConfig& config, const KaMonitor& kaMonitor) :
   // status xml
 
   _statusBuf = NULL;
+  _statusLen = 0;
   _statusBufLen = 0;
 
   // I and Q count scaling factor to get power in mW easily:
@@ -806,7 +807,7 @@ void KaMerge::_sendIwrfBurstPacket()
     _closeSocketToClient();
     return;
   }
-  
+
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -824,7 +825,8 @@ void KaMerge::_allocBurstBuf()
     _burstBufLen =
       sizeof(iwrf_burst_header_t) + (_nSamplesBurst * 2 * sizeof(int16_t));
     _burstBuf = new char[_burstBufLen];
-    _burstIq = reinterpret_cast<int16_t *>(_burstBuf + sizeof(iwrf_burst_header_t));
+    _burstIq = reinterpret_cast<int16_t *>
+      (_burstBuf + sizeof(iwrf_burst_header_t));
     
     _nSamplesBurstAlloc = _nSamplesBurst;
 
@@ -854,6 +856,7 @@ void KaMerge::_assembleStatusPacket()
 
   iwrf_status_xml_t hdr;
   iwrf_status_xml_init(hdr);
+  hdr.packet.len_bytes = _statusLen;
   hdr.xml_len = xmlLen;
 
   // copy data into buffer
@@ -1008,7 +1011,7 @@ void KaMerge::_sendIwrfStatusXmlPacket()
     return;
   }
   
-  if (_sock->writeBuffer(_statusBuf, _statusBufLen)) {
+  if (_sock->writeBuffer(_statusBuf, _statusLen)) {
     cerr << "ERROR - KaMerge::_sendIwrfStatusXmlPacket()" << endl;
     cerr << "  Writing status xml packet" << endl;
     cerr << "  " << _sock->getErrStr() << endl;
@@ -1023,13 +1026,13 @@ void KaMerge::_sendIwrfStatusXmlPacket()
 
 void KaMerge::_allocStatusBuf(size_t xmlLen)
 {
-  int nBytesNeeded = xmlLen + sizeof(iwrf_status_xml);
-  if (nBytesNeeded > _statusBufLen) {
+  _statusLen = xmlLen + sizeof(iwrf_status_xml_t);
+  if (_statusLen > _statusBufLen) {
     if (_statusBuf) {
       delete[] _statusBuf;
     }
-    _statusBuf = new char[nBytesNeeded];
-    _statusBufLen = nBytesNeeded;
+    _statusBuf = new char[_statusLen];
+    _statusBufLen = _statusLen;
   }
 }
 
