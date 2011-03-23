@@ -860,6 +860,7 @@ void KaMerge::_assembleStatusPacket()
 
   iwrf_status_xml_t hdr;
   iwrf_status_xml_init(hdr);
+  hdr.packet.seq_num = _packetSeqNum++;
   hdr.packet.len_bytes = _statusLen;
   hdr.xml_len = xmlLen;
 
