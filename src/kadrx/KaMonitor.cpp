@@ -180,7 +180,7 @@ KaMonitor::transmitterStatus() const {
 
 void
 KaMonitor::run() {
-    QDateTime lastUpdateTime(QDateTime::fromTime_t(0));
+    QDateTime lastUpdateTime(QDateTime::fromTime_t(0).toUTC());
     
     // Since we have no event loop, allow thread termination via the terminate()
     // method.
@@ -189,8 +189,8 @@ KaMonitor::run() {
     while (true) {
         // Sleep if necessary to get ~1 second between updates
         QDateTime now = QDateTime::currentDateTime().toUTC();
-        int msecsSinceUpdate = lastUpdateTime.daysTo(now) * 1000 * 86400 +
-                lastUpdateTime.time().msecsTo(now.time());
+        uint64_t msecsSinceUpdate = uint64_t(lastUpdateTime.daysTo(now)) * 1000 * 86400 + 
+            lastUpdateTime.time().msecsTo(now.time());
         if (msecsSinceUpdate < 1000) {
             usleep((1000 - msecsSinceUpdate) * 1000);
         }
