@@ -14,6 +14,12 @@
 
 LOGGING("KaOscillator3");
 
+const unsigned int KaOscillator3::OSC3_FREQ_STEP;
+const unsigned int KaOscillator3::OSC3_DEFAULT_FREQ;
+const unsigned int KaOscillator3::OSC3_MIN_FREQ;
+const unsigned int KaOscillator3::OSC3_MAX_FREQ;
+
+
 KaOscillator3::KaOscillator3(bool testReadback) :
     _kaPmc730(KaPmc730::theKaPmc730()),
     _testReadback(testReadback && ! _kaPmc730.simulating()),
