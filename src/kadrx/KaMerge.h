@@ -125,6 +125,7 @@ private:
   /// Status XML
 
   char *_statusBuf;
+  int _statusLen;
   int _statusBufLen;
 
   /// pulse sequence number and times
