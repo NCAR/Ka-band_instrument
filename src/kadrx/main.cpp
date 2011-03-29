@@ -17,8 +17,7 @@
 #include <csignal>
 #include <logx/Logging.h>
 #include <toolsa/pmu.h>
-
-LOGGING("kadrx")
+#include <XmlRpc.h>
 
 #include "KaOscControl.h"
 #include "KaDrxPub.h"
@@ -28,9 +27,15 @@ LOGGING("kadrx")
 #include "KaMerge.h"
 #include "KaMonitor.h"
 
+LOGGING("kadrx")
+
 using namespace std;
 using namespace boost::posix_time;
 namespace po = boost::program_options;
+
+/// Our RPC server
+using namespace XmlRpc;
+XmlRpcServer RpcServer;
 
 std::string _devRoot("/dev/pentek/p7142/0"); ///< Device root e.g. /dev/pentek/0
 std::string _drxConfig;          ///< DRX configuration file
@@ -47,6 +52,21 @@ std::string _xmitdHost("kadrx"); ///< The host on which ka_xmitd is running
 int _xmitdPort = 8080;           ///< The port on which ka_xmitd is listening
 
 bool _terminate = false;         ///< set true to signal the main loop to terminate
+
+/////////////////////////////////////////////////////////////////////
+/// Xmlrpc++ method to reset the Ka transmitter serial port
+class ResetXmitterTtyMethod : public XmlRpcServerMethod {
+public:
+    ResetXmitterTtyMethod(XmlRpcServer *s) : XmlRpcServerMethod("resetXmitterTty", s) {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        ILOG << "Received 'resetXmitterTty' command";
+        // Raise the DIO line for serial port reset for a few ms, then lower
+        // it again.
+        KaPmc730::setTxSerialReset(true);
+        usleep(5000);
+        KaPmc730::setTxSerialReset(false);
+    }
+} resetXmitterTtyMethod(&RpcServer);
 
 /////////////////////////////////////////////////////////////////////
 void sigHandler(int sig) {
@@ -335,22 +355,36 @@ main(int argc, char** argv)
     // being generated, then raise the TX enable line.
     verifyTimersAndEnableTx();
 
+    // Initialize our RPC server on port 8081
+    if (! RpcServer.bindAndListen(8081)) {
+        ELOG << "Exiting on XmlRpcServer error!";
+        exit(1);
+    }
+    RpcServer.enableIntrospection(true);
+    
 	double startTime = nowTime();
 	while (1) {
-		for (int i = 0; i < 100; i++) {
-			// check for the termination request
-			if (_terminate) {
-				break;
-			}
-			usleep(100000);
-		}
+	    // Listen for XML-RPC commands for a bit.
+        // Note that work() mostly goes for 2x the given time, but sometimes
+        // goes for 1x the given time. Who knows why?
+        RpcServer.work(0.05);
+        
+        // If we got a ^C or similar termination request, bail out.
 		if (_terminate) {
 			break;
 		}
 
+		// How long since our last status print?
 		double currentTime = nowTime();
 		double elapsed = currentTime - startTime;
-		startTime = currentTime;
+		
+		// If it's been long enough, go on to the status print below, otherwise
+		// go back to the top of the loop.
+		if (elapsed > 10.0) {
+		    startTime = currentTime;
+		} else {
+		    continue;
+		}
 
         ILOG << std::setprecision(3) << std::setw(5) << "H channel " <<
                 hThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
