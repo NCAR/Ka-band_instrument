@@ -11,6 +11,7 @@ qt4
 pmc730
 rapradar
 xmitclient
+xmlrpc
 """)
 
 sources = Split("""
