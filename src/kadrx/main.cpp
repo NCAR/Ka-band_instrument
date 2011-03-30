@@ -63,7 +63,7 @@ public:
         // Raise the DIO line for serial port reset for a few ms, then lower
         // it again.
         KaPmc730::setTxSerialReset(true);
-        usleep(5000);
+        usleep(25000);
         KaPmc730::setTxSerialReset(false);
     }
 } resetXmitterTtyMethod(&RpcServer);
