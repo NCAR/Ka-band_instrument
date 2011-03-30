@@ -359,24 +359,42 @@ updateStatus() {
     XmitStatus = Xmitter->getStatus();
     
     // Increment fault counters
-    if (XmitStatus.magnetronCurrentFault && ! PrevXmitStatus.magnetronCurrentFault)
+    if (XmitStatus.magnetronCurrentFault && ! PrevXmitStatus.magnetronCurrentFault) {
+        WLOG << "Magnetron current fault";
         MagnetronCurrentFaultCount++;
-    if (XmitStatus.blowerFault && ! PrevXmitStatus.blowerFault)
+    }
+    if (XmitStatus.blowerFault && ! PrevXmitStatus.blowerFault) {
+        WLOG << "Blower fault";
         BlowerFaultCount++;
-    if (XmitStatus.safetyInterlock && ! PrevXmitStatus.safetyInterlock)
+    }
+    if (XmitStatus.safetyInterlock && ! PrevXmitStatus.safetyInterlock) {
+        WLOG << "Safety interlock fault";
         SafetyInterlockFaultCount++;
-    if (XmitStatus.reversePowerFault && ! PrevXmitStatus.reversePowerFault)
+    }
+    if (XmitStatus.reversePowerFault && ! PrevXmitStatus.reversePowerFault) {
+        WLOG << "Reverse power fault";
         ReversePowerFaultCount++;
-    if (XmitStatus.pulseInputFault && ! PrevXmitStatus.pulseInputFault)
+    }
+    if (XmitStatus.pulseInputFault && ! PrevXmitStatus.pulseInputFault) {
+        WLOG << "Pulse input fault";
         PulseInputFaultCount++;
-    if (XmitStatus.hvpsCurrentFault && ! PrevXmitStatus.hvpsCurrentFault)
+    }
+    if (XmitStatus.hvpsCurrentFault && ! PrevXmitStatus.hvpsCurrentFault) {
+        WLOG << "HVPS current fault";
         HvpsCurrentFaultCount++;
-    if (XmitStatus.waveguidePressureFault && ! PrevXmitStatus.waveguidePressureFault)
+    }
+    if (XmitStatus.waveguidePressureFault && ! PrevXmitStatus.waveguidePressureFault) {
+        WLOG << "Waveguide pressure fault";
         WaveguidePressureFaultFaultCount++;
-    if (XmitStatus.hvpsUnderVoltage && ! PrevXmitStatus.hvpsUnderVoltage)
+    }
+    if (XmitStatus.hvpsUnderVoltage && ! PrevXmitStatus.hvpsUnderVoltage) {
+        WLOG << "HVPS under-voltage fault";
         HvpsUnderVoltageCount++;
-    if (XmitStatus.hvpsOverVoltage && ! PrevXmitStatus.hvpsOverVoltage)
+    }
+    if (XmitStatus.hvpsOverVoltage && ! PrevXmitStatus.hvpsOverVoltage) {
+        WLOG << "HVPS over-voltage fault";
         HvpsOverVoltagetCount++;
+    }
     
     // Unpack the status from the transmitter into our XML-RPC StatusDict
     StatusDict["serial_connected"] = XmlRpcValue(XmitStatus.serialConnected);
@@ -467,25 +485,69 @@ handlePulseInputFault() {
     if ((now - LastOperateTime) < 2) {
         int tries;
         const int MAXTRIES = 10;
+        
+        // Try a few times if necessary waiting for the fault to clear
         for (tries = 0; tries < MAXTRIES; tries++) {
             // Sleep a moment and get updated status
             usleep(100000);
             updateStatus();
-            // If the fault was actually cleared, go back to "operate" mode.
+            // When the fault was actually cleared, bail out of the loop.
             if (! XmitStatus.faultSummary) {
-                ILOG << "Returning to 'operate' after pulse input fault reset.";
-                Xmitter->operate();
                 break;
             }
         }
         if (tries == MAXTRIES) {
-            WLOG << "Too many tries waiting for fault to clear!";
+            WLOG << "Too many tries waiting for fault(s) to clear!";
             // Disable auto fault resets. They will be re-enabled if the user
             // pushes the "Fault Reset" button.
             DoAutoFaultReset = false;
         }
+        
+        // Now try a few times if necessary to go back to 'operate' mode
+        ILOG << "Returning to 'operate' after pulse input fault reset.";
+        for (tries = 0; tries < MAXTRIES; tries++) {
+            // Send the "operate" command
+            Xmitter->operate();
+            // Sleep a moment and get updated status
+            usleep(100000);
+            updateStatus();
+            // Exit the loop if the transmitter is now operating
+            if (XmitStatus.hvpsRunup) {
+                ILOG << "Succeeded after " << tries + 1 << " try/tries";
+                break;
+            }
+        }
+        if (tries == MAXTRIES) {
+            WLOG << "Failed to re-enter 'operate' mode after " << MAXTRIES <<
+                    " tries";
+        }
     }
     return;     
+}
+
+void
+resetXmitterTty() {
+    ILOG << "Resetting transmitter serial port!";
+    
+    // Try to have the kadrx process reset the transmitter serial port. 
+    // If kadrx is not alive, this won't work, but then it's not so
+    // important, either...
+    std::string kadrxHost = "localhost";
+    int kadrxPort = 8081;
+    XmlRpcClient client(kadrxHost.c_str(), kadrxPort);
+    
+    XmlRpcValue params;
+    XmlRpcValue result;
+    if (! client.execute("resetXmitterTty", params, result)) {
+        // @TODO If the kadrx process is not running, we may be able to open
+        // the PMC-730 card ourselves and twiddle the reset line directly.
+        ELOG << "Error executing kadrx 'resetXmitterTty' command @ " << 
+                kadrxHost << ":" << kadrxPort;
+        ELOG << "Transmitter serial port reset failed";
+        // Sleep for a bit before returning, since we don't need to be trying
+        // the reset again a microsecond from now.
+        sleep(5);
+    }
 }
 
 
@@ -548,6 +610,11 @@ main(int argc, char *argv[]) {
      */
     while (true) {
         updateStatus();
+        if (! XmitStatus.serialConnected) {
+            // Try to reset the transmitter serial port.
+            resetXmitterTty();
+            continue;
+        }
         if (XmitStatus.pulseInputFault)
             handlePulseInputFault();
         // Note that work() mostly goes for 2x the given time, but sometimes
