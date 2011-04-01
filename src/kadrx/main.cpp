@@ -238,8 +238,8 @@ verifyPpsAndNtp(const KaMonitor & kaMonitor) {
         ELOG << "Failed to get NTP time offset. Not starting.";
         exit(1);
     }
-    
-    if (fabs(offset_ms) > 400) {
+    // p7142sd3c::timersStartStop() currently assumes we're within 200 ms
+    if (fabs(offset_ms) >= 200) {
         ELOG << "System time offset of " << offset_ms << " ms is too large!";
         exit(1);
     }
