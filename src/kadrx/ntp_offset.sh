@@ -25,7 +25,7 @@ fi
 # Parse the peer line
   
 # Strip the first character from the line, since it may be a space (which
-# will wreak havoc with the whitespace substitution below...)
+# can otherwise shift fields after the whitespace substitution below...)
 peerline=`echo $peerline | sed -r 's/^.//g'`
 
 # Compress groups of one or more spaces into single spaces
