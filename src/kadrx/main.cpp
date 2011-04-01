@@ -19,6 +19,8 @@
 #include <toolsa/pmu.h>
 #include <XmlRpc.h>
 
+#include <QResource>
+
 #include "KaOscControl.h"
 #include "KaDrxPub.h"
 #include "KaPmc730.h"
@@ -212,6 +214,39 @@ verifyTimersAndEnableTx() {
 }
 
 ///////////////////////////////////////////////////////////
+void
+verifyPpsAndNtp(const KaMonitor & kaMonitor) {
+    if (! kaMonitor.gpsTimeServerGood()) {
+        ELOG << "GPS time server is reporting fault, so we don't trust 1 PPS!";
+        exit(1);
+    }
+    
+    // Copy the local ntp_offset.sh script into a NULL-terminated character
+    // array.
+    QResource ntpOffsetScript(":/ntp_offset.sh");
+    int scriptLen = ntpOffsetScript.size();
+    char *script = new char[scriptLen + 1];
+    memcpy(script, ntpOffsetScript.data(), scriptLen);
+    script[scriptLen] = '\0';
+    
+    // Execute the ntp_offset.sh script and get the output, which is NTP
+    // offset in ms.
+    FILE *scriptOutput = popen(script, "r");
+    float offset_ms;
+    fscanf(scriptOutput, "%f", &offset_ms);
+    if (pclose(scriptOutput) != 0) {
+        ELOG << "Failed to get NTP time offset. Not starting.";
+        exit(1);
+    }
+    
+    if (fabs(offset_ms) > 400) {
+        ELOG << "System time offset of " << offset_ms << " ms is too large!";
+        exit(1);
+    }
+    ILOG << "System clock NTP offset is currently " << offset_ms << " ms";
+}
+
+///////////////////////////////////////////////////////////
 int
 main(int argc, char** argv)
 {
@@ -347,6 +382,14 @@ main(int argc, char** argv)
     // start the merge
     PMU_auto_register("start merge");
     _merge->start();
+    
+    // If we're going to start timers based on an external trigger (i.e., 1 PPS
+    // from the GPS time server), make sure the time server is OK. Also make
+    // sure our system time is close enough that we can calculate the correct
+    // start second.
+    if (kaConfig.external_start_trigger()) {
+        verifyPpsAndNtp(kaMonitor);
+    }
 
     // Start the timers, which will allow data to flow.
     sd3c.timersStartStop(true);

@@ -26,6 +26,7 @@ KaOscillator3.cpp
 KaPmc730.cpp
 PulseData.cpp
 TtyOscillator.cpp
+qrc_kadrx.cc
 main.cpp
 """)
 
@@ -43,9 +44,15 @@ KaPmc730.h
 PulseData.h
 TtyOscillator.h
 """)
+# Qt resource file
+qrcfiles = Split("""
+kadrx.qrc
+""")
 
 env = Environment(tools = ['default'] + tools)
 env.EnableQt4Modules(['QtCore'])
+
+env.Qrc(qrcfiles)
 
 kadrx = env.Program('kadrx', sources)
 

@@ -1,0 +1,5 @@
+<RCC>
+  <qresource>
+    <file>ntp_offset.sh</file>
+  </qresource>
+</RCC>
