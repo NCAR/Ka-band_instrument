@@ -879,11 +879,13 @@ string KaMerge::_assembleStatusXml()
 
 {
 
+  time_t now = time(NULL);
   string xml;
 
   // main block
 
   xml += TaXml::writeStartTag("KaStatus", 0);
+  xml += TaXml::writeTime("Time", 1, now);
 
   // transmit block
   
