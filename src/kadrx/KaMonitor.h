@@ -8,6 +8,7 @@
 #ifndef KAMONITOR_H_
 #define KAMONITOR_H_
 
+#include <stdint.h>
 #include <deque>
 
 #include <QThread>
@@ -102,6 +103,39 @@ public:
      * @return the transmitter status.
      */
     XmitClient::XmitStatus transmitterStatus() const;
+    
+    /**
+     * Oscillator 0 frequency, in Hz.
+     * @return oscillator 0 frequency, in Hz.
+     */
+    uint64_t osc0Frequency() const;
+    
+    /**
+     * Oscillator 1 frequency, in Hz.
+     * @return oscillator 1 frequency, in Hz.
+     */
+    uint64_t osc1Frequency() const;
+    
+    /**
+     * Oscillator 2 frequency, in Hz.
+     * @return oscillator 2 frequency, in Hz.
+     */
+    uint64_t osc2Frequency() const;
+    
+    /**
+     * Oscillator 3 frequency, in Hz.
+     * @return oscillator 3 frequency, in Hz.
+     */
+    uint64_t osc3Frequency() const;
+    
+    /**
+     * Transmitter frequency, derived from frequencies of oscillators 0-3, in 
+     * Hz.
+     * @return transmitter frequency, derived from frequencies of oscillators 
+     * 0-3, in Hz.
+     */
+    uint64_t derivedTxFrequency() const;
+    
 private:
     /**
      * Convert QEA crystal detector voltage to input power (in dBm), based
@@ -130,6 +164,10 @@ private:
      * member.
      */
     void _getXmitStatus();
+    /**
+     * Get oscillator frequencies from the singleton KaOscControl.
+     */
+    void _getOscFrequencies();
     /**
      * Return the average of values in a deque<float>, or -99.9 if the deque
      * is empty.
@@ -170,6 +208,12 @@ private:
 
     /// GPS time server alarm state
     bool _gpsTimeServerGood;
+    
+    /// Oscillator frequencies, Hz
+    uint64_t _osc0Frequency;
+    uint64_t _osc1Frequency;
+    uint64_t _osc2Frequency;
+    uint64_t _osc3Frequency;
     
     /// XML-RPC access to ka_xmitd for its status
     XmitClient _xmitClient;

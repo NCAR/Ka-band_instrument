@@ -6,6 +6,7 @@
  */
 
 #include "KaMonitor.h"
+#include "KaOscControl.h"
 #include "KaPmc730.h"
 
 #include <XmitClient.h>
@@ -178,6 +179,36 @@ KaMonitor::transmitterStatus() const {
     return _xmitStatus;
 }
 
+uint64_t
+KaMonitor::osc0Frequency() const {
+    QMutexLocker locker(&_mutex);
+    return(_osc0Frequency);
+}
+
+uint64_t
+KaMonitor::osc1Frequency() const {
+    QMutexLocker locker(&_mutex);
+    return(_osc1Frequency);
+}
+
+uint64_t
+KaMonitor::osc2Frequency() const {
+    QMutexLocker locker(&_mutex);
+    return(_osc2Frequency);
+}
+
+uint64_t
+KaMonitor::osc3Frequency() const {
+    QMutexLocker locker(&_mutex);
+    return(_osc3Frequency);
+}
+
+uint64_t
+KaMonitor::derivedTxFrequency() const {
+    QMutexLocker locker(&_mutex);
+    return(2 * _osc2Frequency + _osc0Frequency + _osc3Frequency + 25000000);
+}
+
 void
 KaMonitor::run() {
     QDateTime lastUpdateTime(QDateTime::fromTime_t(0).toUTC());
@@ -200,6 +231,9 @@ KaMonitor::run() {
         
         // Get transmitter status.
         _getXmitStatus();
+        
+        // Get oscillator frequencies
+        _getOscFrequencies();
         
         lastUpdateTime = QDateTime::currentDateTime().toUTC();
     }
@@ -274,9 +308,24 @@ KaMonitor::_getXmitStatus() {
     XmitClient::XmitStatus xmitStatus;
     _xmitClient.getStatus(xmitStatus);
     
-    _mutex.lock();
+    QMutexLocker locker(&_mutex);
     _xmitStatus = xmitStatus;
-    _mutex.unlock();
+}
+
+void
+KaMonitor::_getOscFrequencies() {
+    QMutexLocker locker(&_mutex);
+    KaOscControl::theControl().getOscFrequencies(_osc0Frequency,
+            _osc1Frequency, _osc2Frequency, _osc3Frequency);
+    
+    DLOG << std::fixed << std::setprecision(4) << "oscillator 0 frequency: " <<
+            _osc0Frequency / 1.0e9 << " GHz";
+    DLOG << std::fixed << std::setprecision(2) << "oscillator 1 frequency: " <<
+            _osc1Frequency / 1.0e6 << " MHz";
+    DLOG << std::fixed << std::setprecision(3) << "oscillator 2 frequency: " <<
+            _osc2Frequency / 1.0e9 << " GHz";
+    DLOG << std::fixed << std::setprecision(2) << "oscillator 3 frequency: " <<
+            _osc3Frequency / 1.0e6 << " MHz";
 }
 
 double
