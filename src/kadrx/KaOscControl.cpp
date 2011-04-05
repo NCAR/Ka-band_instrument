@@ -215,19 +215,38 @@ KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
     // Enable termination via terminate(), since we don't have a Qt event loop.
     setTerminationEnabled(true);
     
-    // Set AFC parameters from the configuration
+    // Initial frequencies for oscillators 0, 1, and 3.
+    unsigned int osc0ScaledFreq;
+    unsigned int osc1ScaledFreq;
+    unsigned int osc3ScaledFreq;
+    
+    // Oscillator 2 is set-and-forget at 16.500 GHz.    
+    unsigned int osc2ScaledFreq = (16500000000ll / _osc2.getFreqStep());
+    
+    // Set up based on whether or not we're doing AFC
     if (config.afc_enabled()) {
+        // AFC: Oscillator 0 will be started at its lowest frequency, 
+        // and oscillators 1 and 3 will bet set at their middle frequencies.
+        // AFC will tune from there.
+        osc0ScaledFreq = _osc0.getScaledMinFreq();          // 1.5000 GHz
+        osc1ScaledFreq = 132500000 / _osc1.getFreqStep();   // 132.50 MHz
+        osc3ScaledFreq = 107500000 / _osc3.getFreqStep();   // 107.50 MHz
+
+        // Set AFC parameters from the configuration
         _setG0ThresholdDbm(config.afc_g0_threshold_dbm());
         _setCoarseStep(config.afc_coarse_step());
         _setFineStep(config.afc_fine_step());
         ILOG << "AFC maximum data latency is " << maxDataLatency << " seconds";
+    } else {
+        // If we're not doing AFC, just set oscillator 0/1/3 frequencies to 
+        // these representative actual AFC-adjusted operating values in use at 
+        // 0Z on 3/29/2011 after the transmitter had been running for many
+        // hours.
+        osc0ScaledFreq = 1567200000 / _osc0.getFreqStep();  // 1.5672 GHz
+        osc1ScaledFreq = 132800000 / _osc1.getFreqStep();   // 132.80 MHz
+        osc3ScaledFreq = 107800000 / _osc3.getFreqStep();   // 107.80 MHz
     }
     
-    // Set the initial oscillator frequencies
-    unsigned int osc0ScaledFreq = (_osc0.getScaledMinFreq());   // 1.5000 GHz
-    unsigned int osc1ScaledFreq = (132500000 / _osc1.getFreqStep());    // 132.50 MHz
-    unsigned int osc2ScaledFreq = (16500000000ll / _osc2.getFreqStep());   // 16.500 GHz
-    unsigned int osc3ScaledFreq = (107500000 / _osc3.getFreqStep());    // 107.50 MHz
     _setOscillators(osc0ScaledFreq, osc1ScaledFreq, osc2ScaledFreq, 
         osc3ScaledFreq);
 }
