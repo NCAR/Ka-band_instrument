@@ -8,6 +8,7 @@
 #ifndef KAOSCCONTROL_H_
 #define KAOSCCONTROL_H_
 
+#include <stdint.h>
 #include <sys/types.h>
 
 #include "KaDrxConfig.h"
@@ -38,6 +39,18 @@ public:
     /// @param freqOffset measured frequency offset, in Hz
     /// @param pulseSeqNum pulse number, counted since transmitter startup
     void newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqNum);
+    
+    /// Return the frequencies of the four oscillators handled by the 
+    /// KaOscControl.
+    /// @param osc0Freq frequency of oscillator 0
+    /// @param osc1Freq frequency of oscillator 1
+    /// @param osc2Freq frequency of oscillator 2
+    /// @param osc3Freq frequency of oscillator 3
+    /// @return the four oscillator frequencies (in Hz) in the four reference 
+    /// parameters which were passed in.
+    void getOscFrequencies(uint64_t & osc0Freq, uint64_t & osc1Freq, 
+            uint64_t & osc2Freq, uint64_t & osc3Freq);
+
 protected:
     /// constructor
     /// @param config the KaDrxConfig in use, which will provide AFC parameters
