@@ -42,10 +42,10 @@ public:
     
     /// Return the frequencies of the four oscillators handled by the 
     /// KaOscControl.
-    /// @param osc0Freq frequency of oscillator 0
-    /// @param osc1Freq frequency of oscillator 1
-    /// @param osc2Freq frequency of oscillator 2
-    /// @param osc3Freq frequency of oscillator 3
+    /// @param[out] osc0Freq frequency of oscillator 0
+    /// @param[out] osc1Freq frequency of oscillator 1
+    /// @param[out] osc2Freq frequency of oscillator 2
+    /// @param[out] osc3Freq frequency of oscillator 3
     /// @return the four oscillator frequencies (in Hz) in the four reference 
     /// parameters which were passed in.
     void getOscFrequencies(uint64_t & osc0Freq, uint64_t & osc1Freq, 
