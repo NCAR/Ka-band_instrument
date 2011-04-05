@@ -64,20 +64,20 @@ public:
      */
     float rxFrontTemp() const;
     /**
-     * Transmit power @ H channel, dBm
-     * @return transmit power @ H channel, dBm
+     * Transmit power @ H channel QuinStar power detector, dBm
+     * @return raw transmit power @ H channel, dBm
      */
-    float hTxPowerVideo() const;
+    float hTxPowerRaw() const;
     /**
-     * Transmit power @ V channel, dBm
-     * @return transmit power @ V channel, dBm
+     * Transmit power @ V channel QuinStar power detector, dBm
+     * @return raw transmit power @ V channel, dBm
      */
-    float vTxPowerVideo() const;
+    float vTxPowerRaw() const;
     /**
-     * Test target power, dBm
-     * @return test target power, dBm
+     * Test target power @ QuinStar power detector, dBm
+     * @return raw test target power, dBm
      */
-    float testTargetPowerVideo() const;
+    float testTargetPowerRaw() const;
     /**
      * Measured voltage @ 5V power supply, V
      * @return measured voltage @ 5V power supply, V
@@ -192,10 +192,10 @@ private:
     std::deque<float> _rxBackTemps;
     std::deque<float> _rxFrontTemps;
     
-    /// Video power monitors
-    float _hTxPowerVideo;           // H tx pulse power, dBm
-    float _vTxPowerVideo;           // V tx pulse power, dBm
-    float _testTargetPowerVideo;    // test target power, dBm
+    /// Measurements from the three QuinStar power detectors
+    float _hTxPowerRaw;           // H tx pulse power, dBm
+    float _vTxPowerRaw;           // V tx pulse power, dBm
+    float _testTargetPowerRaw;    // test target power, dBm
     
     /// 5V power supply
     float _psVoltage;

@@ -982,11 +982,11 @@ string KaMerge::_assembleStatusXml()
   xml += TaXml::writeDouble
     ("RxFrontTemp", 2, km.rxFrontTemp());
   xml += TaXml::writeDouble
-    ("HTxPowerVideo", 2, km.hTxPowerVideo());
+    ("HTxPowerRaw", 2, km.hTxPowerRaw());
   xml += TaXml::writeDouble
-    ("VTxPowerVideo", 2, km.vTxPowerVideo());
+    ("VTxPowerRaw", 2, km.vTxPowerRaw());
   xml += TaXml::writeDouble
-    ("TestTargetPowerVideo", 2, km.testTargetPowerVideo());
+    ("TestTargetPowerRaw", 2, km.testTargetPowerRaw());
   xml += TaXml::writeDouble
     ("PsVoltage", 2, km.psVoltage());
   

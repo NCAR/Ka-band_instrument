@@ -132,21 +132,21 @@ KaMonitor::rxFrontTemp() const {
 }
 
 float
-KaMonitor::hTxPowerVideo() const {
+KaMonitor::hTxPowerRaw() const {
     QMutexLocker locker(&_mutex);
-    return _hTxPowerVideo;
+    return _hTxPowerRaw;
 }
 
 float
-KaMonitor::vTxPowerVideo() const {
+KaMonitor::vTxPowerRaw() const {
     QMutexLocker locker(&_mutex);
-    return _vTxPowerVideo;
+    return _vTxPowerRaw;
 }
 
 float
-KaMonitor::testTargetPowerVideo() const {
+KaMonitor::testTargetPowerRaw() const {
     QMutexLocker locker(&_mutex);
-    return _testTargetPowerVideo;
+    return _testTargetPowerRaw;
 }
 
 float
@@ -247,9 +247,9 @@ KaMonitor::_getMultiIoValues() {
     // Get data from analog channels 0-9 on the PMC-730 multi-IO card
     std::vector<float> analogData = pmc730.readAnalogChannels(0, 9);
     // Channels 0-2 give us RF power measurements
-    _testTargetPowerVideo = _lookupQEAPower(analogData[0]);
-    _vTxPowerVideo = _lookupQEAPower(analogData[1]);
-    _hTxPowerVideo = _lookupQEAPower(analogData[2]);
+    _testTargetPowerRaw = _lookupQEAPower(analogData[0]);
+    _vTxPowerRaw = _lookupQEAPower(analogData[1]);
+    _hTxPowerRaw = _lookupQEAPower(analogData[2]);
     // Channels 3-8 give us various temperatures. The data are a bit noisy, so
     // we keep up to TEMP_AVERAGING_LEN samples so we can generate moving 
     // averages.
@@ -281,9 +281,9 @@ KaMonitor::_getMultiIoValues() {
     _gpsTimeServerGood = ! pmc730.gpsClockAlarm();
 
     DLOG << std::fixed << std::setprecision(1) <<
-        "TT: " << _testTargetPowerVideo << " dBm, " <<
-        "V: " << _vTxPowerVideo << " dBm, " <<
-        "H: " << _hTxPowerVideo << " dBm";
+        "TT: " << _testTargetPowerRaw << " dBm, " <<
+        "V: " << _vTxPowerRaw << " dBm, " <<
+        "H: " << _hTxPowerRaw << " dBm";
     DLOG << std::fixed << std::setprecision(1) << 
         "rx front: " << rxFrontTemp() <<  " C, " << 
         "back: " << rxBackTemp() << " C, " << 
