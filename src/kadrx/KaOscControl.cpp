@@ -25,10 +25,10 @@ LOGGING("KaOscControl")
 KaOscControl * KaOscControl::_theControl = 0;
 
 /// KaOscControlPriv is the private implementation class for KaOscControl, subclassed from
-/// QThread. The object gets new xmit samples via newXmitSample() calls (from 
+/// QThread. The object gets new xmit samples via newXmitSample() calls (from
 /// another thread), adds them to sums, and when sufficient samples have
-/// been summed releases the averages which will be processed by the local 
-/// thread. The local thread takes the averages and adjusts the three 
+/// been summed releases the averages which will be processed by the local
+/// thread. The local thread takes the averages and adjusts the three
 /// programmable oscillators it controls.
 class KaOscControlPriv : public QThread {
 public:
@@ -37,74 +37,74 @@ public:
     /// @param maxDataLatency maximum data latency time expected for burst data,
     ///     in seconds
     KaOscControlPriv(const KaDrxConfig & config, double maxDataLatency);
-    
+
     ~KaOscControlPriv();
-    
+
     void run();
-    
+
     /// Accept an incoming set of averaged transmit pulse information comprising
     /// g0 power, and calculated frequency offset. This information will be used
-    /// to adjust oscillator frequencies. If this KaOscControl is currently in 
+    /// to adjust oscillator frequencies. If this KaOscControl is currently in
     /// the process of a frequency adjustment, the given sample will be ignored.
     /// @param g0Power g0 power, in dBm
     /// @param freqOffset measured frequency offset, in Hz
     /// @param pulseSeqNum pulse number, counted since transmitter startup
     void newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqNum);
-    
+
     /// Return the frequencies of the four oscillators handled by KaOscControl.
     /// @param osc0Freq frequency of oscillator 0
     /// @param osc1Freq frequency of oscillator 1
     /// @param osc2Freq frequency of oscillator 2
     /// @param osc3Freq frequency of oscillator 3
-    /// @return the four oscillator frequencies (in Hz) in the four reference 
+    /// @return the four oscillator frequencies (in Hz) in the four reference
     /// parameters which were passed in.
-    void getOscFrequencies(uint64_t & osc0Freq, uint64_t & osc1Freq, 
+    void getOscFrequencies(uint64_t & osc0Freq, uint64_t & osc1Freq,
             uint64_t & osc2Freq, uint64_t & osc3Freq);
-    
+
 private:
-    /// Actually process averaged xmit info to perform the AFC for three 
+    /// Actually process averaged xmit info to perform the AFC for three
     /// oscillators. Note that the caller must hold a lock on _mutex when this
     /// method is called!
     void _processXmitAverage();
-    
+
     /// Clear our sums
     void _clearSum();
-    
+
     /// Set frequencies for all four oscillators. Frequencies are in units
     /// of the oscillators' frequency steps.
-    /// @param osc0ScaledFreq frequency for oscillator 0 in units of its 
+    /// @param osc0ScaledFreq frequency for oscillator 0 in units of its
     ///     frequency step
-    /// @param osc1ScaledFreq frequency for oscillator 1 in units of its 
+    /// @param osc1ScaledFreq frequency for oscillator 1 in units of its
     ///     frequency step
-    /// @param osc2ScaledFreq frequency for oscillator 2 in units of its 
+    /// @param osc2ScaledFreq frequency for oscillator 2 in units of its
     ///     frequency step
-    /// @param osc3ScaledFreq frequency for oscillator 3 in units of its 
+    /// @param osc3ScaledFreq frequency for oscillator 3 in units of its
     ///     frequency step
-    void _setOscillators(unsigned int osc0ScaledFreq, 
-        unsigned int osc1ScaledFreq, unsigned int osc2ScaledFreq, 
+    void _setOscillators(unsigned int osc0ScaledFreq,
+        unsigned int osc1ScaledFreq, unsigned int osc2ScaledFreq,
         unsigned int osc3ScaledFreq);
-    
+
     /// Set the G0 threshold power for reliable calculated frequencies, in dBm
     /// @param thresh G0 threshold power, in dBm
     void _setG0ThresholdDbm(double thresh);
-    
-    /// Set the AFC fine step in Hz. 
+
+    /// Set the AFC fine step in Hz.
     /// @param step AFC fine step in Hz
     void _setFineStep(unsigned int step);
 
-    /// Set the AFC coarse step in Hz. 
+    /// Set the AFC coarse step in Hz.
     /// @param step AFC coarse step in Hz
     void _setCoarseStep(unsigned int step);
 
     /// Thread access mutex
     QMutex _mutex;
-    
-    /// Wait condition which wakes the thread when new average values are 
+
+    /// Wait condition which wakes the thread when new average values are
     /// available.
     QWaitCondition _newAverage;
-    
+
     /// AFC state
-    ///     AFC_SEARCHING (coarse adjustment) while looking for more than 
+    ///     AFC_SEARCHING (coarse adjustment) while looking for more than
     ///         threshold power in G0
     ///     AFC_TRACKING (finer adjustment) while tracking to minimize frequency
     ///         offset
@@ -113,54 +113,54 @@ private:
 
     /// Oscillator 0: 1.4-1.5 GHz (1.4400 GHz nominal), 100 kHz step
     TtyOscillator _osc0;
-    
-    /// Oscillator 1: 132-133 MHz (132.5 MHz nominal), 10 kHz step. 
-    /// Adjustments to this oscillator track those of oscillator 3. E.g., if 
-    /// oscillator 3's frequency is reduced 300 kHz, then oscillator 1's 
+
+    /// Oscillator 1: 132-133 MHz (132.5 MHz nominal), 10 kHz step.
+    /// Adjustments to this oscillator track those of oscillator 3. E.g., if
+    /// oscillator 3's frequency is reduced 300 kHz, then oscillator 1's
     /// frequency is also reduced 300 kHz.
     TtyOscillator _osc1;
-    
+
     /// Oscillator 2: 16000-17000 MHz (16500 MHz nominal), 1 MHz step
     /// We set this oscillator once, then leave it alone.
     TtyOscillator _osc2;
-    
+
     /// oscillator 3: 107-108 MHz (107.50 MHz nominal), 50 kHz step
     /// This oscillator is on the 3rd stage downconverter card
     KaOscillator3 _osc3;
-    
+
     /// G0 threshold power for reliable calculated frequencies, in dBm
     double _g0ThreshDbm;
-    
+
     /// Coarse AFC adjustment step, Hz
     unsigned int _coarseStep;
-    
+
     /// Fine AFC adjustment step, Hz
     unsigned int _fineStep;
-    
+
     /// Number of g0 powers to sum before passing average for application
     unsigned int _nToSum;
-    
+
     /// Number of g0 powers currently summed
     unsigned int _nSummed;
-    
+
     /// g0 power sum
     double _g0PowerSum;
-    
+
     /// g0 power averaged over _nToSum samples
     double _g0PowerAvg;
-    
+
     /// offset frequency
     double _freqOffset;
-    
+
     /// last pulse received by newXmitSample()
     int64_t _lastRcvdPulse;
-    
+
     /// number of pulses received by newXmitSample()
     int64_t _pulsesRcvd;
-    
+
     /// number of pulses dropped by newXmitSample()
     int64_t _pulsesDropped;
-    
+
     /// maximum data latency for burst data, in seconds
     double _maxDataLatency;
 };
@@ -179,7 +179,7 @@ KaOscControl::~KaOscControl() {
 }
 
 void
-KaOscControl::createTheControl(const KaDrxConfig & config, 
+KaOscControl::createTheControl(const KaDrxConfig & config,
         double maxDataLatency) {
 	if (_theControl) {
 		ELOG << "Multiple calls to KaOscControl::createTheControl()!";
@@ -191,7 +191,7 @@ KaOscControl::createTheControl(const KaDrxConfig & config,
 KaOscControl &
 KaOscControl::theControl() {
     if (! _theControl) {
-    	ELOG << __PRETTY_FUNCTION__ << 
+    	ELOG << __PRETTY_FUNCTION__ <<
 			": illegal call before the singleton has been created!";
     	abort();
     }
@@ -204,12 +204,12 @@ KaOscControl::newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqN
 }
 
 void
-KaOscControl::getOscFrequencies(uint64_t & osc0Freq, uint64_t & osc1Freq, 
+KaOscControl::getOscFrequencies(uint64_t & osc0Freq, uint64_t & osc1Freq,
         uint64_t & osc2Freq, uint64_t & osc3Freq) {
     _privImpl->getOscFrequencies(osc0Freq, osc1Freq, osc2Freq, osc3Freq);
 }
 
-KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config, 
+KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
         double maxDataLatency) : QThread(),
     _mutex(QMutex::NonRecursive),   // must be non-recursive for QWaitCondition!
     _afcMode(AFC_SEARCHING),
@@ -231,18 +231,18 @@ KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
     _maxDataLatency(maxDataLatency) {
     // Enable termination via terminate(), since we don't have a Qt event loop.
     setTerminationEnabled(true);
-    
+
     // Initial frequencies for oscillators 0, 1, and 3.
     unsigned int osc0ScaledFreq;
     unsigned int osc1ScaledFreq;
     unsigned int osc3ScaledFreq;
-    
-    // Oscillator 2 is set-and-forget at 16.500 GHz.    
+
+    // Oscillator 2 is set-and-forget at 16.500 GHz.
     unsigned int osc2ScaledFreq = (16500000000ll / _osc2.getFreqStep());
-    
+
     // Set up based on whether or not we're doing AFC
     if (config.afc_enabled()) {
-        // AFC: Oscillator 0 will be started at its lowest frequency, 
+        // AFC: Oscillator 0 will be started at its lowest frequency,
         // and oscillators 1 and 3 will bet set at their middle frequencies.
         // AFC will tune from there.
         osc0ScaledFreq = _osc0.getScaledMinFreq();          // 1.5000 GHz
@@ -255,22 +255,22 @@ KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
         _setFineStep(config.afc_fine_step());
         ILOG << "AFC maximum data latency is " << maxDataLatency << " seconds";
     } else {
-        // If we're not doing AFC, just set oscillator 0/1/3 frequencies to 
-        // these representative actual AFC-adjusted operating values in use at 
+        // If we're not doing AFC, just set oscillator 0/1/3 frequencies to
+        // these representative actual AFC-adjusted operating values in use at
         // 0Z on 3/29/2011 after the transmitter had been running for many
         // hours.
         osc0ScaledFreq = 1567200000 / _osc0.getFreqStep();  // 1.5672 GHz
         osc1ScaledFreq = 132800000 / _osc1.getFreqStep();   // 132.80 MHz
         osc3ScaledFreq = 107800000 / _osc3.getFreqStep();   // 107.80 MHz
     }
-    
-    _setOscillators(osc0ScaledFreq, osc1ScaledFreq, osc2ScaledFreq, 
+
+    _setOscillators(osc0ScaledFreq, osc1ScaledFreq, osc2ScaledFreq,
         osc3ScaledFreq);
 }
 
 void
-KaOscControlPriv::_setOscillators(unsigned int osc0ScaledFreq, 
-    unsigned int osc1ScaledFreq, unsigned int osc2ScaledFreq, 
+KaOscControlPriv::_setOscillators(unsigned int osc0ScaledFreq,
+    unsigned int osc1ScaledFreq, unsigned int osc2ScaledFreq,
     unsigned int osc3ScaledFreq) {
     bool osc0_OK = false;
     bool osc1_OK = false;
@@ -286,24 +286,24 @@ KaOscControlPriv::_setOscillators(unsigned int osc0ScaledFreq,
                 WLOG << "...try again to set oscillator 0 frequency";
             _osc0.setScaledFreqAsync(osc0ScaledFreq);
         }
-            
+
         if (! osc1_OK) {
             if (attempt > 0)
                 WLOG << "...try again to set oscillator 1 frequency";
             _osc1.setScaledFreqAsync(osc1ScaledFreq);
         }
-        
+
         if (! osc2_OK) {
             if (attempt > 0)
                 WLOG << "...try again to set oscillator 2 frequency";
             _osc2.setScaledFreqAsync(osc2ScaledFreq);
         }
-            
+
         if (! osc3_OK) {
             _osc3.setScaledFreq(osc3ScaledFreq);
             osc3_OK = true; // we have no way to validate that osc3 is set (yet)
         }
-        
+
         // Now complete the asynchronous process for the two serial oscillators
         osc0_OK = _osc0.freqAttained();
         osc1_OK = _osc1.freqAttained();
@@ -325,13 +325,13 @@ KaOscControlPriv::run() {
 }
 
 void
-KaOscControlPriv::getOscFrequencies(uint64_t & osc0Freq, uint64_t & osc1Freq, 
+KaOscControlPriv::getOscFrequencies(uint64_t & osc0Freq, uint64_t & osc1Freq,
         uint64_t & osc2Freq, uint64_t & osc3Freq) {
     QMutexLocker locker(&_mutex);
-    osc0Freq = _osc0.getScaledFreq() * _osc0.getFreqStep();
-    osc1Freq = _osc1.getScaledFreq() * _osc1.getFreqStep();
-    osc2Freq = _osc2.getScaledFreq() * _osc2.getFreqStep();
-    osc3Freq = _osc3.getScaledFreq() * _osc3.getFreqStep();
+    osc0Freq = uint64_t(_osc0.getScaledFreq()) * _osc0.getFreqStep();
+    osc1Freq = uint64_t(_osc1.getScaledFreq()) * _osc1.getFreqStep();
+    osc2Freq = uint64_t(_osc2.getScaledFreq()) * _osc2.getFreqStep();
+    osc3Freq = uint64_t(_osc3.getScaledFreq()) * _osc3.getFreqStep();
 }
 
 void
@@ -378,7 +378,7 @@ KaOscControlPriv::_setFineStep(unsigned int step) {
 }
 
 void
-KaOscControlPriv::newXmitSample(double g0Power, double freqOffset, 
+KaOscControlPriv::newXmitSample(double g0Power, double freqOffset,
     int64_t pulseSeqNum) {
     if (!(_pulsesRcvd % 5000))
         DLOG << _pulsesRcvd << " pulses received, " << _pulsesDropped << " dropped";
@@ -388,21 +388,21 @@ KaOscControlPriv::newXmitSample(double g0Power, double freqOffset,
         _pulsesDropped++;
         return;
     }
-    
+
     assert(_nSummed < _nToSum);
-    
+
     // Look for pulse gaps
     int pulseGap = pulseSeqNum - _lastRcvdPulse - 1;
     if (pulseGap && _nSummed != 0) {
-        WLOG << __PRETTY_FUNCTION__ << ": " << pulseGap << 
+        WLOG << __PRETTY_FUNCTION__ << ": " << pulseGap <<
             " pulse gap (_nSummed = " << _nSummed << ")";
     }
     _lastRcvdPulse = pulseSeqNum;
-    
+
     // Add to our sums
     _g0PowerSum += g0Power;
     _nSummed++;
-    
+
     // If we've summed the required number of pulses, calculate the averages
     // and wake our thread waiting for the new averages
     if (_nSummed == _nToSum) {
@@ -426,39 +426,39 @@ KaOscControlPriv::_processXmitAverage() {
  //   double g0PowerDbm = 10.0 * log10(_g0PowerAvg) + 30; // +30 for dBW to dBm
     double g0PowerDbm = 10.0 * log10(_g0PowerAvg); // dBm
 
-    ILOG << "New " << _nToSum << "-pulse average: G0 " << g0PowerDbm << 
+    ILOG << "New " << _nToSum << "-pulse average: G0 " << g0PowerDbm <<
         " dBm, freq offset " << _freqOffset;
 
     // Set mode based on whether g0PowerDbm is less than our threshold
     AfcMode_t newMode = (g0PowerDbm < _g0ThreshDbm) ? AFC_SEARCHING : AFC_TRACKING;
-    
+
     switch (newMode) {
-      // In AFC_SEARCHING mode, step upward in coarse steps through frequencies 
+      // In AFC_SEARCHING mode, step upward in coarse steps through frequencies
       // for oscillator 0 until we find sufficient G0 power.
       case AFC_SEARCHING:
       {
           // If mode just changed to searching, log it and apply the change
           if (newMode != _afcMode) {
               WLOG << "G0 power " << g0PowerDbm <<
-                      " dBm has dropped below min of " << 
+                      " dBm has dropped below min of " <<
                       _g0ThreshDbm << " dBm. Returning to SEARCH mode.";
               // Only sum 10 pulses at a time when in searching mode
               _afcMode = AFC_SEARCHING;
               _nToSum = 10;
               _clearSum();
               // Start searching at minimum oscillator 0 frequency
-              DLOG << "SEARCH starting oscillator 0 frequency at (" << 
-                   _osc0.getScaledMinFreq() << " x " << _osc0.getFreqStep() << 
+              DLOG << "SEARCH starting oscillator 0 frequency at (" <<
+                   _osc0.getScaledMinFreq() << " x " << _osc0.getFreqStep() <<
                    ") Hz";
               _osc0.setScaledFreq(_osc0.getScaledMinFreq());
               break;
           }
-          // If we can, increase oscillator 0 frequency by our coarse step, 
+          // If we can, increase oscillator 0 frequency by our coarse step,
           // otherwise go back to minimum oscillator 0 frequency.
           unsigned int newScaledFreq0 = _osc0.getScaledFreq();
           if (newScaledFreq0 != _osc0.getScaledMaxFreq()) {
               newScaledFreq0 += _coarseStep / _osc0.getFreqStep();
-              DLOG << "SEARCH stepping oscillator 0 frequency to (" << 
+              DLOG << "SEARCH stepping oscillator 0 frequency to (" <<
                       newScaledFreq0 << " x " << _osc0.getFreqStep() << ") Hz";
           } else {
               newScaledFreq0 = _osc0.getScaledMinFreq();
@@ -489,14 +489,14 @@ KaOscControlPriv::_processXmitAverage() {
               DLOG << "Frequency offset < 60 kHz, nothing to do!";
               return;
           }
-          
+
           // How many AFC fine steps to correct? How many steps is that for
           // each oscillator?
           int afcFineSteps = int(round(_freqOffset / _fineStep));
           int osc0Steps = 0;
           int osc1Steps = afcFineSteps * (_fineStep / _osc1.getFreqStep());
           int osc3Steps = afcFineSteps * (_fineStep / _osc3.getFreqStep());
-          
+
           // If possible without exceeding oscillator 3's frequency range,
           // change just oscillator 3 (and 1 which tracks it)... Otherwise, we
           // have to change all three oscillators.
@@ -504,31 +504,31 @@ KaOscControlPriv::_processXmitAverage() {
           if ((osc3NewScaledFreq < _osc3.getScaledMinFreq()) ||
               (osc3NewScaledFreq > _osc3.getScaledMaxFreq())) {
               // We have to adjust oscillator 0. So, let's set oscillators 3
-              // and 1 back to their center frequencies and take up the 
+              // and 1 back to their center frequencies and take up the
               // remaining adjustment in oscillator 0.
-              unsigned int osc3ScaledCenter = 
+              unsigned int osc3ScaledCenter =
                   (_osc3.getScaledMinFreq() + _osc3.getScaledMaxFreq()) / 2;
               osc3Steps = osc3ScaledCenter - _osc3.getScaledFreq();
               osc1Steps = osc3Steps * int(_osc3.getFreqStep() / _osc1.getFreqStep());
-              
+
               double freqRemainder = _freqOffset - (osc3Steps * int(_osc3.getFreqStep()));
               afcFineSteps = int(round(freqRemainder / _fineStep));
               osc0Steps = afcFineSteps * int(_fineStep / _osc0.getFreqStep());
           }
-          
+
           int freqChange0 = osc0Steps * int(_osc0.getFreqStep());
           int freqChange3 = osc3Steps * int(_osc3.getFreqStep());
-          ILOG << "TRACKING: Changing 0 by " << freqChange0 << 
+          ILOG << "TRACKING: Changing 0 by " << freqChange0 <<
               " Hz, 1 and 3 by " << freqChange3 << " Hz";
-          
+
           _setOscillators(_osc0.getScaledFreq() + osc0Steps,
               _osc1.getScaledFreq() + osc1Steps, _osc2.getScaledFreq(),
               _osc3.getScaledFreq() + osc3Steps);
           break;
       }
     }
-    // Sleep for a time equal to the expected data latency for the 
-    // burst channel. This assures that the next data we allow to come in 
+    // Sleep for a time equal to the expected data latency for the
+    // burst channel. This assures that the next data we allow to come in
     // will be using the new frequencies.
     usleep((unsigned int)(1.0e6 * _maxDataLatency));
 }
