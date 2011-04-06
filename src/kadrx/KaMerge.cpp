@@ -984,9 +984,15 @@ string KaMerge::_assembleStatusXml()
   xml += TaXml::writeDouble
     ("HTxPowerRaw", 2, km.hTxPowerRaw());
   xml += TaXml::writeDouble
+    ("HTxPowerCorrected", 2, km.hTxPowerRaw() + _config.rcvr_h_power_corr());
+  xml += TaXml::writeDouble
     ("VTxPowerRaw", 2, km.vTxPowerRaw());
   xml += TaXml::writeDouble
+    ("VTxPowerCorrected", 2, km.vTxPowerRaw() + _config.rcvr_v_power_corr());
+  xml += TaXml::writeDouble
     ("TestTargetPowerRaw", 2, km.testTargetPowerRaw());
+  xml += TaXml::writeDouble
+    ("TestTargetPowerCorrected", 2, km.testTargetPowerRaw() + _config.rcvr_tt_power_corr());
   xml += TaXml::writeDouble
     ("PsVoltage", 2, km.psVoltage());
   
