@@ -46,7 +46,6 @@ int _chans = KaDrxPub::KA_N_CHANNELS; ///< number of channels
 int _tsLength = 256;             ///< The time series length
 std::string _gaussianFile = "";  ///< gaussian filter coefficient file
 std::string _kaiserFile = "";    ///< kaiser filter coefficient file
-KaMerge* _merge = 0;             ///< The merge object - also IWRF TCP server
 bool _simulate = false;          ///< Set true for simulate mode
 int _simWavelength = 5000;       ///< The simulated data wavelength, in samples
 int _simPauseMs = 20;            ///< The number of milliseconds to pause when reading in simulate mode.
@@ -280,12 +279,11 @@ main(int argc, char** argv)
 
     signal(SIGPIPE, SIG_IGN);
 
-    // Start our status monitoring thread.
+    // Create our status monitoring thread.
     KaMonitor kaMonitor(_xmitdHost, _xmitdPort);
-    kaMonitor.start();
 
-    // create the merge object
-    _merge = new KaMerge(kaConfig, kaMonitor);
+    // create the merge object (which is also the IWRF TCP server)
+    KaMerge merge(kaConfig, kaMonitor);
 
     // Turn off transmitter trigger enable until we know we're generating
     // timing signals (and hence that the T/R limiters are presumably
@@ -322,15 +320,15 @@ main(int argc, char** argv)
 
     // H channel (0)
     PMU_auto_register("set up threads");
-    KaDrxPub hThread(sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, _merge,
+    KaDrxPub hThread(sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, &merge,
         _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength);
 
     // V channel (1)
-    KaDrxPub vThread(sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, _merge,
+    KaDrxPub vThread(sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, &merge,
         _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength);
 
     // Burst channel (2)
-    KaDrxPub burstThread(sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig, _merge,
+    KaDrxPub burstThread(sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig, &merge,
         _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength);
 
     // Create the upConverter.
@@ -351,6 +349,11 @@ main(int argc, char** argv)
     // catch a SIGINT (from control-C) or SIGTERM (the default from 'kill')
     signal(SIGINT, sigHandler);
     signal(SIGTERM, sigHandler);
+
+    // Start monitor and merge
+    PMU_auto_register("start monitor and merge");
+    kaMonitor.start();
+    merge.start();
 
     // Start the downconverter threads.
     PMU_auto_register("start threads");
@@ -379,10 +382,6 @@ main(int argc, char** argv)
     PMU_auto_register("start upconverter");
     startUpConverter(upConverter, sd3c.txPulseWidthCounts());
 
-    // start the merge
-    PMU_auto_register("start merge");
-    _merge->start();
-    
     // If we're going to start timers based on an external trigger (i.e., 1 PPS
     // from the GPS time server), make sure the time server is OK. Also make
     // sure our system time is close enough that we can calculate the correct
