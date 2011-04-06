@@ -24,8 +24,13 @@ rcvr_digital_gain       -2.67   # dB
 rcvr_filter_mismatch    1.1     # dB
 rcvr_gate0_delay        5.5e-6  # s
 rcvr_noise_figure       8.3     # dB , H-ch
-rcvr_pulse_width        5.0e-7    # s
+rcvr_pulse_width        5.0e-7  # s
 rcvr_rf_gain            36.16   # dB , H-ch
+# Coupling differences between the three QuinStar diode power detectors and
+# A/D channel inputs: power@A/D = power@QuinStar + power_corr
+rcvr_h_power_corr       71.93   # dB
+rcvr_v_power_corr       0.00    # dB
+rcvr_tt_power_corr      -59.81  # dB
 
 range_to_gate0          37.5    # m to center of gate
 

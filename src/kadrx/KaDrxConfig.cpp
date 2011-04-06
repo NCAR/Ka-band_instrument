@@ -55,6 +55,9 @@ std::set<std::string> KaDrxConfig::_createDoubleLegalKeys() {
     keys.insert("rcvr_pulse_width");
     keys.insert("rcvr_rf_gain");
     keys.insert("rcvr_switching_network_loss");
+    keys.insert("rcvr_h_power_corr");
+    keys.insert("rcvr_v_power_corr");
+    keys.insert("rcvr_tt_power_corr");
     keys.insert("rcvr_waveguide_loss");
     keys.insert("latitude");
     keys.insert("longitude");
@@ -287,9 +290,24 @@ KaDrxConfig::isValid(bool verbose) const {
             std::cerr << "'rcvr_pulse_width' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (rcvr_rf_gain() == UNSET_INT) {
+    if (rcvr_rf_gain() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'rcvr_rf_gain' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (rcvr_h_power_corr() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'rcvr_h_power_corr' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (rcvr_v_power_corr() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'rcvr_v_power_corr' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (rcvr_tt_power_corr() == UNSET_DOUBLE) {
+        if (verbose)
+            std::cerr << "'rcvr_tt_power_corr' unset in DRX configuration" << std::endl;
         valid = false;
     }
     if (tx_cntr_freq() == UNSET_DOUBLE) {
@@ -444,32 +462,4 @@ KaDrxConfig::isValid(bool verbose) const {
         valid = false;
     }
     return valid;
-}
-
-std::vector<double> 
-KaDrxConfig::gp_timer_delays() const {
-    std::vector<double> delays;
-    // The first of the general purpose timers (OUTPUT_TIMER) is used in Ka for 
-    // transmit pulse modulation.
-    delays.push_back(tx_pulse_mod_delay());
-    // The other GP timers are unused
-    delays.push_back(0);
-    delays.push_back(0);
-    delays.push_back(0);
-    
-    return delays;
-}
-
-std::vector<double> 
-KaDrxConfig::gp_timer_widths() const {
-    std::vector<double> widths;
-    // The first of the general purpose timers (OUTPUT_TIMER) is used in Ka for 
-    // transmit pulse modulation.
-    widths.push_back(tx_pulse_mod_width());
-    // The other GP timers are unused
-    widths.push_back(0);
-    widths.push_back(0);
-    widths.push_back(0);
-    
-    return widths;
 }

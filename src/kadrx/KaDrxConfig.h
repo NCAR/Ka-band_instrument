@@ -169,6 +169,24 @@ public:
     double rcvr_digital_gain() const { return _getDoubleVal("rcvr_digital_gain"); } /// dB
     double rcvr_gate0_delay() const { return _getDoubleVal("rcvr_gate0_delay"); }   /// seconds
     
+    /// Coupling difference in dB between H channel QuinStar power detector and 
+    /// A/D H channel input: power_at_A/D = power_at_QuinStar + rcvr_h_power_corr
+    /// @return the coupling difference between the H channel QuinStar power
+    /// detector and the A/D H channel input, dB
+    double rcvr_h_power_corr() const { return _getDoubleVal("rcvr_h_power_corr"); }
+    
+    /// Coupling difference in dB between V channel QuinStar power detector and 
+    /// A/D V channel input: power_at_A/D = power_at_QuinStar + rcvr_v_power_corr
+    /// @return the coupling difference between the V channel QuinStar power
+    /// detector and the A/D V channel input, dB
+    double rcvr_v_power_corr() const { return _getDoubleVal("rcvr_v_power_corr"); }
+    
+    /// Coupling difference in dB between test target QuinStar power detector 
+    /// and A/D H channel input: power_at_A/D = power_at_QuinStar + rcvr_tt_power_corr
+    /// @return the coupling difference between the test target QuinStar power
+    /// detector and the A/D H channel input, dB
+    double rcvr_tt_power_corr() const { return _getDoubleVal("rcvr_tt_power_corr"); }
+    
     /// Return the range to the center of gate 0, in meters
     /// @return the range to the center of gate 0, in meters
     double range_to_gate0() const { return _getDoubleVal("range_to_gate0"); }
@@ -176,15 +194,6 @@ public:
     double test_target_delay() const { return _getDoubleVal("test_target_delay"); } /// seconds
     double test_target_width() const { return _getDoubleVal("test_target_width"); } /// seconds
     
-    /// Five delay values for the general purpose timers in the sd3c firmware.
-    /// The first GP timer is used for tx pulse modulation, and the rest are
-    /// unused.
-    std::vector<double> gp_timer_delays() const; 
-    /// Five width values for the general purpose timers in the sd3c firmware.
-    /// The first GP timer is used for tx pulse modulation, and the rest are
-    /// unused.
-    std::vector<double> gp_timer_widths() const; 
-
     double latitude() const { return _getDoubleVal("latitude"); }    /// degrees
     double longitude() const { return _getDoubleVal("longitude"); }  /// degrees
     double altitude() const { return _getDoubleVal("altitude"); }    /// meters MSL
