@@ -318,14 +318,11 @@ KaMonitor::_getOscFrequencies() {
     KaOscControl::theControl().getOscFrequencies(_osc0Frequency,
             _osc1Frequency, _osc2Frequency, _osc3Frequency);
     
-    DLOG << std::fixed << std::setprecision(4) << "oscillator 0 frequency: " <<
-            _osc0Frequency / 1.0e9 << " GHz";
-    DLOG << std::fixed << std::setprecision(2) << "oscillator 1 frequency: " <<
-            _osc1Frequency / 1.0e6 << " MHz";
-    DLOG << std::fixed << std::setprecision(3) << "oscillator 2 frequency: " <<
-            _osc2Frequency / 1.0e9 << " GHz";
-    DLOG << std::fixed << std::setprecision(2) << "oscillator 3 frequency: " <<
-            _osc3Frequency / 1.0e6 << " MHz";
+    DLOG << std::fixed << "oscillator frequencies - " <<
+        std::setprecision(4) << "0: " << _osc0Frequency / 1.0e9 << " GHz" <<
+        std::setprecision(2) << ", 1: " << _osc1Frequency / 1.0e6 << " MHz" <<
+        std::setprecision(3) << ", 2: " << _osc2Frequency / 1.0e9 << " GHz" <<
+        std::setprecision(2) << ", 3: " << _osc3Frequency / 1.0e6 << " MHz";
 }
 
 double
