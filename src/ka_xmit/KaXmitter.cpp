@@ -87,6 +87,7 @@ KaXmitter::~KaXmitter() {
 
 void
 KaXmitter::powerOn() {
+    ILOG << "Power On";
     if (! _simulate) {
         _sendCommand(_POWERON_COMMAND);
     } else {
@@ -98,6 +99,7 @@ KaXmitter::powerOn() {
 
 void
 KaXmitter::powerOff() {
+    ILOG << "Power Off";
     if (! _simulate) {
         _sendCommand(_POWEROFF_COMMAND);
     } else {
@@ -108,6 +110,7 @@ KaXmitter::powerOff() {
 
 void
 KaXmitter::faultReset() {
+    ILOG << "Fault Reset";
     if (! _simulate) {
         _sendCommand(_RESET_COMMAND);
     } else {
@@ -129,6 +132,7 @@ KaXmitter::faultReset() {
 
 void
 KaXmitter::standby() {
+    ILOG << "Standby";
     if (! _simulate) {
         _sendCommand(_STANDBY_COMMAND);
     } else {
@@ -145,6 +149,7 @@ KaXmitter::standby() {
 
 void
 KaXmitter::operate() {
+    ILOG << "Operate";
     if (! _simulate) {
         _sendCommand(_OPERATE_COMMAND);
     } else {
