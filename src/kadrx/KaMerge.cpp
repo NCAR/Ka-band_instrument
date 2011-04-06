@@ -997,6 +997,21 @@ string KaMerge::_assembleStatusXml()
   xml += TaXml::writeBoolean
     ("GpsTimeServerGood", 2, km.gpsTimeServerGood());
   
+  // Current oscillator frequencies, Hz
+  xml += TaXml::writeDouble
+    ("Oscillator0Frequency", 2, km.osc0Frequency());
+  xml += TaXml::writeDouble
+    ("Oscillator1Frequency", 2, km.osc1Frequency());
+  xml += TaXml::writeDouble
+    ("Oscillator2Frequency", 2, km.osc2Frequency());
+  xml += TaXml::writeDouble
+    ("Oscillator3Frequency", 2, km.osc3Frequency());
+  
+  // Current tx frequency derived from the state of the rx/downconverter 
+  // oscillators, Hz.
+  xml += TaXml::writeDouble
+    ("TransmitterFrequency", 2, km.derivedTxFrequency());
+  
   xml += TaXml::writeEndTag("KaReceiverStatus", 1);
 
   xml += TaXml::writeEndTag("KaStatus", 0);
