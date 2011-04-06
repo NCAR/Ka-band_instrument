@@ -216,7 +216,9 @@ KaMerge::KaMerge(const KaDrxConfig& config, const KaMonitor& kaMonitor) :
 KaMerge::~KaMerge()
 
 {
-
+  // First stop the thread if it's running
+  terminate();
+  
   _closeSocketToClient();
 
   delete _qH;
