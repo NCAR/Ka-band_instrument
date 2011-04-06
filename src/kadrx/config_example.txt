@@ -35,7 +35,7 @@ rcvr_tt_power_corr      -59.81  # dB
 range_to_gate0          37.5    # m to center of gate
 
 tx_cntr_freq            3.5e10  # Hz
-tx_peak_power           76.99   # dBm
+tx_peak_power           74.69   # dBm
 tx_pulse_width          5.0e-7  # s
 tx_pulse_mod_delay      6.0e-7  # s
 tx_pulse_mod_width      6.0e-7  # s
