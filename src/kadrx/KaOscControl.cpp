@@ -327,7 +327,12 @@ KaOscControlPriv::run() {
 void
 KaOscControlPriv::getOscFrequencies(uint64_t & osc0Freq, uint64_t & osc1Freq,
         uint64_t & osc2Freq, uint64_t & osc3Freq) {
-    QMutexLocker locker(&_mutex);
+    // Don't try locking the mutex here, since it takes way too long 
+    // (up to a few seconds!) to get the mutex if we're in the middle of an 
+    // oscillator adjustment.  Worst case we'll get the state of things
+    // in the middle of an adjustment, with some oscillators done adjusting
+    // and others not done. It's still an accurate representation of the
+    // state of the system at that time...
     osc0Freq = uint64_t(_osc0.getScaledFreq()) * _osc0.getFreqStep();
     osc1Freq = uint64_t(_osc1.getScaledFreq()) * _osc1.getFreqStep();
     osc2Freq = uint64_t(_osc2.getScaledFreq()) * _osc2.getFreqStep();
