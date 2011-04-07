@@ -3,6 +3,9 @@
 #include <cstring>
 #include <cmath>
 
+#include <iostream>
+using namespace std;
+
 ///////////////////////////////////////////////////////////////////////////
 
 PulseData::PulseData()
@@ -66,16 +69,17 @@ void PulseData::combineEverySecondGate()
   int16_t *newIq = _iq;
 
   for (int newG = 0; newG < newNGates; newG++) {
+
     // Save I and Q of the first gate being averaged for this new gate
-    int16_t firstI = iq[0];
-    int16_t firstQ = iq[1];
-    int16_t firstPower = firstI * firstI + firstQ * firstQ;
-    
+    double firstI = iq[0];
+    double firstQ = iq[1];
+    double firstPower = firstI * firstI + firstQ * firstQ;
+
     // Sum powers for the gates going into the new gate
     double powerSum = 0.0;
     for (int subG = 0; subG < DecimationFactor; subG++) {
-        int16_t i = iq[0];
-        int16_t q = iq[1];
+        double i = iq[0];
+        double q = iq[1];
         
         powerSum += i * i + q * q;
         
@@ -87,11 +91,32 @@ void PulseData::combineEverySecondGate()
     
     // Scale factor for firstI and firstQ so that they keep their original phase 
     // but will yield the average power of the combined gates.
-    double iqScale = sqrt(newPower / firstPower);
+
+    double iqScale = 1.0;
+    if (firstPower > 0) {
+      sqrt(newPower / firstPower);
+    }
     
     // Scale firstI and firstQ to generate values for our new gate.
-    newIq[0] = firstI * iqScale;
-    newIq[1] = firstQ * iqScale;
+
+    
+    int newI = firstI * iqScale;
+    int newQ = firstQ * iqScale;
+
+    if (newI < -32768) {
+      newI = -32768;
+    } else if (newI > 32767) {
+      newI = 32767;
+    }
+    
+    if (newQ < -32768) {
+      newQ = -32768;
+    } else if (newQ > 32767) {
+      newQ = 32767;
+    }
+    
+    newIq[0] = (int16_t) newI;
+    newIq[1] = (int16_t) newQ;
     
     newIq += 2; // step to the next new gate
 
