@@ -96,8 +96,8 @@ void PulseData::combineEverySecondGate()
     
     // Scale firstI and firstQ to generate values for our new gate.
    
-    int newI = firstI * iqScale;
-    int newQ = firstQ * iqScale;
+    double newI = firstI * iqScale;
+    double newQ = firstQ * iqScale;
 
     if (newI < -32768) {
       newI = -32768;
