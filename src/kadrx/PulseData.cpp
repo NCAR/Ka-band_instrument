@@ -92,14 +92,10 @@ void PulseData::combineEverySecondGate()
     // Scale factor for firstI and firstQ so that they keep their original phase 
     // but will yield the average power of the combined gates.
 
-    double iqScale = 1.0;
-    if (firstPower > 0) {
-      sqrt(newPower / firstPower);
-    }
+    double iqScale = (firstPower > 0.0) ? sqrt(newPower / firstPower) : 1.0;
     
     // Scale firstI and firstQ to generate values for our new gate.
-
-    
+   
     int newI = firstI * iqScale;
     int newQ = firstQ * iqScale;
 
