@@ -1,6 +1,7 @@
 #include "PulseData.h"
 #include <cstdio>
 #include <cstring>
+#include <cmath>
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -58,21 +59,45 @@ void PulseData::set(int64_t pulseSeqNum,
 void PulseData::combineEverySecondGate()
 
 {
-
-  int nGatesHalf = _nGates / 2;
+  const int DecimationFactor = 2;  // every 2nd gate (for now?)
+  int newNGates = _nGates / DecimationFactor;
 
   int16_t *iq = _iq;
-  int16_t *iqHalf = _iq;
+  int16_t *newIq = _iq;
 
-  for (int ii = 0; ii < nGatesHalf; ii++) {
+  for (int newG = 0; newG < newNGates; newG++) {
+    // Save I and Q of the first gate being averaged for this new gate
+    int16_t firstI = iq[0];
+    int16_t firstQ = iq[1];
+    int16_t firstPower = firstI * firstI + firstQ * firstQ;
+    
+    // Sum powers for the gates going into the new gate
+    double powerSum = 0.0;
+    for (int subG = 0; subG < DecimationFactor; subG++) {
+        int16_t i = iq[0];
+        int16_t q = iq[1];
+        
+        powerSum += i * i + q * q;
+        
+        iq += 2;    // step to the next original gate
+    }
 
-    memcpy(iqHalf, iq, 2 * sizeof(int16_t));
-    iq += 4;
-    iqHalf += 2;
+    // Average power for the two gates
+    double newPower = powerSum / DecimationFactor;
+    
+    // Scale factor for firstI and firstQ so that they keep their original phase 
+    // but will yield the average power of the combined gates.
+    double iqScale = sqrt(newPower / firstPower);
+    
+    // Scale firstI and firstQ to generate values for our new gate.
+    newIq[0] = firstI * iqScale;
+    newIq[1] = firstQ * iqScale;
+    
+    newIq += 2; // step to the next new gate
 
   }
 
-  _nGates = nGatesHalf;
+  _nGates = newNGates;
 
 }
 
