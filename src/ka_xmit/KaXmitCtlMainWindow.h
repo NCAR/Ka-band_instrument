@@ -49,14 +49,16 @@ private:
      *  @return "-" if the count is zero, otherwise a text representation of 
      *      the count.
      */
-    QString _countLabel(int count) {
-        if (count == 0)
-            return QString("-");
-        
-        QString txt;
-        txt.setNum(count);
-        return txt;
-    }
+    static QString _countLabel(int count);
+    
+    /**
+     *  Return an empty string if the time is -1, otherwise a brief text 
+     *  representation of the time.
+     *  @param time the time_t time to be represented
+     *  @return an empty string if the time is -1, otherwise a brief text 
+     *  representation of the time.
+     */
+    static QString _faultTimeLabel(time_t time);
 
     Ui::KaXmitCtlMainWindow _ui;
     XmitClient _xmitClient;

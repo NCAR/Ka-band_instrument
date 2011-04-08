@@ -129,6 +129,17 @@ KaXmitCtlMainWindow::_update() {
     _ui.hvpsUnderVFaultCount->setText(_countLabel(_status.hvpsUnderVoltageCount()));
     _ui.hvpsOverVFaultCount->setText(_countLabel(_status.hvpsOverVoltageCount()));
     
+    // latest fault times
+    _ui.magCurrFaultTime->setText(_faultTimeLabel(_status.magnetronCurrentFaultTime()));
+    _ui.blowerFaultTime->setText(_faultTimeLabel(_status.blowerFaultTime()));
+    _ui.interlockFaultTime->setText(_faultTimeLabel(_status.safetyInterlockTime()));
+    _ui.revPowerFaultTime->setText(_faultTimeLabel(_status.reversePowerFaultTime()));
+    _ui.pulseInputFaultTime->setText(_faultTimeLabel(_status.pulseInputFaultTime()));
+    _ui.hvpsCurrFaultTime->setText(_faultTimeLabel(_status.hvpsCurrentFaultTime()));
+    _ui.wgPresFaultTime->setText(_faultTimeLabel(_status.waveguidePressureFaultTime()));
+    _ui.hvpsUnderVFaultTime->setText(_faultTimeLabel(_status.hvpsUnderVoltageTime()));
+    _ui.hvpsOverVFaultTime->setText(_faultTimeLabel(_status.hvpsOverVoltageTime()));
+    
     QString txt;
     txt.setNum(_status.autoPulseFaultResets());
     _ui.autoResetCount->setText(txt);
@@ -246,4 +257,28 @@ KaXmitCtlMainWindow::_logMessage(std::string message) {
     _ui.logArea->appendPlainText(
             QDateTime::currentDateTime().toUTC().toString("yyyy-MM-dd hh:mm:ss ") + 
             message.c_str());
+}
+
+QString
+KaXmitCtlMainWindow::_countLabel(int count) {
+    if (count == 0)
+        return QString("-");
+
+    QString txt;
+    txt.setNum(count);
+    return txt;
+}
+
+QString
+KaXmitCtlMainWindow::_faultTimeLabel(time_t time) {
+    if (time == -1)
+        return QString("");
+    
+    QDateTime nowQDT = QDateTime::currentDateTime().toUTC();
+    QDateTime faultQDT = QDateTime::fromTime_t(time).toUTC();
+    if (faultQDT.date() == nowQDT.date()) {
+        return(faultQDT.toString("hh:mm:ss"));
+    } else {
+        return(faultQDT.toString("MM/dd hh:mm:ss"));
+    }
 }
