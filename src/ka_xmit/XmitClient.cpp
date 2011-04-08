@@ -128,6 +128,16 @@ XmitClient::XmitStatus::XmitStatus() {
     _hvpsOverVoltageCount = -1;
     _autoPulseFaultResets = -1;
     
+    _magnetronCurrentFaultTime = -1;
+    _blowerFaultTime = -1;
+    _safetyInterlockTime = -1;
+    _reversePowerFaultTime = -1;
+    _pulseInputFaultTime = -1;
+    _hvpsCurrentFaultTime = -1;
+    _waveguidePressureFaultTime = -1;
+    _hvpsUnderVoltageTime = -1;
+    _hvpsOverVoltageTime = -1;
+    
     _hvpsVoltage = -9999.9;
     _magnetronCurrent = -9999.9;
     _hvpsCurrent = -9999.9;
@@ -166,8 +176,19 @@ XmitClient::XmitStatus::XmitStatus(XmlRpc::XmlRpcValue & statusDict) {
     _waveguidePressureFaultCount = _StatusInt(statusDict, "waveguide_pressure_fault_count");
     _hvpsUnderVoltageCount = _StatusInt(statusDict, "hvps_under_voltage_count");
     _hvpsOverVoltageCount = _StatusInt(statusDict, "hvps_over_voltage_count");
+
     _autoPulseFaultResets = _StatusInt(statusDict, "auto_pulse_fault_resets");
     
+    _magnetronCurrentFaultTime = _StatusInt(statusDict, "magnetron_current_fault_time");
+    _blowerFaultTime = _StatusInt(statusDict, "blower_fault_time");
+    _safetyInterlockTime = _StatusInt(statusDict, "safety_interlock_time");
+    _reversePowerFaultTime = _StatusInt(statusDict, "reverse_power_fault_time");
+    _pulseInputFaultTime = _StatusInt(statusDict, "pulse_input_fault_time");
+    _hvpsCurrentFaultTime = _StatusInt(statusDict, "hvps_current_fault_time");
+    _waveguidePressureFaultTime = _StatusInt(statusDict, "waveguide_pressure_fault_time");
+    _hvpsUnderVoltageTime = _StatusInt(statusDict, "hvps_under_voltage_time");
+    _hvpsOverVoltageTime = _StatusInt(statusDict, "hvps_over_voltage_time");
+
     _hvpsVoltage = _StatusDouble(statusDict, "hvps_voltage");
     _magnetronCurrent = _StatusDouble(statusDict, "magnetron_current");
     _hvpsCurrent = _StatusDouble(statusDict, "hvps_current");

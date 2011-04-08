@@ -215,6 +215,60 @@ public:
          */
         int hvpsOverVoltageCount() const { return(_hvpsOverVoltageCount); }
         /**
+         * Unix time of last magnetron current fault since ka_xmitd startup.
+         * @return the Unix time of the last magnetron current fault since ka_xmitd 
+         * startup.
+         */
+        int magnetronCurrentFaultTime() const { return(_magnetronCurrentFaultTime); }
+        /**
+         * Unix time of last blower fault since ka_xmitd startup.
+         * @return the Unix time of the last blower fault since ka_xmitd 
+         * startup.
+         */
+        int blowerFaultTime() const { return(_blowerFaultTime); }
+        /**
+         * Unix time of last safety interlock fault since ka_xmitd startup.
+         * @return the Unix time of the last safety interlock fault since ka_xmitd 
+         * startup.
+         */
+        int safetyInterlockTime() const { return(_safetyInterlockTime); }
+        /**
+         * Unix time of last reverse power fault since ka_xmitd startup.
+         * @return the Unix time of the last reverse power fault since ka_xmitd 
+         * startup.
+         */
+        int reversePowerFaultTime() const { return(_reversePowerFaultTime); }
+        /**
+         * Unix time of last pulse input fault since ka_xmitd startup.
+         * @return the Unix time of the last pulse input fault since ka_xmitd 
+         * startup.
+         */
+        int pulseInputFaultTime() const { return(_pulseInputFaultTime); }
+        /**
+         * Unix time of last HVPS current fault since ka_xmitd startup.
+         * @return the Unix time of the last HVPS current fault since ka_xmitd 
+         * startup.
+         */
+        int hvpsCurrentFaultTime() const { return(_hvpsCurrentFaultTime); }
+        /**
+         * Unix time of last waveguide pressure fault since ka_xmitd startup.
+         * @return the Unix time of the last waveguide pressure fault since ka_xmitd 
+         * startup.
+         */
+        int waveguidePressureFaultTime() const { return(_waveguidePressureFaultTime); }
+        /**
+         * Unix time of last HVPS under-voltage fault since ka_xmitd startup.
+         * @return the Unix time of the last HVPS under-voltage fault since ka_xmitd 
+         * startup.
+         */
+        int hvpsUnderVoltageTime() const { return(_hvpsUnderVoltageTime); }
+        /**
+         * Unix time of last HVPS over-voltage fault since ka_xmitd startup.
+         * @return the Unix time of the last HVPS over-voltage fault since ka_xmitd 
+         * startup.
+         */
+        int hvpsOverVoltageTime() const { return(_hvpsOverVoltageTime); }
+        /**
          * Number of auto pulse fault resets by ka_xmitd since startup.
          * @return the number of auto pulse fault resets by ka_xmitd since
          * startup.
@@ -254,7 +308,18 @@ public:
         int _waveguidePressureFaultCount;
         int _hvpsUnderVoltageCount;
         int _hvpsOverVoltageCount;
+        
         int _autoPulseFaultResets;
+
+        time_t _magnetronCurrentFaultTime;
+        time_t _blowerFaultTime;
+        time_t _safetyInterlockTime;
+        time_t _reversePowerFaultTime;
+        time_t _pulseInputFaultTime;
+        time_t _hvpsCurrentFaultTime;
+        time_t _waveguidePressureFaultTime;
+        time_t _hvpsUnderVoltageTime;
+        time_t _hvpsOverVoltageTime;
 
         double _hvpsVoltage;
         double _magnetronCurrent;

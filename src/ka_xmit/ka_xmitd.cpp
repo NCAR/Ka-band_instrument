@@ -60,6 +60,17 @@ int WaveguidePressureFaultFaultCount = 0;
 int HvpsUnderVoltageCount = 0;
 int HvpsOverVoltagetCount = 0;
 
+// Latest fault times
+time_t MagnetronCurrentFaultTime = -1;
+time_t BlowerFaultTime = -1;
+time_t SafetyInterlockFaultTime = -1;
+time_t ReversePowerFaultTime = -1;
+time_t PulseInputFaultTime = -1;
+time_t HvpsCurrentFaultTime = -1;
+time_t WaveguidePressureFaultFaultTime = -1;
+time_t HvpsUnderVoltageTime = -1;
+time_t HvpsOverVoltagetTime = -1;
+
 // log4cpp Appender which keeps around the 50 most recent log messages. 
 logx::RecentHistoryAppender RecentLogHistory("RecentHistoryAppender", 50);
 
@@ -222,6 +233,51 @@ logx::RecentHistoryAppender RecentLogHistory("RecentHistoryAppender", 50);
 ///     <td>int</td>
 ///     <td>count of HVPS over-voltage faults since startup</td>
 ///   </tr>
+///   <tr>
+///     <td>magnetron_current_fault_time</td>
+///     <td>int</td>
+///     <td>Unix time of last magnetron current fault seen</td>
+///   </tr>
+///   <tr>
+///     <td>blower_fault_time</td>
+///     <td>int</td>
+///     <td>Unix time of last blower fault seen</td>
+///   </tr>
+///   <tr>
+///     <td>safety_interlock_time</td>
+///     <td>int</td>
+///     <td>Unix time of last safety interlock fault seen</td>
+///   </tr>
+///   <tr>
+///     <td>reverse_power_fault_time</td>
+///     <td>int</td>
+///     <td>Unix time of last reverse power fault seen</td>
+///   </tr>
+///   <tr>
+///     <td>pulse_input_fault_time</td>
+///     <td>int</td>
+///     <td>Unix time of last pulse input fault seen</td>
+///   </tr>
+///   <tr>
+///     <td>hvps_current_fault_time</td>
+///     <td>int</td>
+///     <td>Unix time of last HVPS current fault seen</td>
+///   </tr>
+///   <tr>
+///     <td>waveguide_pressure_fault_time</td>
+///     <td>int</td>
+///     <td>Unix time of last waveguide pressure fault seen</td>
+///   </tr>
+///   <tr>
+///     <td>hvps_under_voltage_time</td>
+///     <td>int</td>
+///     <td>Unix time of last HVPS under-voltage fault seen</td>
+///   </tr>
+///   <tr>
+///     <td>hvps_over_voltage_time</td>
+///     <td>int</td>
+///     <td>Unix time of last HVPS over-voltage fault seen</td>
+///   </tr>
 /// </table>
 /// Example client usage, where ka_xmitd is running on machine `xmitserver`:
 /// @code
@@ -357,43 +413,53 @@ updateStatus() {
     static KaXmitStatus PrevXmitStatus;
     PrevXmitStatus = XmitStatus;
     XmitStatus = Xmitter->getStatus();
+    time_t now = time(0);
     
     // Increment fault counters
     if (XmitStatus.magnetronCurrentFault && ! PrevXmitStatus.magnetronCurrentFault) {
         WLOG << "Magnetron current fault";
         MagnetronCurrentFaultCount++;
+        MagnetronCurrentFaultTime = now;
     }
     if (XmitStatus.blowerFault && ! PrevXmitStatus.blowerFault) {
         WLOG << "Blower fault";
         BlowerFaultCount++;
+        BlowerFaultTime = now;
     }
     if (XmitStatus.safetyInterlock && ! PrevXmitStatus.safetyInterlock) {
         WLOG << "Safety interlock fault";
         SafetyInterlockFaultCount++;
+        SafetyInterlockFaultTime = now;
     }
     if (XmitStatus.reversePowerFault && ! PrevXmitStatus.reversePowerFault) {
         WLOG << "Reverse power fault";
         ReversePowerFaultCount++;
+        ReversePowerFaultTime = now;
     }
     if (XmitStatus.pulseInputFault && ! PrevXmitStatus.pulseInputFault) {
         WLOG << "Pulse input fault";
         PulseInputFaultCount++;
+        PulseInputFaultTime = now;
     }
     if (XmitStatus.hvpsCurrentFault && ! PrevXmitStatus.hvpsCurrentFault) {
         WLOG << "HVPS current fault";
         HvpsCurrentFaultCount++;
+        HvpsCurrentFaultTime = now;
     }
     if (XmitStatus.waveguidePressureFault && ! PrevXmitStatus.waveguidePressureFault) {
         WLOG << "Waveguide pressure fault";
         WaveguidePressureFaultFaultCount++;
+        WaveguidePressureFaultFaultTime = now;
     }
     if (XmitStatus.hvpsUnderVoltage && ! PrevXmitStatus.hvpsUnderVoltage) {
         WLOG << "HVPS under-voltage fault";
         HvpsUnderVoltageCount++;
+        HvpsUnderVoltageTime = now;
     }
     if (XmitStatus.hvpsOverVoltage && ! PrevXmitStatus.hvpsOverVoltage) {
         WLOG << "HVPS over-voltage fault";
         HvpsOverVoltagetCount++;
+        HvpsOverVoltagetTime = now;
     }
     
     // Unpack the status from the transmitter into our XML-RPC StatusDict
@@ -435,6 +501,19 @@ updateStatus() {
             XmlRpcValue(WaveguidePressureFaultFaultCount);
     StatusDict["hvps_under_voltage_count"] = XmlRpcValue(HvpsUnderVoltageCount);
     StatusDict["hvps_over_voltage_count"] = XmlRpcValue(HvpsOverVoltagetCount);
+    
+    // Add latest fault times
+    StatusDict["magnetron_current_fault_time"] = 
+            XmlRpcValue(int(MagnetronCurrentFaultTime));
+    StatusDict["blower_fault_time"] = XmlRpcValue(int(BlowerFaultTime));
+    StatusDict["safety_interlock_time"] = XmlRpcValue(int(SafetyInterlockFaultTime));
+    StatusDict["reverse_power_fault_time"] = XmlRpcValue(int(ReversePowerFaultTime));
+    StatusDict["pulse_input_fault_time"] = XmlRpcValue(int(PulseInputFaultTime));
+    StatusDict["hvps_current_fault_time"] = XmlRpcValue(int(HvpsCurrentFaultTime));
+    StatusDict["waveguide_pressure_fault_time"] = 
+            XmlRpcValue(int(WaveguidePressureFaultFaultTime));
+    StatusDict["hvps_under_voltage_time"] = XmlRpcValue(int(HvpsUnderVoltageTime));
+    StatusDict["hvps_over_voltage_time"] = XmlRpcValue(int(HvpsOverVoltagetTime));
     
     // If we're operating (hvps_runup is true), update LastOperateTime to now
     if (XmitStatus.hvpsRunup)
@@ -513,7 +592,7 @@ handlePulseInputFault() {
             updateStatus();
             // Exit the loop if the transmitter is now operating
             if (XmitStatus.hvpsRunup) {
-                ILOG << "Succeeded after " << tries + 1 << " try/tries";
+                ILOG << "Succeeded after " << tries + 1 << " tries";
                 break;
             }
         }
