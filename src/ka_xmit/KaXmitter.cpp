@@ -172,8 +172,10 @@ KaXmitter::getStatus() {
         _simStatus.hvpsCurrent = 0.2 + (0.2 * random()) / RAND_MAX;
         _simStatus.temperature = 30 + (2.0 * random()) / RAND_MAX;
         
-        if (_simStatus.hvpsRunup && (random() / float(RAND_MAX)) < 0.05)
+        // If in operate mode, occasionally generate a pulse input fault
+        if (_simStatus.hvpsRunup && (random() / float(RAND_MAX)) < 0.05) {
             _simStatus.pulseInputFault = true;
+        }
 
         _simStatus.faultSummary = _simStatus.blowerFault ||
                 _simStatus.hvpsCurrentFault|| _simStatus.hvpsOverVoltage ||
@@ -181,8 +183,13 @@ KaXmitter::getStatus() {
                 _simStatus.pulseInputFault || _simStatus.reversePowerFault ||
                 _simStatus.safetyInterlock;
         
-        if (_simStatus.faultSummary)
-            standby();
+        // If we simulated a fault, also simulate leaving operate mode
+        if (_simStatus.faultSummary) {
+            _simStatus.hvpsOn = false;
+            _simStatus.hvpsRunup = false;
+            _simStatus.hvpsVoltage = 0.0;
+            _simStatus.standby = true;
+        }
         
         return(_simStatus);
     }
