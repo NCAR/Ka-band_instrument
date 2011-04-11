@@ -16,7 +16,9 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <boost/program_options.hpp>
 
+#include <toolsa/pmu.h>
 #include <logx/Logging.h>
 #include <log4cpp/SyslogAppender.hh>
 #include <RecentHistoryAppender.h>
@@ -24,6 +26,8 @@
 #include <XmlRpc.h>
 
 #include "KaXmitter.h"
+
+namespace po = boost::program_options;
 
 LOGGING("ka_xmitd")
 
@@ -73,6 +77,15 @@ time_t HvpsOverVoltagetTime = -1;
 
 // log4cpp Appender which keeps around the 50 most recent log messages. 
 logx::RecentHistoryAppender RecentLogHistory("RecentHistoryAppender", 50);
+
+// Description of command line options
+po::options_description OptionsDesc("Options");
+
+/// Run in foreground?
+bool Foreground = false;
+
+/// Instance name for procmap
+std::string InstanceName = "";
 
 /// Xmlrpc++ method to get transmitter status from ka_xmitd. The method
 /// returns a XmlRpc::XmlRpcValue struct (dictionary) mapping std::string keys 
@@ -629,10 +642,59 @@ resetXmitterTty() {
     }
 }
 
+/// Print usage information
+void
+usage(const char* argv0) {
+    std::cerr << "Usage: " << argv0 << 
+            " [option]... <xmitter_ttydev> <server_port>" << std::endl;
+    std::cerr << OptionsDesc << std::endl;
+    logx::LogUsage(std::cerr);
+    std::cerr << std::endl;
+    std::cerr << "Use ""SimulatedKaXmitter"" as <xmitter_ttydev> to " << 
+            "simulate a transmitter" << std::endl;
+}
+
+/// Parse the command line options, removing the successfully parsed bits from
+/// argc/argv.
+void
+parseOptions(int & argc, char** argv)
+{
+    // get the options
+    OptionsDesc.add_options()
+            ("help", "Describe options")
+            ("foreground", po::bool_switch(&Foreground),
+                    "Run in foreground, rather than as a daemon process")
+            ("instance", po::value<std::string>(&InstanceName), 
+                    "Instance name for procmap")
+            ;
+
+    po::variables_map vm;
+    po::command_line_parser parser(argc, argv);
+    parser.options(OptionsDesc);
+    po::parsed_options parsedOpts = parser.run();
+    po::store(parsedOpts, vm);
+    po::notify(vm);
+    
+    if (vm.count("help")) {
+        usage(argv[0]);
+        exit(0);
+    }
+    
+    // Retain only the unparsed args in argv, adjusting argc and argv
+    std::vector<std::string> unparsed = 
+            po::collect_unrecognized(parsedOpts.options, po::include_positional);
+    argc = 1 + unparsed.size();
+    for (unsigned int i = 0; i < unparsed.size(); i++) {
+        argv[i + 1] = strdup(unparsed[i].c_str());
+    }
+}
 
 
 int
 main(int argc, char *argv[]) {
+    // Get our local options
+    parseOptions(argc, argv);
+    
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
     
@@ -643,23 +705,20 @@ main(int argc, char *argv[]) {
     // Append our log to the recent history
     log4cpp::Category::getRoot().addAppender(RecentLogHistory);
 
-    // Check the remaining args
-    if (argc != 3 && argc != 4) {
-        std::cerr << "Usage: " << argv[0] << 
-            " <xmitter_ttydev> <server_port> [f] [<logx_arg> ...]" << std::endl;
-        std::cerr << std::endl;
-        std::cerr << "Use ""SimulatedKaXmitter"" as <xmitter_ttydev> to " << 
-                "simulate a transmitter" << std::endl;
-        std::cerr << "If 'f' is given after the port number, the program will" <<
-            std::endl;
-        std::cerr << "run in foreground, otherwise it will run as a daemon in" <<
-            std::endl;
-        std::cerr << "background." << std::endl;
+    // Remaining args should just be serial device for the transmitter and
+    // port number we should use.
+    if (argc != 3) {
+        std::cout << "remaining args: ";
+        for (int i = 0; i < argc; i++) {
+            std::cout << argv[i] << " ";
+        }
+        std::cout << std::endl;
+        usage(argv[0]);
         exit(1);
     }
     
-    // If we didn't get a third arg, run in background
-    if (argc == 3) {
+    // Normally we fork off a background process and run as a daemon
+    if (! Foreground) {
         pid_t pid = fork();
         if (pid < 0) {
             ELOG << "Error forking: " << strerror(errno);
@@ -669,6 +728,13 @@ main(int argc, char *argv[]) {
         }
     }
     
+    // Initialize registration with procmap if instance is specified
+    if (InstanceName.size() > 0) {
+        PMU_auto_init("ka_xmitd", InstanceName.c_str(), PROCMAP_REGISTER_INTERVAL);
+        ILOG << "Initializing procmap registration as instance '" << 
+                InstanceName << "'";
+    }
+
     time_t now = time(0);
     char timestring[40];
     strftime(timestring, sizeof(timestring) - 1, "%F %T", gmtime(&now));
@@ -678,16 +744,20 @@ main(int argc, char *argv[]) {
     memset(&XmitStatus, 0, sizeof(XmitStatus));
     
     // Instantiate our transmitter, communicating over the given serial port
+    PMU_auto_register("instantiating KaXmitter");
     Xmitter = new KaXmitter(argv[1]);
     
     // Initialize our RPC server
+    PMU_auto_register("starting XML-RPC server");
     RpcServer.bindAndListen(atoi(argv[2]));
     RpcServer.enableIntrospection(true);
     
     /*
-     * Listen for XML-RPC commands for a while. Repeat.
+     * Get current status. Listen for XML-RPC commands for a while. Repeat.
      */
     while (true) {
+        PMU_auto_register("running");
+        // Get current transmitter status
         updateStatus();
         if (! XmitStatus.serialConnected) {
             // Try to reset the transmitter serial port.
@@ -696,6 +766,7 @@ main(int argc, char *argv[]) {
         }
         if (XmitStatus.pulseInputFault)
             handlePulseInputFault();
+        // Listen for XML-RPC commands.
         // Note that work() mostly goes for 2x the given time, but sometimes
         // goes for 1x the given time. Who knows why?
         RpcServer.work(0.2);

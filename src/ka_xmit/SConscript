@@ -4,6 +4,8 @@ xmitdTools = Split("""
 logx
 doxygen
 xmlrpc
+rapradar
+boost_program_options
 """)
 
 xmitdEnv = Environment(tools = ['default'] + xmitdTools)
