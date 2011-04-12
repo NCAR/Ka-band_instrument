@@ -222,6 +222,7 @@ KaMonitor::run() {
         QDateTime now = QDateTime::currentDateTime().toUTC();
         uint64_t msecsSinceUpdate = uint64_t(lastUpdateTime.daysTo(now)) * 1000 * 86400 + 
             lastUpdateTime.time().msecsTo(now.time());
+        lastUpdateTime = now;
         if (msecsSinceUpdate < 1000) {
             usleep((1000 - msecsSinceUpdate) * 1000);
         }
@@ -234,8 +235,6 @@ KaMonitor::run() {
         
         // Get oscillator frequencies
         _getOscFrequencies();
-        
-        lastUpdateTime = QDateTime::currentDateTime().toUTC();
     }
 }
 
