@@ -6,6 +6,7 @@ doxygen
 xmlrpc
 rapradar
 boost_program_options
+pmc730
 """)
 
 xmitdEnv = Environment(tools = ['default'] + xmitdTools)
@@ -14,7 +15,11 @@ xmitd_sources = Split("""
 ka_xmitd.cpp
 KaXmitter.cpp
 """)
-ka_xmitd = xmitdEnv.Program('ka_xmitd', xmitd_sources)
+
+# We need KaPmc730 from kadrx
+kaPmc730 = xmitdEnv.Object(target='KaPmc730.o', source='../kadrx/KaPmc730.cpp')
+
+ka_xmitd = xmitdEnv.Program('ka_xmitd', xmitd_sources + kaPmc730)
 Default(ka_xmitd)
 
 xmitctlTools = Split("""

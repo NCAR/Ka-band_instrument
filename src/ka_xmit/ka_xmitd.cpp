@@ -26,6 +26,7 @@
 #include <XmlRpc.h>
 
 #include "KaXmitter.h"
+#include "../kadrx/KaPmc730.h"
 
 namespace po = boost::program_options;
 
@@ -617,29 +618,55 @@ handlePulseInputFault() {
     return;     
 }
 
+
+
 void
 resetXmitterTty() {
-    ILOG << "Resetting transmitter serial port!";
+    // If it's been less than 5 seconds since the last TTY reset attempt,
+    // sleep for a bit before we do it again...
+    static time_t LastXmitTtyResetTime = 0;
     
-    // Try to have the kadrx process reset the transmitter serial port. 
-    // If kadrx is not alive, this won't work, but then it's not so
-    // important, either...
-    std::string kadrxHost = "localhost";
-    int kadrxPort = 8081;
-    XmlRpcClient client(kadrxHost.c_str(), kadrxPort);
-    
-    XmlRpcValue params;
-    XmlRpcValue result;
-    if (! client.execute("resetXmitterTty", params, result)) {
-        // @TODO If the kadrx process is not running, we may be able to open
-        // the PMC-730 card ourselves and twiddle the reset line directly.
-        ELOG << "Error executing kadrx 'resetXmitterTty' command @ " << 
-                kadrxHost << ":" << kadrxPort;
-        ELOG << "Transmitter serial port reset failed";
-        // Sleep for a bit before returning, since we don't need to be trying
-        // the reset again a microsecond from now.
-        sleep(5);
+    time_t now = time(0);
+    int sleepSeconds = 5 - (now - LastXmitTtyResetTime);
+    if (sleepSeconds > 0) {
+        sleep(sleepSeconds);
+    } else 
+        
+    LastXmitTtyResetTime = time(0);
+
+    // If the PMC-730 card is not currently in use (i.e., kadrx is not running),
+    // open it up long enough to twiddle the line which resets the transmitter
+    // serial port.
+    // Otherwise, send an XML-RPC command to kadrx to have *it* reset the
+    // transmitter serial port.
+    if (Pmc730::CardAvailable(0)) {
+        ILOG << "Directly resetting transmitter serial port.";
+        // Create the singleton KaPmc730 and have it reset the tx serial port.
+        // (Reference the theKaPmc730() causes the singleton to be instantiated.)
+        KaPmc730::theKaPmc730().resetTxSerialPort();
+        // Make sure we get rid of the singleton again, in case someone wants
+        // to start up kadrx.
+        KaPmc730::closeTheKaPmc730();
+    } else {
+        ILOG << "Resetting transmitter serial port via XML-RPC call to kadrx.";
+        // Try to have the kadrx process reset the transmitter serial port. 
+        std::string kadrxHost = "localhost";
+        int kadrxPort = 8081;
+        XmlRpcClient client(kadrxHost.c_str(), kadrxPort);
+        
+        XmlRpcValue params;
+        XmlRpcValue result;
+        if (! client.execute("resetXmitterTty", params, result)) {
+            // @TODO If the kadrx process is not running, we may be able to open
+            // the PMC-730 card ourselves and twiddle the reset line directly.
+            ELOG << "Error executing kadrx 'resetXmitterTty' command @ " << 
+                    kadrxHost << ":" << kadrxPort;
+            ELOG << "Transmitter serial port reset failed";
+        }
     }
+    // Sleep for a bit before returning, since we don't need to be trying
+    // the reset again a microsecond from now.
+    sleep(5);
 }
 
 /// Print usage information
