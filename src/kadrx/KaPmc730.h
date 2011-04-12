@@ -21,6 +21,16 @@ public:
     static KaPmc730 & theKaPmc730();
     
     /**
+     * Delete the current singleton instance (if any), freeing the PMC-730 card.
+     * Any later reference to theKaPmc730() will cause the singleton to be
+     * instantiated again.
+     */
+    static void closeTheKaPmc730() {
+        delete(_theKaPmc730);
+        _theKaPmc730 = 0;
+    }
+    
+    /**
      * Get the current value in the PMC730 pulse counter.
      */
     static uint32_t getPulseCounter() { return(theKaPmc730()._getPulseCounter()); }
@@ -34,11 +44,13 @@ public:
     }
 
     /**
-     * Set the transmitter's serial port reset line.
-     * @param bool if true, the transmitter's serial line reset will be enabled
+     * Briefly raise the DIO line which causes a reset of the Ka transmitter's 
+     * serial port.
      */
-    static void setTxSerialReset(bool enable) {
-        theKaPmc730().setDioLine(_KA_DOUT_TXSERIALRESET, enable ? 1 : 0);
+    static void resetTxSerialPort() {
+        theKaPmc730().setDioLine(_KA_DOUT_TXSERIALRESET, 1);
+        usleep(25000);  // 25 ms (currently just a guess...)
+        theKaPmc730().setDioLine(_KA_DOUT_TXSERIALRESET, 0);
     }
     
     /**
