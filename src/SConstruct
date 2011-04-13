@@ -20,15 +20,9 @@ env = Environment(tools = ['default'],
                   GLOBAL_TOOLS = ['prefixoptions', 'buildmode', 'svninfo', KaSetup])
 svnInfo = env.SvnInfo('svnInfo.h', '#')
 
-SConscript("acex/SConscript")
-SConscript("rtfcommon/SConscript")
 SConscript("pentek/SConscript")
-SConscript("sniffer/SConscript")
 SConscript("ka_xmit/SConscript")
 SConscript("kadrx/SConscript")
-SConscript("kascope/SConscript")
-SConscript("kaprod/SConscript")
-SConscript("kaarchiver/SConscript")
 SConscript("tcpscope/SConscript")
 
 env.Alias('apidocs', env.Dir("apidocs"))
