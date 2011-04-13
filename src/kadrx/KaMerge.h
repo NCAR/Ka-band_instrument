@@ -152,6 +152,7 @@ private:
   iwrf_scan_segment_t _simScan;
   iwrf_pulse_header_t _pulseHdr;
   iwrf_burst_header_t _burstHdr;
+  iwrf_xmit_power_t _xmitPower;
 
   /// Server
 
@@ -197,9 +198,27 @@ private:
   void _sendIwrfStatusXmlPacket();
   void _allocStatusBuf(size_t xmlLen);
   
+  void _assembleIwrfXmitPowerPacket();
+  void _sendIwrfXmitPowerPacket();
+  
   int _openServer();
   int _openSocketToClient();
   void _closeSocketToClient();
+  
+
+  /// Corrected H transmit power, dBm. This is an estimate of the power at the
+  /// H channel of the A/D.
+  /// @return corrected H transmit power, dBm
+  float _hTxPwrCorrectedDbm();
+  /// Corrected V transmit power, dBm. This is an estimate of the power at the
+  /// V channel of the A/D.
+  /// @return corrected V transmit power, dBm
+  float _vTxPwrCorrectedDbm();
+  /// Corrected test target power, dBm. This is an estimate of the test target
+  /// power at the H channel of the A/D.
+  /// @return corrected test target power, dBm
+  float _ttPwrCorrectedDbm();
+  
 
 };
 

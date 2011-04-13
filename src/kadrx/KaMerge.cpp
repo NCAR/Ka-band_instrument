@@ -310,12 +310,16 @@ void KaMerge::run()
     _sendIwrfPulsePacket();
     
     // If it's been long enough since our last status packet, generate a new
-    // one now.
+    // one now. We add an IWRF transmit power packet as well.
     time_t now = time(0);
     if ((now - lastStatusTime) >= StatusInterval) {
         _assembleStatusPacket();
         _sendIwrfStatusXmlPacket();
         lastStatusTime = now;
+        
+        // IWRF transmit power packet
+        _assembleIwrfXmitPowerPacket();
+        _sendIwrfXmitPowerPacket();
     }
     
   } // while
@@ -874,6 +878,58 @@ void KaMerge::_assembleStatusPacket()
 }
 
 /////////////////////////////////////////////////////////////////////////////
+// assemble IWRF tx power packet
+
+void KaMerge::_assembleIwrfXmitPowerPacket()
+
+{
+
+    _xmitPower.power_dbm_h = _hTxPwrCorrectedDbm();
+    _xmitPower.power_dbm_v = _vTxPwrCorrectedDbm();
+
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// send out the IWRF transmit power packet
+
+void KaMerge::_sendIwrfXmitPowerPacket()
+{
+
+  // check that socket to client is open
+
+  if (_openSocketToClient()) {
+    return;
+  }
+  
+  if (_sock->writeBuffer(&_xmitPower, sizeof(_xmitPower))) {
+    cerr << "ERROR - KaMerge::_sendIwrfXmitPowerPacket()" << endl;
+    cerr << "  Writing transmit power packet" << endl;
+    cerr << "  " << _sock->getErrStr() << endl;
+    _closeSocketToClient();
+    return;
+  }
+
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// Corrected H transmit power, dBm
+float KaMerge::_hTxPwrCorrectedDbm() {
+    return(_kaMonitor.hTxPowerRaw() + _config.rcvr_h_power_corr());
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// Corrected V transmit power, dBm
+float KaMerge::_vTxPwrCorrectedDbm() {
+    return(_kaMonitor.vTxPowerRaw() + _config.rcvr_v_power_corr());
+}
+
+/////////////////////////////////////////////////////////////////////////////
+// Corrected test target power, dBm
+float KaMerge::_ttPwrCorrectedDbm() {
+    return(_kaMonitor.testTargetPowerRaw() + _config.rcvr_tt_power_corr());
+}
+
+/////////////////////////////////////////////////////////////////////////////
 // assemble status XML
 // returns the XML string
 
@@ -986,15 +1042,15 @@ string KaMerge::_assembleStatusXml()
   xml += TaXml::writeDouble
     ("HTxPowerRaw", 2, km.hTxPowerRaw());
   xml += TaXml::writeDouble
-    ("HTxPowerCorrected", 2, km.hTxPowerRaw() + _config.rcvr_h_power_corr());
+    ("HTxPowerCorrected", 2, _hTxPwrCorrectedDbm());
   xml += TaXml::writeDouble
     ("VTxPowerRaw", 2, km.vTxPowerRaw());
   xml += TaXml::writeDouble
-    ("VTxPowerCorrected", 2, km.vTxPowerRaw() + _config.rcvr_v_power_corr());
+    ("VTxPowerCorrected", 2, _vTxPwrCorrectedDbm());
   xml += TaXml::writeDouble
     ("TestTargetPowerRaw", 2, km.testTargetPowerRaw());
   xml += TaXml::writeDouble
-    ("TestTargetPowerCorrected", 2, km.testTargetPowerRaw() + _config.rcvr_tt_power_corr());
+    ("TestTargetPowerCorrected", 2, _ttPwrCorrectedDbm());
   xml += TaXml::writeDouble
     ("PsVoltage", 2, km.psVoltage());
   
