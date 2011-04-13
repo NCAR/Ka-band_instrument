@@ -886,6 +886,8 @@ void KaMerge::_assembleIwrfXmitPowerPacket()
 
     _xmitPower.power_dbm_h = _hTxPwrCorrectedDbm();
     _xmitPower.power_dbm_v = _vTxPwrCorrectedDbm();
+    DLOG << "iwrf_xmit_power power_dbm_h: " << _xmitPower.power_dbm_h <<
+            ", power_dbm_v: " << _xmitPower.power_dbm_v;
 
 }
 
