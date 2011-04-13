@@ -692,7 +692,7 @@ void KaMerge::_assembleIwrfPulsePacket()
       _simAz = 0.0;
       _simSweepNum++;
       _simElev += _simDeltaElev;
-      if (_simSweepNum == 10) {
+      if (_simSweepNum == _simNElev) {
         _simElev = _simStartElev;
         _simSweepNum = 0;
         _simVolNum++;
