@@ -629,9 +629,9 @@ resetXmitterTty() {
     time_t now = time(0);
     int sleepSeconds = 5 - (now - LastXmitTtyResetTime);
     if (sleepSeconds > 0) {
-        DLOG << "Sleeping " << sleepSeconds << " s before another tty reset";
+        ILOG << "Sleeping " << sleepSeconds << " s before another tty reset";
         sleep(sleepSeconds);
-    } else 
+    }
         
     LastXmitTtyResetTime = time(0);
 
