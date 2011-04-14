@@ -629,6 +629,7 @@ resetXmitterTty() {
     time_t now = time(0);
     int sleepSeconds = 5 - (now - LastXmitTtyResetTime);
     if (sleepSeconds > 0) {
+        DLOG << "Sleeping " << sleepSeconds << " s before another tty reset";
         sleep(sleepSeconds);
     } else 
         
@@ -664,9 +665,6 @@ resetXmitterTty() {
             ELOG << "Transmitter serial port reset failed";
         }
     }
-    // Sleep for a bit before returning, since we don't need to be trying
-    // the reset again a microsecond from now.
-    sleep(5);
 }
 
 /// Print usage information
