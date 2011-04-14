@@ -717,11 +717,11 @@ parseOptions(int & argc, char** argv)
 
 int
 main(int argc, char *argv[]) {
-    // Get our local options
-    parseOptions(argc, argv);
-    
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
+    
+    // Get our local options
+    parseOptions(argc, argv);
     
     // Append our log to local syslog
     log4cpp::SyslogAppender syslogAppender("SyslogAppender", "ka_xmitd", LOG_DAEMON);
