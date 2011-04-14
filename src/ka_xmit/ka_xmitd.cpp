@@ -784,13 +784,15 @@ main(int argc, char *argv[]) {
         PMU_auto_register("running");
         // Get current transmitter status
         updateStatus();
-        if (! XmitStatus.serialConnected) {
-            // Try to reset the transmitter serial port.
+        
+        // Try to reset the transmitter serial port if necessary.
+        if (! XmitStatus.serialConnected)
             resetXmitterTty();
-            continue;
-        }
+
+        // If we got a pulse input fault, try to handle it
         if (XmitStatus.pulseInputFault)
             handlePulseInputFault();
+        
         // Listen for XML-RPC commands.
         // Note that work() mostly goes for 2x the given time, but sometimes
         // goes for 1x the given time. Who knows why?
