@@ -47,11 +47,7 @@ public:
      * Briefly raise the DIO line which causes a reset of the Ka transmitter's 
      * serial port.
      */
-    static void resetTxSerialPort() {
-        theKaPmc730().setDioLine(_KA_DOUT_TXSERIALRESET, 1);
-        usleep(25000);  // 25 ms (currently just a guess...)
-        theKaPmc730().setDioLine(_KA_DOUT_TXSERIALRESET, 0);
-    }
+    static void resetTxSerialPort();
     
     /**
      * Set the state of oscillator3's ADF4001 PLL chip clock line.
