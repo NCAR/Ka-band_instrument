@@ -21,7 +21,7 @@ prt1                    1.0e-3  # s
 
 rcvr_bandwidth          1.37e6  # Hz
 rcvr_digital_gain       -2.67   # dB
-rcvr_filter_mismatch    1.1     # dB
+rcvr_filter_mismatch    0.4     # dB
 rcvr_gate0_delay        5.5e-6  # s
 rcvr_noise_figure       8.3     # dB , H-ch
 rcvr_pulse_width        5.0e-7  # s
@@ -41,7 +41,7 @@ tx_pulse_mod_delay      6.0e-7  # s
 tx_pulse_mod_width      6.0e-7  # s
 tx_delay                0.0     # s
 
-test_target_delay       75.08e-6# s
+test_target_delay       485.08e-6# s
 test_target_width       5.0e-6  # s
 
 afc_enabled             true
