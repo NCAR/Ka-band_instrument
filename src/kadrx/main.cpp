@@ -21,6 +21,7 @@
 
 #include <QResource>
 
+#include "svnInfo.h"
 #include "KaOscControl.h"
 #include "KaDrxPub.h"
 #include "KaPmc730.h"
@@ -253,6 +254,8 @@ main(int argc, char** argv)
 
 	// parse the command line options
 	parseOptions(argc, argv);
+	
+	ILOG << "kadrx - svn revision " << SVNREVISION << "," << SVNEXTERNALREVS;
 
 	// set up registration with procmap if instance is specified
 	if (_instance.size() > 0) {
