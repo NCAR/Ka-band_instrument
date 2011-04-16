@@ -153,6 +153,10 @@ KaMerge::KaMerge(const KaDrxConfig& config, const KaMonitor& kaMonitor) :
   _calib.power_meas_loss_db_h = _config.tx_peak_pwr_coupling();
   _calib.power_meas_loss_db_v = _config.tx_peak_pwr_coupling();
 
+  // initialize power packet
+
+  iwrf_xmit_power_init(_xmitPower);
+
   // initialize IWRF scan segment for simulation angles
 
   iwrf_scan_segment_init(_simScan);
@@ -884,11 +888,16 @@ void KaMerge::_assembleIwrfXmitPowerPacket()
 
 {
 
-    _xmitPower.power_dbm_h = _hTxPwrCorrectedDbm();
-    _xmitPower.power_dbm_v = _vTxPwrCorrectedDbm();
-    DLOG << "iwrf_xmit_power power_dbm_h: " << _xmitPower.power_dbm_h <<
-            ", power_dbm_v: " << _xmitPower.power_dbm_v;
+  _xmitPower.packet.seq_num = _packetSeqNum++;
+  _xmitPower.packet.time_secs_utc = _timeSecs;
+  _xmitPower.packet.time_nano_secs = _nanoSecs;
+  
+  _xmitPower.power_dbm_h = _hTxPwrCorrectedDbm();
+  _xmitPower.power_dbm_v = _vTxPwrCorrectedDbm();
 
+  DLOG << "iwrf_xmit_power power_dbm_h: " << _xmitPower.power_dbm_h <<
+    ", power_dbm_v: " << _xmitPower.power_dbm_v;
+  
 }
 
 /////////////////////////////////////////////////////////////////////////////
