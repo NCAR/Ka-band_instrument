@@ -166,10 +166,11 @@ KaMerge::KaMerge(const KaDrxConfig& config, const KaMonitor& kaMonitor) :
 
   iwrf_pulse_header_init(_pulseHdr);
 
-  // initialize burst IQ
+  // initialize burst IQ & last seen burst power
 
   iwrf_burst_header_init(_burstHdr);
-  _burstSampleFreqHz= _config.burst_sample_frequency();
+  _burstSampleFreqHz = _config.burst_sample_frequency();
+  _lastBurstPowerDbm = -999.;
 
   /// PRT mode
 
@@ -475,6 +476,9 @@ PulseData *KaMerge::writePulseV(PulseData *val)
 
 BurstData *KaMerge::writeBurst(BurstData *val)
 {
+  // Save the burst power from the object
+  _lastBurstPowerDbm = val->getG0PowerDbm();
+  // Write the object
   return _qB->write(val);
 }
 
@@ -993,8 +997,7 @@ string KaMerge::_assembleStatusXml()
   xml += TaXml::writeBoolean
     ("HvpsCurrentFault", 2, xs.hvpsCurrentFault());
   xml += TaXml::writeBoolean
-    ("WaveguidePressureFault", 2, xs.waveguidePressureFault
-     ());
+    ("WaveguidePressureFault", 2, xs.waveguidePressureFault());
   xml += TaXml::writeBoolean
     ("HvpsUnderVoltage", 2, xs.hvpsUnderVoltage());
   xml += TaXml::writeBoolean
@@ -1081,6 +1084,9 @@ string KaMerge::_assembleStatusXml()
     ("Oscillator2Frequency", 2, km.osc2Frequency());
   xml += TaXml::writeDouble
     ("Oscillator3Frequency", 2, km.osc3Frequency());
+  
+  // Last power we got from the burst channel (transmit power estimate)
+  xml += TaXml::writeDouble("BurstPower", 2, _lastBurstPowerDbm);
   
   // Current tx frequency derived from the state of the rx/downconverter 
   // oscillators, Hz.

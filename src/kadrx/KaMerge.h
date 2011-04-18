@@ -121,6 +121,7 @@ private:
   char *_burstBuf;
   int _burstBufLen;
   double _burstSampleFreqHz;
+  double _lastBurstPowerDbm;
 
   /// Status XML
 
