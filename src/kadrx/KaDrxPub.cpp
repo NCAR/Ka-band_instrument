@@ -326,15 +326,15 @@ KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {
 
     double ival = i[9] / _iqScaleForMw;
     double qval = q[9] / _iqScaleForMw;
-    double g0Power = ival * ival + qval * qval; // units of V^2
-    double g0PowerDb = 10 * log10(g0Power);
+    double g0Power = ival * ival + qval * qval; // mW
+    double g0PowerDbm = 10 * log10(g0Power);
     if (! (pulseSeqNum % 5000)) {
       DLOG << "At pulse " << pulseSeqNum << ": freq corr. " <<
         freqCorrection << " Hz, g0 power " << g0Power << " (" <<
-        g0PowerDb << " dB)";
+        g0PowerDbm << " dBm)";
     }
     _g0Magnitude = sqrt(g0Power);
-    _g0PowerDbm = g0PowerDb;
+    _g0PowerDbm = g0PowerDbm;
     _g0PhaseDeg = _argDeg(ival, qval);
     _g0IvalNorm = ival / _g0Magnitude;
     _g0QvalNorm = qval / _g0Magnitude;
