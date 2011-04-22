@@ -70,7 +70,7 @@ KaDrxPub::KaDrxPub(
         width = _config.burst_sample_width();
     }
     
-    _down = sd3c.addDownconverter(_chanId, burstSampling, tsLength,
+    _down = _sd3c.addDownconverter(_chanId, burstSampling, tsLength,
         delay, width, gaussianFile, kaiserFile, simPauseMS, simWavelength, 
         !(_config.external_clock()));
 
@@ -139,7 +139,7 @@ void KaDrxPub::run() {
     if (_doPeiFile) {
         if (! _peiFile) {
             char filename[256];
-            ptime pulsePtime = _down->timeOfPulse(pulseSeqNum);
+            ptime pulsePtime = _sd3c.timeOfPulse(pulseSeqNum);
             boost::gregorian::date pulseDate = pulsePtime.date();
             time_duration pulseTime = pulsePtime.time_of_day();
             sprintf(filename, "chan%d_%4d%02d%02d_%02d%02d%02d_pei", _chanId,
@@ -152,7 +152,7 @@ void KaDrxPub::run() {
         }
 
         int16_t *iqData = (int16_t*)buf;
-        time_duration timeFromEpoch = _down->timeOfPulse(pulseSeqNum) - Epoch1970;
+        time_duration timeFromEpoch = _sd3c.timeOfPulse(pulseSeqNum) - Epoch1970;
     
         double timeSecs = timeFromEpoch.total_seconds() + 
             double(timeFromEpoch.fractional_seconds()) / time_duration::ticks_per_second();
@@ -190,7 +190,7 @@ void
   
 {
 
-  time_duration timeFromEpoch = _down->timeOfPulse(pulseSeqNum) - Epoch1970;
+  time_duration timeFromEpoch = _sd3c.timeOfPulse(pulseSeqNum) - Epoch1970;
   time_t timeSecs = timeFromEpoch.total_seconds();
   int nanoSecs = timeFromEpoch.fractional_seconds() * 
           (1000000000 / time_duration::ticks_per_second());
