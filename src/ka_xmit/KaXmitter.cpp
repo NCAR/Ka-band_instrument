@@ -50,33 +50,7 @@ KaXmitter::KaXmitter(std::string ttyDev) :
     ILOG << "KaXmitter on device " << ttyDev;
     // Open the serial port
     if (! _simulate) {
-        DLOG << "Opening " << _ttyDev;
-        if ((_fd = open(_ttyDev.c_str(), O_RDWR)) == -1) {
-            ELOG << __PRETTY_FUNCTION__ << ": error opening " << _ttyDev << ": " <<
-                    strerror(errno);
-            exit(1);
-        }
-
-        // Make the port 9600 8N1, "raw"
-        struct termios ios;
-        if (tcgetattr(_fd, &ios) == -1) {
-            ELOG << __PRETTY_FUNCTION__ << ": error getting " << _ttyDev << 
-                    " attributes: " << strerror(errno);
-            exit(1);
-        }
-        cfmakeraw(&ios);
-        cfsetspeed(&ios, B9600);
-        
-        // Set a 0.2 second timeout for reads
-        ios.c_cc[VMIN] = 0;
-        ios.c_cc[VTIME] = 2;    // 0.2 seconds
-
-        if (tcsetattr(_fd, TCSAFLUSH, &ios) == -1) {
-            ELOG << __PRETTY_FUNCTION__ << ": error setting " << _ttyDev << 
-                    " attributes: " << strerror(errno);
-            exit(1);
-        }
-        DLOG << "Done configuring " << _ttyDev;
+        _openTty();
     }
     // Initialize our simulated status
     _initSimStatus();
@@ -306,6 +280,45 @@ KaXmitter::getStatus() {
     }
     
     return(status);
+}
+
+void
+KaXmitter::reopenTty() {
+    ILOG << "Re-opening " << _ttyDev;
+    close(_fd);
+    _fd = -1;
+    _openTty();
+}
+
+void
+KaXmitter::_openTty() {
+    DLOG << "Opening " << _ttyDev;
+    if ((_fd = open(_ttyDev.c_str(), O_RDWR)) == -1) {
+        ELOG << __PRETTY_FUNCTION__ << ": error opening " << _ttyDev << ": " <<
+                strerror(errno);
+        exit(1);
+    }
+
+    // Make the port 9600 8N1, "raw"
+    struct termios ios;
+    if (tcgetattr(_fd, &ios) == -1) {
+        ELOG << __PRETTY_FUNCTION__ << ": error getting " << _ttyDev << 
+                " attributes: " << strerror(errno);
+        exit(1);
+    }
+    cfmakeraw(&ios);
+    cfsetspeed(&ios, B9600);
+
+    // Set a 0.2 second timeout for reads
+    ios.c_cc[VMIN] = 0;
+    ios.c_cc[VTIME] = 2;    // 0.2 seconds
+
+    if (tcsetattr(_fd, TCSAFLUSH, &ios) == -1) {
+        ELOG << __PRETTY_FUNCTION__ << ": error setting " << _ttyDev << 
+                " attributes: " << strerror(errno);
+        exit(1);
+    }
+    DLOG << "Done configuring " << _ttyDev;
 }
 
 void

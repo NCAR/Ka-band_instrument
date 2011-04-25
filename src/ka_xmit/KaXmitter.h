@@ -83,11 +83,22 @@ public:
     void operate();
     
     /**
+     * Reopen our serial port talking to the transmitter. Generally this should
+     * be called any time the serial port on the transmitter has been reset.
+     */
+    void reopenTty();
+    
+    /**
      * Device name to use when creating a simulation KaXmitter.
      */
     static const std::string SIM_DEVICE;
         
 private:
+    /**
+     * Open and configure our tty connection to the transmitter
+     */
+    void _openTty();
+    
     /**
      * Send a command to the transmitter.
      */
