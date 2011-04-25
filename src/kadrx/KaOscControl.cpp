@@ -51,6 +51,13 @@ public:
     /// @param pulseSeqNum pulse number, counted since transmitter startup
     void newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqNum);
 
+    /// Tell KaOscControl blanking/non-blanking state of the transmitter
+    /// as of a given pulse number.
+    /// @param enabled true iff the transmitter is enabled
+    /// @param pulseSeqNum the pulse sequence number at which this transmitter 
+    /// state becomes valid 
+    void setBlankingEnabled(bool enabled, int64_t pulseSeqNum);
+    
     /// Return the frequencies of the four oscillators handled by KaOscControl.
     /// @param osc0Freq frequency of oscillator 0
     /// @param osc1Freq frequency of oscillator 1
@@ -160,9 +167,24 @@ private:
 
     /// number of pulses dropped by newXmitSample()
     int64_t _pulsesDropped;
+    
+    /// number of pulses dropped in blanking sectors
+    int64_t _blankedPulsesDropped;
 
     /// maximum data latency for burst data, in seconds
     double _maxDataLatency;
+    
+    /// Pending blanking sector events
+    std::map<int64_t, bool> _blankingEvents;
+    
+    /// Are we currently in a blanking sector?
+    bool _inBlankingSector;
+    
+    /// Let AFC coast (no adjustments) until this pulse number is reached
+    int64_t _coastingEndPulse;
+    
+    /// Number of pulses dropped while coasting
+    int64_t _coastingPulsesDropped;
 };
 
 KaOscControl::KaOscControl(const KaDrxConfig & config, double maxDataLatency) {
@@ -204,6 +226,11 @@ KaOscControl::newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqN
 }
 
 void
+KaOscControl::setBlankingEnabled(bool enabled, int64_t pulseSeqNum) {
+    _privImpl->setBlankingEnabled(enabled, pulseSeqNum);
+}
+
+void
 KaOscControl::getOscFrequencies(uint64_t & osc0Freq, uint64_t & osc1Freq,
         uint64_t & osc2Freq, uint64_t & osc3Freq) {
     _privImpl->getOscFrequencies(osc0Freq, osc1Freq, osc2Freq, osc3Freq);
@@ -228,7 +255,11 @@ KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
     _lastRcvdPulse(0),
     _pulsesRcvd(0),
     _pulsesDropped(0),
-    _maxDataLatency(maxDataLatency) {
+    _blankedPulsesDropped(0),
+    _maxDataLatency(maxDataLatency),
+    _inBlankingSector(true),
+    _coastingEndPulse(0),
+    _coastingPulsesDropped(0) {
     // Enable termination via terminate(), since we don't have a Qt event loop.
     setTerminationEnabled(true);
 
@@ -383,17 +414,106 @@ KaOscControlPriv::_setFineStep(unsigned int step) {
 }
 
 void
+KaOscControlPriv::setBlankingEnabled(bool enabledState, int64_t pulseSeqNum) {
+    std::map<int64_t, bool>::reverse_iterator lastEventIt = _blankingEvents.rbegin();
+    // If our event map is empty, just put this one in
+    if (lastEventIt == _blankingEvents.rend()) {
+        _blankingEvents[pulseSeqNum] = enabledState;
+    } else {
+        // Get the pulse number and state for the last entry in the map
+        int64_t lastEventPulseNum = lastEventIt->first;
+        bool lastEventState = lastEventIt->second;
+        // Normally, the incoming pulse number is greater than the last one
+        // in our map.
+        if (pulseSeqNum >= lastEventPulseNum) {
+            // We only add a new entry if its state is different from the last
+            // entry in the map.
+            if (enabledState != lastEventState) {
+                _blankingEvents[pulseSeqNum] = enabledState;
+                DLOG << "At pulse " << pulseSeqNum << ", blanking will be " << 
+                        (enabledState ? "enabled" : "disabled");
+            }
+        } else {
+            // If the new pulse sequence number is *before* the latest we currently
+            // have in the map, complain, clear the map, and just put in the new 
+            // entry.
+            ELOG << __PRETTY_FUNCTION__ << ": event for " << pulseSeqNum <<
+                    " received after event for " << lastEventIt->second;
+            ELOG << "Clearing all previous events from queue";
+            _blankingEvents.clear();
+            _blankingEvents[pulseSeqNum] = enabledState;
+            _inBlankingSector = true;
+        }
+    }
+}
+
+void
 KaOscControlPriv::newXmitSample(double g0Power, double freqOffset,
     int64_t pulseSeqNum) {
-    if (!(_pulsesRcvd % 5000))
-        DLOG << _pulsesRcvd << " pulses received, " << _pulsesDropped << " dropped";
+    if (!(_pulsesRcvd % 5000)) {
+        DLOG << _pulsesRcvd << " pulses received, " << 
+            _pulsesDropped << " dropped, " <<
+            _blankedPulsesDropped << " dropped while blanking";
+    }
     _pulsesRcvd++;
-    // If a frequency adjustment is in progress, just drop this sample
+    // If a frequency adjustment is in progress (i.e., if we can't lock the 
+    // mutex), just drop this sample
     if (! _mutex.tryLock()) {
         _pulsesDropped++;
         return;
     }
 
+    // Determine whether this pulse is in a blanked sector
+    std::map<int64_t, bool>::iterator it;
+    bool blanked = _inBlankingSector;   // start with previous setting
+    for (it = _blankingEvents.begin(); it != _blankingEvents.end(); it++) {
+        int64_t nextEventPulseNum = it->first;
+        bool nextEventBlankedState = it->second;
+        // If the next event is later than the incoming pulse, bail out now
+        if (pulseSeqNum < nextEventPulseNum)
+            break;
+        // Get the state for the next event, and remove the event from the map
+        blanked = nextEventBlankedState;
+        _blankingEvents.erase(it);
+    }
+    
+    if (blanked != _inBlankingSector) {
+        DLOG << "Blanking changed from " << 
+            (_inBlankingSector ? "true" : "false") << " to " <<
+            (blanked ? "true" : "false") << " @ " << pulseSeqNum;
+        // If blanking has just turned off and we were tracking, let AFC coast 
+        // since the transmitter needs a while to settle back to its 
+        // previous frequency.
+        // @TODO - it would be nice to change from a fixed number of pulses
+        // here to a fixed time
+        if (! blanked && _afcMode == AFC_TRACKING) {
+            _coastingEndPulse = pulseSeqNum + 20000;
+        }
+    }
+    _inBlankingSector = blanked;
+    
+    // If we're in a blanked sector or we're coasting after blanking has
+    // terminated, clear our sum and drop this pulse
+    if (_inBlankingSector || (pulseSeqNum < _coastingEndPulse)) {
+        if (_inBlankingSector) {
+            _blankedPulsesDropped++;
+        }
+        if (pulseSeqNum < _coastingEndPulse) {
+            if ((_coastingPulsesDropped % 1000) == 0) {
+                DLOG << "Coasting " << _coastingPulsesDropped <<
+                    " pulses: " << freqOffset;
+            }
+            _coastingPulsesDropped++;
+        }
+        _clearSum();
+        _mutex.unlock();
+        return;
+    }
+    
+    if (_coastingPulsesDropped) {
+        DLOG << "Coasted through " << _coastingPulsesDropped << " pulses";
+        _coastingPulsesDropped = 0;
+    }
     assert(_nSummed < _nToSum);
 
     // Look for pulse gaps

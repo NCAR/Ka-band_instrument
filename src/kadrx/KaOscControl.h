@@ -40,6 +40,13 @@ public:
     /// @param pulseSeqNum pulse number, counted since transmitter startup
     void newXmitSample(double g0Power, double freqOffset, int64_t pulseSeqNum);
     
+    /// Tell KaOscControl blanking/non-blanking state of the transmitter
+    /// as of a given pulse number.
+    /// @param enabled true iff the transmitter is enabled
+    /// @param pulseSeqNum the pulse sequence number at which this transmitter 
+    /// state becomes valid 
+    void setBlankingEnabled(bool enabled, int64_t pulseSeqNum);
+    
     /// Return the frequencies of the four oscillators handled by the 
     /// KaOscControl.
     /// @param[out] osc0Freq frequency of oscillator 0

@@ -44,11 +44,15 @@ public:
     }
 
     /**
-     * Briefly raise the DIO line which causes a reset of the Ka transmitter's 
-     * serial port.
+     * Set the state of the transmitter serial port reset line.
+     * The line must be set high for a brief period then lowered again to 
+     * reset the transmitter's serial port.
+     * @param signalHigh if true, the line will be set high, otherwise low
      */
-    static void resetTxSerialPort();
-    
+    static void setTxSerialResetLine(bool signalHigh) {
+        theKaPmc730().setDioLine(_KA_DOUT_TXSERIALRESET, signalHigh);
+    }
+
     /**
      * Set the state of oscillator3's ADF4001 PLL chip clock line.
      * (differential signal sent on DIO lines 8 and 9)
@@ -120,7 +124,7 @@ public:
      * PMC-730.
      */
     static void doSimulate(bool simulate);
-
+    
 private:
     KaPmc730();
     virtual ~KaPmc730();

@@ -173,13 +173,3 @@ KaPmc730::_sendDifferentialSignal(bool signalHigh, DoutLine_t dioPosLine,
     // ship out the new state
     setDio8_15(new8_15);
 }
-
-void
-KaPmc730::resetTxSerialPort() {
-    int msSleepTime = 500;
-    ILOG << "Setting Ka xmitter serial port reset line high for " << 
-            msSleepTime << " ms";
-    theKaPmc730().setDioLine(_KA_DOUT_TXSERIALRESET, 1);
-    usleep(msSleepTime * 1000);
-    theKaPmc730().setDioLine(_KA_DOUT_TXSERIALRESET, 0);
-}

@@ -38,7 +38,6 @@ namespace po = boost::program_options;
 
 /// Our RPC server
 using namespace XmlRpc;
-XmlRpcServer RpcServer;
 
 std::string _devRoot("/dev/pentek/p7142/0"); ///< Device root e.g. /dev/pentek/0
 std::string _drxConfig;          ///< DRX configuration file
@@ -52,19 +51,17 @@ int _simWavelength = 5000;       ///< The simulated data wavelength, in samples
 int _simPauseMs = 20;            ///< The number of milliseconds to pause when reading in simulate mode.
 std::string _xmitdHost("kadrx"); ///< The host on which ka_xmitd is running
 int _xmitdPort = 8080;           ///< The port on which ka_xmitd is listening
+bool _allowBlanking = true;      ///< Are we allowing sector blanking via XML-RPC calls?
+Pentek::p7142sd3c * _sd3c;               ///< Our SD3C instance
+
+// Note that the transmitter should only fire if _limitersWorking is true
+// and _inBlankingSector is false.
+bool _limitersWorking = false;   ///< Set true when timers are seen, 
+                                 /// so T/R limiters should be functioning
+bool _inBlankingSector = true;   ///< Set true if antenna is in a sector which
+                                 /// should be blanked (i.e., xmitter must be off)
 
 bool _terminate = false;         ///< set true to signal the main loop to terminate
-
-/////////////////////////////////////////////////////////////////////
-/// Xmlrpc++ method to reset the Ka transmitter serial port
-class ResetXmitterTtyMethod : public XmlRpcServerMethod {
-public:
-    ResetXmitterTtyMethod(XmlRpcServer *s) : XmlRpcServerMethod("resetXmitterTty", s) {}
-    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
-        ILOG << "Received 'resetXmitterTty' command";
-        KaPmc730::resetTxSerialPort();
-    }
-} resetXmitterTtyMethod(&RpcServer);
 
 /////////////////////////////////////////////////////////////////////
 void sigHandler(int sig) {
@@ -174,6 +171,15 @@ void startUpConverter(Pentek::p7142Up& upConverter,
 
 ///////////////////////////////////////////////////////////
 void
+setTxEnableLine() {
+    bool enableTx = _limitersWorking && ! _inBlankingSector;
+    // Enable the transmitter iff the T/R limiters are working and we're not
+    // in a blanking sector.
+    KaPmc730::setTxTriggerEnable(enableTx);
+}
+
+///////////////////////////////////////////////////////////
+void
 verifyTimersAndEnableTx() {
     if (_simulate)
         return;
@@ -204,9 +210,43 @@ verifyTimersAndEnableTx() {
         ELOG << "Pentek timers don't seem to be running...";
         exit(1);
     }
-    // Enable the transmitter
-    ILOG << "Enabling transmitter";
-    KaPmc730::setTxTriggerEnable(true);
+    // Set _limitersWorking to true, since T/R limiters should be
+    // functioning now.
+    ILOG << "T/R limiters should now be working";
+    _limitersWorking = true;
+    setTxEnableLine();
+}
+
+///////////////////////////////////////////////////////////
+// Disable transmitter within a blanking sector, starting at the
+// given pulse number.
+// @param pulseSeqNum the pulse number at which to apply this transmitter
+// state
+void
+setBlankingOn(int64_t pulseSeqNum) {
+    // We don't care about pulseSeqNum here, since we get calls from the 
+    // synchro-to-digital box with effectively zero latency. Just disable
+    // the transmitter.
+    _inBlankingSector = true;
+    setTxEnableLine();
+
+    KaOscControl::theControl().setBlankingEnabled(true, pulseSeqNum);
+}
+
+///////////////////////////////////////////////////////////
+// Enable transmitter within a blanking sector, starting at the
+// given pulse number.
+// @param pulseSeqNum the pulse number at which to apply this transmitter
+// state
+void
+setBlankingOff(int64_t pulseSeqNum) {
+    // We don't care about pulseSeqNum here, since we get calls from the 
+    // synchro-to-digital box with effectively zero latency. Just enable
+    // the transmitter.
+    _inBlankingSector = false;
+    setTxEnableLine();
+    
+    KaOscControl::theControl().setBlankingEnabled(false, pulseSeqNum);
 }
 
 ///////////////////////////////////////////////////////////
@@ -241,6 +281,90 @@ verifyPpsAndNtp(const KaMonitor & kaMonitor) {
     }
     ILOG << "System clock NTP offset is currently " << offset_ms << " ms";
 }
+
+/////////////////////////////////////////////////////////////////////
+/// Xmlrpc++ method to raise the Ka transmitter serial reset line
+class RaiseXmitTtyResetMethod : public XmlRpcServerMethod {
+public:
+    RaiseXmitTtyResetMethod() : XmlRpcServerMethod("raiseXmitTtyReset") {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        ILOG << "Received 'raiseXmitTtyReset' command";
+        KaPmc730::setTxSerialResetLine(true);
+    }
+};
+
+/////////////////////////////////////////////////////////////////////
+/// Xmlrpc++ method to lower the Ka transmitter serial reset line
+class LowerXmitTtyResetMethod : public XmlRpcServerMethod {
+public:
+    LowerXmitTtyResetMethod() : XmlRpcServerMethod("lowerXmitTtyReset") {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        ILOG << "Received 'lowerXmitTtyReset' command";
+        KaPmc730::setTxSerialResetLine(false);
+    }
+};
+
+/////////////////////////////////////////////////////////////////////
+/// Xmlrpc++ method to turn on transmit blanking (i.e., disable the transmitter)
+/// The param list should have:
+///     1) (double) the time since 1970-01-01 00:00:00 UTC in seconds
+///     2) (double) antenna elevation
+///     3) (double) antenna azimuth
+/// Returns 0 if the method is successful, or -1 if XML-RPC calls for blanking
+/// are currently disallowed.
+class SetBlankingOnMethod : public XmlRpcServerMethod {
+public:
+    SetBlankingOnMethod() : XmlRpcServerMethod("setBlankingOn") {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        double time = paramList[0];
+        double elev = paramList[1];
+        double azim = paramList[2];
+        DLOG << "Received 'setBlankingOn' command with time: " << time <<
+                ", elev: " << elev << ", azim: " << azim;
+        if (! _allowBlanking) {
+            DLOG << "Blanking via XML-RPC calls is currently disallowed";
+            retvalP = -1;
+            return;
+        }
+        ptime pTime = boost::posix_time::from_time_t(int(time));
+        int usecs = int(1.0e6 * fmod(time, 1.0));
+        pTime += boost::posix_time::microseconds(usecs);
+        int64_t pulseSeqNum = _sd3c->pulseAtTime(pTime);
+        setBlankingOn(pulseSeqNum);
+        retvalP = 0;
+    }
+};
+
+/////////////////////////////////////////////////////////////////////
+/// Xmlrpc++ method to turn off transmit blanking (i.e., enable the transmitter)
+/// The param list should have:
+///     1) (double) the time since 1970-01-01 00:00:00 UTC in seconds
+///     2) (double) antenna elevation
+///     3) (double) antenna azimuth
+/// Returns 0 if the method is successful, or -1 if XML-RPC calls for blanking
+/// are currently disallowed.
+class SetBlankingOffMethod : public XmlRpcServerMethod {
+public:
+    SetBlankingOffMethod() : XmlRpcServerMethod("setBlankingOff") {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        double time = paramList[0];
+        double elev = paramList[1];
+        double azim = paramList[2];
+        DLOG << "Received 'setBlankingOff' command with time: " << time <<
+                ", elev: " << elev << ", azim: " << azim;
+        if (! _allowBlanking) {
+            DLOG << "Blanking via XML-RPC calls is currently disallowed";
+            retvalP = -1;
+            return;
+        }
+        ptime pTime = boost::posix_time::from_time_t(int(time));
+        int usecs = int(1.0e6 * fmod(time, 1.0));
+        pTime += boost::posix_time::microseconds(usecs);
+        int64_t pulseSeqNum = _sd3c->pulseAtTime(pTime);
+        setBlankingOff(pulseSeqNum);
+        retvalP = 0;
+    }
+};
 
 ///////////////////////////////////////////////////////////
 int
@@ -292,49 +416,49 @@ main(int argc, char** argv)
 
     // Instantiate our p7142sd3c
     PMU_auto_register("pentek initialize");
-    Pentek::p7142sd3c sd3c(_devRoot, _simulate, kaConfig.tx_delay(),
+    _sd3c = new Pentek::p7142sd3c(_devRoot, _simulate, kaConfig.tx_delay(),
         kaConfig.tx_pulse_width(), kaConfig.prt1(), kaConfig.prt2(),
         kaConfig.staggered_prt(), kaConfig.gates(), 1, false,
         Pentek::p7142sd3c::DDC10DECIMATE, kaConfig.external_start_trigger());
 
     // Use SD3C's general purpose timer 0 (timer 3) for transmit pulse modulation
     PMU_auto_register("timers enable");
-    sd3c.setGPTimer0(kaConfig.tx_pulse_mod_delay(), kaConfig.tx_pulse_mod_width());
+    _sd3c->setGPTimer0(kaConfig.tx_pulse_mod_delay(), kaConfig.tx_pulse_mod_width());
 
     // Use SD3C's general purpose timer 1 (timer 5) for test target pulse.
-    sd3c.setGPTimer1(kaConfig.test_target_delay(), kaConfig.test_target_width());
+    _sd3c->setGPTimer1(kaConfig.test_target_delay(), kaConfig.test_target_width());
 
     // Use SD3C's general purpose timer 2 (timer 6) for T/R LIMITER trigger.
     // It must be *low* from T0 to 500 ns after the transmit pulse ends, and
     // high for the rest of the PRT.
     double trLimiterWidth = kaConfig.tx_pulse_mod_delay() +
         kaConfig.tx_pulse_mod_width() + 7.0e-7;
-    sd3c.setGPTimer2(0.0, trLimiterWidth, true);
+    _sd3c->setGPTimer2(0.0, trLimiterWidth, true);
 
     // Use SD3C's general purpose timer 3 (timer 7) for PIN SW trigger.
     // This signal is the inverse of the T/R LIMITER signal above.
-    sd3c.setGPTimer3(0.0, trLimiterWidth, false);
+    _sd3c->setGPTimer3(0.0, trLimiterWidth, false);
 
 	// Create (but don't yet start) the downconversion threads.
 
     // H channel (0)
     PMU_auto_register("set up threads");
-    KaDrxPub hThread(sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, &merge,
+    KaDrxPub hThread(*_sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, &merge,
         _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength);
 
     // V channel (1)
-    KaDrxPub vThread(sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, &merge,
+    KaDrxPub vThread(*_sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, &merge,
         _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength);
 
     // Burst channel (2)
-    KaDrxPub burstThread(sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig, &merge,
+    KaDrxPub burstThread(*_sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig, &merge,
         _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength);
 
     // Create the upConverter.
     // Configure the DAC to use CMIX by fDAC/4 (coarse mixer mode = 9)
     PMU_auto_register("create upconverter");
-    Pentek::p7142Up & upConverter = *sd3c.addUpconverter("0C",
-        sd3c.adcFrequency(), sd3c.adcFrequency() / 4, 9);
+    Pentek::p7142Up & upConverter = *_sd3c->addUpconverter("0C",
+        _sd3c->adcFrequency(), _sd3c->adcFrequency() / 4, 9);
 
     // Set up oscillator control/AFC
     PMU_auto_register("oscillator control");
@@ -374,12 +498,12 @@ main(int argc, char** argv)
 
     // Start filters on all downconverters
     PMU_auto_register("start filters");
-    sd3c.startFilters();
+    _sd3c->startFilters();
 
     // Load the DAC memory bank 2, clear the DACM fifo, and enable the
     // DAC memory counters. This must take place before the timers are started.
     PMU_auto_register("start upconverter");
-    startUpConverter(upConverter, sd3c.txPulseWidthCounts());
+    startUpConverter(upConverter, _sd3c->txPulseWidthCounts());
 
     // If we're going to start timers based on an external trigger (i.e., 1 PPS
     // from the GPS time server), make sure the time server is OK. Also make
@@ -390,30 +514,34 @@ main(int argc, char** argv)
     }
 
     // Start the timers, which will allow data to flow.
-    sd3c.timersStartStop(true);
+    _sd3c->timersStartStop(true);
 
     // Verify that timers have started, by seeing that we have TX sync pulses
     // being generated, then raise the TX enable line.
     verifyTimersAndEnableTx();
 
     // Initialize our RPC server on port 8081
-    if (! RpcServer.bindAndListen(8081)) {
+    XmlRpc::XmlRpcServer rpcServer;
+    rpcServer.addMethod(new RaiseXmitTtyResetMethod());
+    rpcServer.addMethod(new LowerXmitTtyResetMethod());
+    rpcServer.addMethod(new SetBlankingOnMethod());
+    rpcServer.addMethod(new SetBlankingOffMethod());
+    if (! rpcServer.bindAndListen(8081)) {
         ELOG << "Exiting on XmlRpcServer error!";
         exit(1);
     }
-    RpcServer.enableIntrospection(true);
+    rpcServer.enableIntrospection(true);
     
-	double startTime = nowTime();
+
+    double startTime = nowTime();
 	while (1) {
-	    // Listen for XML-RPC commands for a bit.
-        // Note that work() mostly goes for 2x the given time, but sometimes
-        // goes for 1x the given time. Who knows why?
-        RpcServer.work(0.05);
+        // Process XML-RPC commands for a brief bit
+        rpcServer.work(0.01);
         
         // If we got a ^C or similar termination request, bail out.
-		if (_terminate) {
-			break;
-		}
+        if (_terminate) {
+            break;
+        }
 
 		// How long since our last status print?
 		double currentTime = nowTime();
@@ -449,7 +577,8 @@ main(int argc, char** argv)
     // Turn off transmitter trigger enable
     KaPmc730::setTxTriggerEnable(false);
 
-    // Stop the downconverter threads.
+    // Stop the downconverter threads. These have no event loops, so they
+    // must be stopped using "terminate()"
     hThread.terminate();
     vThread.terminate();
     burstThread.terminate();
@@ -463,7 +592,7 @@ main(int argc, char** argv)
     upConverter.stopDAC();
 
     // stop the timers
-    sd3c.timersStartStop(false);
+    _sd3c->timersStartStop(false);
 
     ILOG << "terminated on command";
 }
