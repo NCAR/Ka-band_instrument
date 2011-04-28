@@ -175,14 +175,25 @@ KaXmitter::getStatus() {
     // Get rid of any unread input
     tcflush(_fd, TCIFLUSH);
     
-    // Send the status command
-    _sendCommand(_STATUS_COMMAND);
+    // Try up to five times so send a status command and wait for *something*
+    // to come back
+    for (int attempt = 0; ; attempt++) {
+        // Send the status command
+        _sendCommand(_STATUS_COMMAND);
     
-    // Wait up to a second for reply to be ready
-    if (_readSelect(1000) < 0) {
-        WLOG << __PRETTY_FUNCTION__ << 
-            ": read select timed out! Is the transmitter plugged in?";
-        return(status);
+        // Wait up to a quarter second for reply to be ready
+        if (_readSelect(250) == 0) {
+            if (attempt > 0) {
+                DLOG << "Took " << attempt + 1 << " tries to get status reply";
+            }
+            break;
+        } else {
+            if (attempt == 4) {
+                WLOG << "No status reply in " << attempt + 1 << 
+                    " tries; Is the transmitter plugged in?";
+                return(status);
+            }
+        }
     }
     
     // Read the 21-byte status reply
@@ -192,7 +203,7 @@ KaXmitter::getStatus() {
     while (nRead < REPLYSIZE) {
         int result = read(_fd, reply + nRead, REPLYSIZE - nRead);
         if (result == 0) {
-            WLOG << "Status reply read timeout. Trying again.";
+            DLOG << "Status reply read timeout. Trying again.";
             return getStatus();
         } else if (result < 0) {
             ELOG << "Status reply read error: " << strerror(errno);
