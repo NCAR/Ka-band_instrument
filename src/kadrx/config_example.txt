@@ -95,6 +95,10 @@ sim_az_rate             10.0    # deg/s
 write_pei_files         false
 max_pei_gates           400
 
+# Enable/disable sector blanking via XML-RPC calls
+
+allow_blanking          false
+
 # Enable/disable simulated PMC-730 card
 
 simulate_pmc730         false
