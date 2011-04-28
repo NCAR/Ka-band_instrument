@@ -51,14 +51,14 @@ int _simWavelength = 5000;       ///< The simulated data wavelength, in samples
 int _simPauseMs = 20;            ///< The number of milliseconds to pause when reading in simulate mode.
 std::string _xmitdHost("kadrx"); ///< The host on which ka_xmitd is running
 int _xmitdPort = 8080;           ///< The port on which ka_xmitd is listening
-bool _allowBlanking = true;      ///< Are we allowing sector blanking via XML-RPC calls?
-Pentek::p7142sd3c * _sd3c;               ///< Our SD3C instance
+bool _allowBlanking = true;     ///< Are we allowing sector blanking via XML-RPC calls?
+Pentek::p7142sd3c * _sd3c;       ///< Our SD3C instance
 
 // Note that the transmitter should only fire if _limitersWorking is true
 // and _inBlankingSector is false.
 bool _limitersWorking = false;   ///< Set true when timers are seen, 
                                  /// so T/R limiters should be functioning
-bool _inBlankingSector = true;   ///< Set true if antenna is in a sector which
+bool _inBlankingSector;          ///< Set true if antenna is in a sector which
                                  /// should be blanked (i.e., xmitter must be off)
 
 bool _terminate = false;         ///< set true to signal the main loop to terminate
@@ -393,6 +393,12 @@ main(int argc, char** argv)
         ELOG << "Exiting on incomplete configuration!";
         exit(1);
     }
+    
+    // Initial value for _inBlankingSector is true if we're allowing for 
+    // blanking (we'll blank until we're explicitly told we're *not* in a 
+    // blanking sector), otherwise false (since no sectors will be blanked).
+    _allowBlanking = kaConfig.allow_blanking();
+    _inBlankingSector = _allowBlanking ? true : false;
 
     // Make sure our KaPmc730 is created in simulation mode if requested
     KaPmc730::doSimulate(kaConfig.simulate_pmc730());

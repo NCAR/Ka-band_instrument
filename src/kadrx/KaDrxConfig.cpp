@@ -98,6 +98,7 @@ std::set<std::string> KaDrxConfig::_BoolLegalKeys(_createBoolLegalKeys());
 std::set<std::string> KaDrxConfig::_createBoolLegalKeys() {
     std::set<std::string> keys;
     keys.insert("afc_enabled");
+    keys.insert("allow_blanking");
     keys.insert("external_clock");
     keys.insert("external_start_trigger");
     keys.insert("pdpp");
@@ -459,6 +460,11 @@ KaDrxConfig::isValid(bool verbose) const {
     if (simulate_tty_oscillators() == UNSET_BOOL) {
         if (verbose)
             std::cerr << "'simulate_tty_oscillators' unset in DRX configuration" << std::endl;
+        valid = false;
+    }
+    if (allow_blanking() == UNSET_BOOL) {
+        if (verbose)
+            std::cerr << "'allow_blanking' unset in DRX configuration" << std::endl;
         valid = false;
     }
     return valid;

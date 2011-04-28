@@ -258,6 +258,11 @@ public:
     int simulate_tty_oscillators() const {
     	return _getBoolVal("simulate_tty_oscillators");
     }
+    
+    // Are we allowing sector blanking via XML-RPC calls?
+    int allow_blanking() const {
+        return _getBoolVal("allow_blanking");
+    }
 
     /**
      * Validate that all metadata values required for product generation 
