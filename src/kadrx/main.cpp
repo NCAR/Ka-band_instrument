@@ -435,10 +435,10 @@ main(int argc, char** argv)
     _sd3c->setGPTimer1(kaConfig.test_target_delay(), kaConfig.test_target_width());
 
     // Use SD3C's general purpose timer 2 (timer 6) for T/R LIMITER trigger.
-    // It must be *low* from T0 to 500 ns after the transmit pulse ends, and
+    // It must be *low* from T0 to 1.7 us after the transmit pulse ends, and
     // high for the rest of the PRT.
     double trLimiterWidth = kaConfig.tx_pulse_mod_delay() +
-        kaConfig.tx_pulse_mod_width() + 7.0e-7;
+        kaConfig.tx_pulse_mod_width() + 1.7e-6;
     _sd3c->setGPTimer2(0.0, trLimiterWidth, true);
 
     // Use SD3C's general purpose timer 3 (timer 7) for PIN SW trigger.
