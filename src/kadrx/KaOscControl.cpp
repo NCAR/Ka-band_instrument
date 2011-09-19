@@ -257,7 +257,7 @@ KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
     _pulsesDropped(0),
     _blankedPulsesDropped(0),
     _maxDataLatency(maxDataLatency),
-    _inBlankingSector(true),
+    _inBlankingSector(false),
     _coastingEndPulse(0),
     _coastingPulsesDropped(0) {
     // Enable termination via terminate(), since we don't have a Qt event loop.
@@ -297,6 +297,12 @@ KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
 
     _setOscillators(osc0ScaledFreq, osc1ScaledFreq, osc2ScaledFreq,
         osc3ScaledFreq);
+
+    if (config.allow_blanking()) {
+      _inBlankingSector = true;
+    } else {
+      _inBlankingSector = false;
+    }
 }
 
 void
