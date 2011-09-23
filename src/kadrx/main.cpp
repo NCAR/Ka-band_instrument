@@ -62,11 +62,18 @@ bool _inBlankingSector;          ///< Set true if antenna is in a sector which
                                  /// should be blanked (i.e., xmitter must be off)
 
 bool _terminate = false;         ///< set true to signal the main loop to terminate
+bool _hup = false;               ///< set true to signal the main loop we got a hup
 
 /////////////////////////////////////////////////////////////////////
 void sigHandler(int sig) {
     ILOG << "Interrupt received...termination may take a few seconds";
     _terminate = true;
+}
+
+/////////////////////////////////////////////////////////////////////
+void hupHandler(int sig) {
+  ILOG << "HUP received...response  may take a few seconds";
+  _hup = true;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -437,8 +444,14 @@ main(int argc, char** argv)
     // Use SD3C's general purpose timer 2 (timer 6) for T/R LIMITER trigger.
     // It must be *low* from T0 to 1.7 us after the transmit pulse ends, and
     // high for the rest of the PRT.
-    double trLimiterWidth = kaConfig.tx_pulse_mod_delay() +
-        kaConfig.tx_pulse_mod_width() + 4.7e-6;
+
+    //     double trLimiterWidth = kaConfig.tx_pulse_mod_delay() +
+    //         kaConfig.tx_pulse_mod_width() + 4.7e-6;
+
+    // XXXX ERIC/MIKED/JOHNATHAN - DYNAMO - increase to total of 2 km
+
+    double trLimiterWidth = 13.33e-6;
+
     _sd3c->setGPTimer2(0.0, trLimiterWidth, true);
 
     // Use SD3C's general purpose timer 3 (timer 7) for PIN SW trigger.
@@ -478,6 +491,7 @@ main(int argc, char** argv)
     // catch a SIGINT (from control-C) or SIGTERM (the default from 'kill')
     signal(SIGINT, sigHandler);
     signal(SIGTERM, sigHandler);
+    signal(SIGHUP, hupHandler);
 
     // Start monitor and merge
     PMU_auto_register("start monitor and merge");
@@ -549,6 +563,14 @@ main(int argc, char** argv)
             break;
         }
 
+        if (_hup) {
+          cerr << "HUP received...disabling the triggers" << endl;
+          // Turn off transmitter trigger enable
+          KaPmc730::setTxTriggerEnable(false);
+          cerr << "HUP received...disabling the triggers - done" << endl;
+          _hup = false;
+        }
+
 		// How long since our last status print?
 		double currentTime = nowTime();
 		double elapsed = currentTime - startTime;
@@ -581,7 +603,13 @@ main(int argc, char** argv)
 	}
 
     // Turn off transmitter trigger enable
+    cerr << "Setting trigger enable to false" << endl;
     KaPmc730::setTxTriggerEnable(false);
+    cerr << "Setting trigger enable to false - done" << endl;
+
+    cerr << "Sleeping 2 sec" << endl;
+    sleep(2);
+    cerr << "Sleep done" << endl;
 
     // Stop the downconverter threads. These have no event loops, so they
     // must be stopped using "terminate()"
@@ -598,7 +626,9 @@ main(int argc, char** argv)
     upConverter.stopDAC();
 
     // stop the timers
+    cerr << "Stopping the timers" << endl;
     _sd3c->timersStartStop(false);
+    cerr << "Stopping the timers - done" << endl;
 
     ILOG << "terminated on command";
 }
