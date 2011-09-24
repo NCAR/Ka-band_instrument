@@ -24,7 +24,8 @@ KaXmitCtlMainWindow::KaXmitCtlMainWindow(std::string xmitterHost,
     _redLED(":/redLED.png"),
     _greenLED(":/greenLED.png"),
     _greenLED_off(":/greenLED_off.png"),
-    _nextLogIndex(0) {
+    _nextLogIndex(0),
+    _noXmitd(true) {
     // Set up the UI
     _ui.setupUi(this);
     // Limit the log area to 1000 messages
@@ -92,7 +93,16 @@ KaXmitCtlMainWindow::_update() {
     if (! _xmitClient.getStatus(_status)) {
         _noDaemon();
         return;
-    } else if (! _status.serialConnected()) {
+    } 
+    if (_noXmitd){
+        // we were out of touch with the ka_xmitd
+	std::ostringstream ss;
+	ss << "Connected to ka_xmitd @ " << _xmitClient.getXmitdHost() << ":" <<
+		_xmitClient.getXmitdPort();
+	_logMessage(ss.str().c_str());
+	_noXmitd = false;
+    } 
+    if (! _status.serialConnected()) {
         _noXmitter();
         return;
     }
@@ -193,7 +203,7 @@ KaXmitCtlMainWindow::_noDaemon() {
             _xmitClient.getXmitdPort();
     statusBar()->showMessage(ss.str().c_str());
     // If we've been in contact with a ka_xmitd, log that we lost contact
-    if (_nextLogIndex > 0) {
+    if (_noXmitd == false) {
         ss.seekp(0); // start over in the ostringstream
         ss << "Lost contact with ka_xmitd @ " << _xmitClient.getXmitdHost() <<
                 ":" << _xmitClient.getXmitdPort();
@@ -203,6 +213,7 @@ KaXmitCtlMainWindow::_noDaemon() {
     // start fresh when we connect again
     _nextLogIndex = 0;
     // Disable the UI when we are out of contact
+    _noXmitd = true;
     _disableUi();
 }
 

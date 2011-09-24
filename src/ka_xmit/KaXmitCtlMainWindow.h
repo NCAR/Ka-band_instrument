@@ -71,5 +71,6 @@ private:
     
     // next log index to get from ka_xmitd
     unsigned int _nextLogIndex;
+    bool _noXmitd;
 };
 #endif /*KAXMITCTLMAINWINDOW_H_*/

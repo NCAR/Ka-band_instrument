@@ -50,7 +50,7 @@ public:
     /**
      * Get current status values from the transmitter.
      */
-    KaXmitStatus getStatus();
+    KaXmitStatus getStatus(unsigned int recursion = 0);
     
     /**
      * Turn on the transmitter unit (does not enable high voltage and actual

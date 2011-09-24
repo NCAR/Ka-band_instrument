@@ -137,9 +137,10 @@ KaXmitter::operate() {
     }
     return;
 }
+#define MAX_GET_STATUS_TRIES 2
 
 KaXmitStatus
-KaXmitter::getStatus() {
+KaXmitter::getStatus(unsigned int recursion) {
     // Special handling if we're simulating...
     if (_simulate) {
         _simStatus.magnetronCurrent = 0.1 + (0.2 * random()) / RAND_MAX;
@@ -171,6 +172,14 @@ KaXmitter::getStatus() {
     // This must be the real thing, so get status from the transmitter
     KaXmitStatus status;
     _clearStatus(status);
+    // don't recurse more than 'N' levels in retries
+    if (recursion++ ==MAX_GET_STATUS_TRIES) {
+       ELOG << __PRETTY_FUNCTION__ << ": Too many getStatus() retries! (giving up)";
+       return status;
+    }
+    if (recursion > 1) {
+       WLOG << __PRETTY_FUNCTION__ << ": getStatus() retry - recursion = " << recursion;
+    }
     
     // Get rid of any unread input
     tcflush(_fd, TCIFLUSH);
@@ -204,7 +213,7 @@ KaXmitter::getStatus() {
         int result = read(_fd, reply + nRead, REPLYSIZE - nRead);
         if (result == 0) {
             DLOG << "Status reply read timeout. Trying again.";
-            return getStatus();
+            return getStatus(recursion);
         } else if (result < 0) {
             ELOG << "Status reply read error: " << strerror(errno);
             return(status);
@@ -216,7 +225,7 @@ KaXmitter::getStatus() {
     // Validate the reply
     if (! _argValid(std::string(reply, REPLYSIZE))) {
         WLOG << ": Trying again after bad status reply";
-        return(getStatus());
+        return(getStatus(recursion));
     }
     
     // Finally, parse the reply
@@ -368,6 +377,8 @@ KaXmitter::_sendCommand(std::string cmd) {
         sleep(1);
     }
     // Exit if we fail to get the command through after many attempts...
+    ELOG << __PRETTY_FUNCTION__ << ": Repeated Errors (" << strerror(errno) <<
+                    ") sending '" << cmd[1] << "' command - exiting.";
     exit(1);
 }
 
