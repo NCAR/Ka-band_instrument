@@ -64,6 +64,7 @@ bool _inBlankingSector;          ///< Set true if antenna is in a sector which
 bool _terminate = false;         ///< set true to signal the main loop to terminate
 bool _hup = false;               ///< set true to signal the main loop we got a hup signal
 bool _usr1 = false;              ///< set true to signal the main loop we got a usr1 signal
+bool _usr2 = false;              ///< set true to signal the main loop we got a usr2 signal
 bool _triggersEnabled = false;
 
 /////////////////////////////////////////////////////////////////////
@@ -82,6 +83,12 @@ void hupHandler(int sig) {
 void usr1Handler(int sig) {
   ILOG << "USR1 received...response  may take a few seconds";
   _usr1 = true;
+}
+
+/////////////////////////////////////////////////////////////////////
+void usr2Handler(int sig) {
+  ILOG << "USR2 received...response  may take a few seconds";
+  _usr2 = true;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -191,7 +198,7 @@ setTxEnableLine() {
     // Enable the transmitter iff the T/R limiters are working and we're not
     // in a blanking sector.
     KaPmc730::setTxTriggerEnable(enableTx);
-    _triggersEnabled = true;
+    _triggersEnabled = enableTx;
 }
 
 ///////////////////////////////////////////////////////////
@@ -300,17 +307,50 @@ verifyPpsAndNtp(const KaMonitor & kaMonitor) {
 
 /////////////////////////////////////////////////////////////////////
 /// Xmlrpc++ method to raise the Ka transmitter serial reset line
+
+/// 2011/10/1 Joe VanAndel & Mike Dixon
+/// This method is called when ka_xmitd lost communication with the
+/// transmitter's serial line.  We've found it is sometimes necessary to disable
+/// triggers before the reset works.
+/// 
+/// This method implements the entire reset strategy. 
+/// The LowerXmitTtyResetMethod is no longer needed
+/// (but is harmless)
 class RaiseXmitTtyResetMethod : public XmlRpcServerMethod {
 public:
     RaiseXmitTtyResetMethod() : XmlRpcServerMethod("raiseXmitTtyReset") {}
     void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+	static const int TX_SERIAL_RESET_TIME_MS = 1000;
         ILOG << "Received 'raiseXmitTtyReset' command";
+        // Turn off transmitter trigger enable
+        ILOG << "Transmitter triggers disabled";
+        KaPmc730::setTxTriggerEnable(false);
+	_triggersEnabled = false;
+        usleep(TX_SERIAL_RESET_TIME_MS* 1000);
+
+	// raise serial reset
         KaPmc730::setTxSerialResetLine(true);
+        ILOG << "serial reset line is HIGH";
+        usleep(TX_SERIAL_RESET_TIME_MS* 1000);
+
+	// lower serial reset
+        KaPmc730::setTxSerialResetLine(false);
+        ILOG << "serial reset line is LOW";
+        usleep(TX_SERIAL_RESET_TIME_MS* 1000);
+
+        // Turn on transmitter trigger enable
+        verifyTimersAndEnableTx();
+        ILOG << "Transmitter triggers enabled";
+
+        ILOG << "Completed 'raiseXmitTtyReset' command";
     }
 };
 
 /////////////////////////////////////////////////////////////////////
 /// Xmlrpc++ method to lower the Ka transmitter serial reset line
+///
+/// The LowerXmitTtyResetMethod is no longer needed
+/// (but is harmless)
 class LowerXmitTtyResetMethod : public XmlRpcServerMethod {
 public:
     LowerXmitTtyResetMethod() : XmlRpcServerMethod("lowerXmitTtyReset") {}
@@ -503,6 +543,7 @@ main(int argc, char** argv)
     signal(SIGTERM, sigHandler);
     signal(SIGHUP, hupHandler);
     signal(SIGUSR1, usr1Handler);
+    signal(SIGUSR2, usr2Handler);
 
     // Start monitor and merge
     PMU_auto_register("start monitor and merge");
@@ -594,6 +635,13 @@ main(int argc, char** argv)
           _usr1 = false;
         }
 
+        if (_usr2) {
+          cerr << "USR2 received...disabling triggers, resetting serial port and re-anbling triggers " << endl;
+	   RaiseXmitTtyResetMethod resetTty;
+	   XmlRpcValue  paramList,  retvalP;
+	   resetTty.execute(paramList, retvalP);
+          _usr2 = false;
+        }
 		// How long since our last status print?
 		double currentTime = nowTime();
 		double elapsed = currentTime - startTime;
