@@ -62,7 +62,9 @@ bool _inBlankingSector;          ///< Set true if antenna is in a sector which
                                  /// should be blanked (i.e., xmitter must be off)
 
 bool _terminate = false;         ///< set true to signal the main loop to terminate
-bool _hup = false;               ///< set true to signal the main loop we got a hup
+bool _hup = false;               ///< set true to signal the main loop we got a hup signal
+bool _usr1 = false;              ///< set true to signal the main loop we got a usr1 signal
+bool _triggersEnabled = false;
 
 /////////////////////////////////////////////////////////////////////
 void sigHandler(int sig) {
@@ -74,6 +76,12 @@ void sigHandler(int sig) {
 void hupHandler(int sig) {
   ILOG << "HUP received...response  may take a few seconds";
   _hup = true;
+}
+
+/////////////////////////////////////////////////////////////////////
+void usr1Handler(int sig) {
+  ILOG << "USR1 received...response  may take a few seconds";
+  _usr1 = true;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -183,6 +191,7 @@ setTxEnableLine() {
     // Enable the transmitter iff the T/R limiters are working and we're not
     // in a blanking sector.
     KaPmc730::setTxTriggerEnable(enableTx);
+    _triggersEnabled = true;
 }
 
 ///////////////////////////////////////////////////////////
@@ -426,6 +435,7 @@ main(int argc, char** argv)
     // operating).
     PMU_auto_register("trigger enable");
     KaPmc730::setTxTriggerEnable(false);
+    _triggersEnabled = false;
 
     // Instantiate our p7142sd3c
     PMU_auto_register("pentek initialize");
@@ -492,6 +502,7 @@ main(int argc, char** argv)
     signal(SIGINT, sigHandler);
     signal(SIGTERM, sigHandler);
     signal(SIGHUP, hupHandler);
+    signal(SIGUSR1, usr1Handler);
 
     // Start monitor and merge
     PMU_auto_register("start monitor and merge");
@@ -569,6 +580,18 @@ main(int argc, char** argv)
           KaPmc730::setTxTriggerEnable(false);
           cerr << "HUP received...disabling the triggers - done" << endl;
           _hup = false;
+          _triggersEnabled = false;
+        }
+
+        if (_usr1) {
+          cerr << "USR1 received...re-enabling the triggers" << endl;
+          if (_triggersEnabled) {
+            cerr << "Triggers already enabled - no action taken" << endl;
+          } else {
+            verifyTimersAndEnableTx();
+            cerr << "USR1 received...re-enabling the triggers - done" << endl;
+          }
+          _usr1 = false;
         }
 
 		// How long since our last status print?
