@@ -1011,6 +1011,13 @@ string KaMerge::_assembleStatusXml()
     ("HvpsCurrent", 2, xs.hvpsCurrent());
   xml += TaXml::writeDouble
     ("Temperature", 2, xs.temperature());
+
+  xml += TaXml::writeDouble
+    ("G0PowerDbm", 2, _burst->getG0PowerDbm());
+  xml += TaXml::writeDouble
+    ("G0PhaseDeg", 2, _burst->getG0PhaseDeg());
+  xml += TaXml::writeDouble
+    ("G0FreqHz", 2, _burst->getG0FreqHz());
   
   xml += TaXml::writeInt
     ("MagnetronCurrentFaultCount", 2, xs.magnetronCurrentFaultCount());
