@@ -17,6 +17,11 @@
 #include <XmitClient.h>
 
 class KaMonitorPriv;
+typedef struct {
+float power;
+float voltage;
+}QEA_Cal_Val;
+
 
 /// QThread object which handles Ka monitoring, regularly sampling all status 
 /// available via the multi-IO card as well as transmitter status information 
@@ -143,7 +148,7 @@ private:
      * @param voltage QEA crystal detector output, in V
      * @return power measured by the QEA crystal detector, in dBm
      */
-    static double _lookupQEAPower(double voltage);
+    static double _lookupQEAPower(const QEA_Cal_Val *qea_vals, unsigned len, double voltage);
     /**
      * Return the temperature, in C, based on temperature sensor voltage.
      * @param voltage voltage from temperature sensor

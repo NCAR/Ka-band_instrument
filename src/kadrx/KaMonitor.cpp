@@ -25,10 +25,11 @@
 LOGGING("KaMonitor")
 
 /* 
- * Quinstar QEA crystal RF power detector calibration measurements from 
+ * Test Target for Quinstar QEA crystal RF power detector calibration measurements from 
  * 11/04/2010, input power in dBm vs. output volts.
  */
-static const float QEA_Cal[][2] = {
+
+static const QEA_Cal_Val  QEA_Cal_TT[] = {
   {-34.72, 2.48E-03},
   {-33.72, 3.36E-03},
   {-32.72, 4.60E-03},
@@ -80,7 +81,60 @@ static const float QEA_Cal[][2] = {
   {13.28, 3.94E+00},
   {14.28, 4.14E+00},
 };
-static const int QEA_CalLen = (sizeof(QEA_Cal) / (sizeof(*QEA_Cal)));
+static const int QEA_CalLen_TT = (sizeof(QEA_Cal_TT) / (sizeof(QEA_Cal_Val)));
+
+// Ka Band Quinstar Diode Detector with Coax/ WG Adapter
+// calibration 2011/9/27 @ Dynamo
+// Input Sig Gen (34.7GHz),Measured PWR,,Measured mVPWR
+
+static const QEA_Cal_Val  QEA_Cal_HChan[] = {
+
+{-26.6, 0.0234},
+{-25.06, 0.0288},
+{-23.82, 0.0344},
+{-22.74, 0.0404},
+{-21.76, 0.0484},
+{-20.71, 0.0564},
+{-19.67, 0.0672},
+{-18.66, 0.08},
+{-17.64, 0.0936},
+{-16.63, 0.1096},
+{-15.64, 0.1316},
+{-14.35, 0.16},
+{-13.36, 0.1856},
+{-12.38, 0.216},
+{-11.41, 0.252},
+{-10.43, 0.288},
+{-9.46, 0.328},
+{-8.49, 0.38},
+{-7.51, 0.428},
+{-6.54, 0.488},
+{-5.56, 0.56},
+{-4.3, 0.672},
+{-3.32, 0.752},
+{-2.36, 0.848},
+{-1.38, 0.96},
+{-0.42, 1.072},
+{0.55, 1.232},
+{1.52, 1.392},
+{2.49, 1.552},
+{3.47, 1.712},
+{4.44, 1.904},
+{5.59, 2.16},
+{6.56, 2.36},
+{7.53, 2.56},
+{8.5, 2.76},
+{9.48, 3.04},
+};
+static const int QEA_CalLen_HChan = (sizeof(QEA_Cal_HChan) / (sizeof(QEA_Cal_Val)));
+
+// no calibration for V - return -999
+static const QEA_Cal_Val  QEA_Cal_VChan[] = {
+{-999, 5.00},
+{999, 10.0},
+};
+
+static const int QEA_CalLen_VChan = (sizeof(QEA_Cal_VChan) / (sizeof(QEA_Cal_Val)));
 
 KaMonitor::KaMonitor(std::string xmitdHost, int xmitdPort) :
     QThread(),
@@ -246,9 +300,9 @@ KaMonitor::_getMultiIoValues() {
     // Get data from analog channels 0-9 on the PMC-730 multi-IO card
     std::vector<float> analogData = pmc730.readAnalogChannels(0, 9);
     // Channels 0-2 give us RF power measurements
-    _testTargetPowerRaw = _lookupQEAPower(analogData[0]);
-    _vTxPowerRaw = _lookupQEAPower(analogData[1]);
-    _hTxPowerRaw = _lookupQEAPower(analogData[2]);
+    _testTargetPowerRaw = _lookupQEAPower(QEA_Cal_TT,  QEA_CalLen_TT, analogData[0]);
+    _vTxPowerRaw = _lookupQEAPower(QEA_Cal_VChan, QEA_CalLen_VChan, analogData[1]);
+    _hTxPowerRaw = _lookupQEAPower(QEA_Cal_HChan,QEA_CalLen_HChan,  analogData[2]);
     // Channels 3-8 give us various temperatures. The data are a bit noisy, so
     // we keep up to TEMP_AVERAGING_LEN samples so we can generate moving 
     // averages.
@@ -325,24 +379,24 @@ KaMonitor::_getOscFrequencies() {
 }
 
 double
-KaMonitor::_lookupQEAPower(double voltage) {
+KaMonitor::_lookupQEAPower(const QEA_Cal_Val *qea_cal, unsigned len, double voltage) {
     // If we're below the lowest voltage in the cal table, just return the
     // lowest power in the cal table.
-    if (voltage < QEA_Cal[0][1]) {
-        return(QEA_Cal[0][0]);
+    if (voltage < qea_cal[0].voltage) {
+        return(qea_cal[0].power);
     }
     // If we're above the highest voltage in the cal table, just return the
     // highest power in the cal table.
-    if (voltage > QEA_Cal[QEA_CalLen - 1][1]) {
-        return(QEA_Cal[QEA_CalLen - 1][0]);
+    if (voltage > qea_cal[len - 1].voltage) {
+        return(qea_cal[len - 1].power);
     }
     // OK, our voltage is somewhere in the table. Move up through the table, 
     // and interpolate between the two enclosing points.
-    for (int i = 0; i < QEA_CalLen - 1; i++) {
-        float powerLow = QEA_Cal[i][0];
-        float vLow = QEA_Cal[i][1];
-        float powerHigh = QEA_Cal[i + 1][0];
-        float vHigh = QEA_Cal[i + 1][1];
+    for (unsigned i = 0; i < len - 1; i++) {
+        float powerLow = qea_cal[i].power;
+        float vLow = qea_cal[i].voltage;
+        float powerHigh = qea_cal[i + 1].power;
+        float vHigh = qea_cal[i + 1].voltage;
         if (vHigh < voltage)
             continue;
         // Convert powers to linear space, then interpolate to our input voltage
