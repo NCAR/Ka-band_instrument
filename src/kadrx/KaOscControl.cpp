@@ -290,7 +290,9 @@ KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
         // these representative actual AFC-adjusted operating values in use at
         // 0Z on 3/29/2011 after the transmitter had been running for many
         // hours.
-        osc0ScaledFreq = 1567200000 / _osc0.getFreqStep();  // 1.5672 GHz
+	// values changed by Eric Loew 2011/9/29
+        // osc0ScaledFreq = 1567200000 / _osc0.getFreqStep();  // 1.5672 GHz
+        osc0ScaledFreq = 1560000000 / _osc0.getFreqStep();  // 1.5600 GHz
         osc1ScaledFreq = 132800000 / _osc1.getFreqStep();   // 132.80 MHz
         osc3ScaledFreq = 107800000 / _osc3.getFreqStep();   // 107.80 MHz
     }
