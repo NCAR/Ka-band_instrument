@@ -679,7 +679,7 @@ resetXmitterTty() {
                     kadrxHost << ":" << kadrxPort;
             ELOG << "Transmitter serial port reset failed";
         }
-	client.close(); 
+        client.close();
     }
     // Now re-open the serial connection to the transmitter
     Xmitter->reopenTty();
