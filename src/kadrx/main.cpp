@@ -98,45 +98,45 @@ void usr2Handler(int sig) {
 /// @return The runtime options that can be passed to the
 /// threads that interact with the RR314.
 void parseOptions(int argc,
-		char** argv)
+        char** argv)
 {
 
-	// get the options
-	po::options_description descripts("Options");
-	descripts.add_options()
-	("help", "Describe options")
-	("devRoot", po::value<std::string>(&_devRoot), "Device root (e.g. /dev/pentek/0)")
-	("drxConfig", po::value<std::string>(&_drxConfig), "DRX configuration file")
-	("instance", po::value<std::string>(&_instance), "App instance for procmap")
-	("simulate",                                   "Enable simulation")
-	("simPauseMS",  po::value<int>(&_simPauseMs),  "Simulation pause interval (ms)")
-	("simWavelength", po::value<int>(&_simWavelength), "The simulated data wavelength, in samples")
-	("tsLength", po::value<int>(&_tsLength), "The time series length")
-	("xmitdHost", po::value<std::string>(&_xmitdHost), "Host machine for ka_xmitd")
-	("xmitdPort", po::value<int>(&_xmitdPort), "Port for contacting ka_xmitd")
-			;
-	// If we get an option on the command line with no option name, it
-	// is treated like --drxConfig=<option> was given.
-	po::positional_options_description pd;
-	pd.add("drxConfig", 1);
+    // get the options
+    po::options_description descripts("Options");
+    descripts.add_options()
+    ("help", "Describe options")
+    ("devRoot", po::value<std::string>(&_devRoot), "Device root (e.g. /dev/pentek/0)")
+    ("drxConfig", po::value<std::string>(&_drxConfig), "DRX configuration file")
+    ("instance", po::value<std::string>(&_instance), "App instance for procmap")
+    ("simulate",                                   "Enable simulation")
+    ("simPauseMS",  po::value<int>(&_simPauseMs),  "Simulation pause interval (ms)")
+    ("simWavelength", po::value<int>(&_simWavelength), "The simulated data wavelength, in samples")
+    ("tsLength", po::value<int>(&_tsLength), "The time series length")
+    ("xmitdHost", po::value<std::string>(&_xmitdHost), "Host machine for ka_xmitd")
+    ("xmitdPort", po::value<int>(&_xmitdPort), "Port for contacting ka_xmitd")
+            ;
+    // If we get an option on the command line with no option name, it
+    // is treated like --drxConfig=<option> was given.
+    po::positional_options_description pd;
+    pd.add("drxConfig", 1);
 
-	po::variables_map vm;
-	po::store(po:: command_line_parser(argc, argv).options(descripts).positional(pd).run(), vm);
-	po::notify(vm);
+    po::variables_map vm;
+    po::store(po:: command_line_parser(argc, argv).options(descripts).positional(pd).run(), vm);
+    po::notify(vm);
 
-	if (vm.count("help")) {
-		std::cout << "Usage: " << argv[0] <<
-			" [OPTION]... [--drxConfig] <configFile>" << std::endl;
-		std::cout << descripts << std::endl;
-		exit(0);
-	}
+    if (vm.count("help")) {
+        std::cout << "Usage: " << argv[0] <<
+            " [OPTION]... [--drxConfig] <configFile>" << std::endl;
+        std::cout << descripts << std::endl;
+        exit(0);
+    }
 
-	if (vm.count("simulate"))
-	    _simulate = true;
-	if (vm.count("drxConfig") != 1) {
-	    ELOG << "Exactly one DRX configuration file must be given!";
-	    exit(1);
-	}
+    if (vm.count("simulate"))
+        _simulate = true;
+    if (vm.count("drxConfig") != 1) {
+        ELOG << "Exactly one DRX configuration file must be given!";
+        exit(1);
+    }
 }
 
 ///////////////////////////////////////////////////////////
@@ -144,50 +144,50 @@ void parseOptions(int argc,
 void
 makeRealTime()
 {
-	uid_t id = getuid();
+    uid_t id = getuid();
 
-	// don't even try if we are not root.
-	if (id != 0) {
-		WLOG << "Not root, unable to change scheduling priority";
-		return;
-	}
+    // don't even try if we are not root.
+    if (id != 0) {
+        WLOG << "Not root, unable to change scheduling priority";
+        return;
+    }
 
-	sched_param sparam;
-	sparam.sched_priority = 50;
+    sched_param sparam;
+    sparam.sched_priority = 50;
 
-	if (sched_setscheduler(0, SCHED_RR, &sparam)) {
-		ELOG << "warning, unable to set scheduler parameters: " << strerror(errno);
-	}
+    if (sched_setscheduler(0, SCHED_RR, &sparam)) {
+        ELOG << "warning, unable to set scheduler parameters: " << strerror(errno);
+    }
 }
 
 ///////////////////////////////////////////////////////////
 /// @return The current time, in seconds since Jan. 1, 1970.
 double nowTime()
 {
-	struct timeb timeB;
-	ftime(&timeB);
-	return timeB.time + timeB.millitm/1000.0;
+    struct timeb timeB;
+    ftime(&timeB);
+    return timeB.time + timeB.millitm/1000.0;
 }
 
 ///////////////////////////////////////////////////////////
 void startUpConverter(Pentek::p7142Up& upConverter,
         unsigned int pulsewidth_counts) {
 
-	// create the signal
-	unsigned int n = pulsewidth_counts * 2;
-	int32_t IQ[n];
+    // create the signal
+    unsigned int n = pulsewidth_counts * 2;
+    int32_t IQ[n];
 
-	for (unsigned int i = 0; i < n/2; i++) {
-		IQ[i]   = 0x8000 << 16 | 0x8000;
-	}
-	for (unsigned int i = n/2; i < n; i++) {
-		IQ[i]   = 0x8000 << 16 | 0x8000;
-	}
-	// load mem2
-	upConverter.write(IQ, n);
+    for (unsigned int i = 0; i < n/2; i++) {
+        IQ[i]   = 0x8000 << 16 | 0x8000;
+    }
+    for (unsigned int i = n/2; i < n; i++) {
+        IQ[i]   = 0x8000 << 16 | 0x8000;
+    }
+    // load mem2
+    upConverter.write(IQ, n);
 
-	// start the upconverter
-	upConverter.startDAC();
+    // start the upconverter
+    upConverter.startDAC();
 
 }
 
@@ -320,20 +320,20 @@ class RaiseXmitTtyResetMethod : public XmlRpcServerMethod {
 public:
     RaiseXmitTtyResetMethod() : XmlRpcServerMethod("raiseXmitTtyReset") {}
     void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
-	static const int TX_SERIAL_RESET_TIME_MS = 1000;
+        static const int TX_SERIAL_RESET_TIME_MS = 1000;
         ILOG << "Received 'raiseXmitTtyReset' command";
         // Turn off transmitter trigger enable
         ILOG << "Transmitter triggers disabled";
         KaPmc730::setTxTriggerEnable(false);
-	_triggersEnabled = false;
+        _triggersEnabled = false;
         usleep(TX_SERIAL_RESET_TIME_MS* 1000);
 
-	// raise serial reset
+        // raise serial reset
         KaPmc730::setTxSerialResetLine(true);
         ILOG << "serial reset line is HIGH";
         usleep(TX_SERIAL_RESET_TIME_MS* 1000);
 
-	// lower serial reset
+        // lower serial reset
         KaPmc730::setTxSerialResetLine(false);
         ILOG << "serial reset line is LOW";
         usleep(TX_SERIAL_RESET_TIME_MS* 1000);
@@ -426,24 +426,24 @@ public:
 int
 main(int argc, char** argv)
 {
-	// try to change scheduling to real-time
-	makeRealTime();
+    // try to change scheduling to real-time
+    makeRealTime();
 
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
 
-	// parse the command line options
-	parseOptions(argc, argv);
-	
-	ILOG << "kadrx - svn revision " << SVNREVISION << "," << SVNEXTERNALREVS;
+    // parse the command line options
+    parseOptions(argc, argv);
 
-	// set up registration with procmap if instance is specified
-	if (_instance.size() > 0) {
-		PMU_auto_init("kadrx", _instance.c_str(), PROCMAP_REGISTER_INTERVAL);
-		ILOG << "will register with procmap, instance: " << _instance;
-	}
+    ILOG << "kadrx - svn revision " << SVNREVISION << "," << SVNEXTERNALREVS;
 
-	// Read the KA configuration file
+    // set up registration with procmap if instance is specified
+    if (_instance.size() > 0) {
+        PMU_auto_init("kadrx", _instance.c_str(), PROCMAP_REGISTER_INTERVAL);
+        ILOG << "will register with procmap, instance: " << _instance;
+    }
+
+    // Read the KA configuration file
     KaDrxConfig kaConfig(_drxConfig);
     if (! kaConfig.isValid()) {
         ELOG << "Exiting on incomplete configuration!";
@@ -508,7 +508,7 @@ main(int argc, char** argv)
     // This signal is the inverse of the T/R LIMITER signal above.
     _sd3c->setGPTimer3(0.0, trLimiterWidth, false);
 
-	// Create (but don't yet start) the downconversion threads.
+    // Create (but don't yet start) the downconversion threads.
 
     // H channel (0)
     PMU_auto_register("set up threads");
@@ -606,7 +606,7 @@ main(int argc, char** argv)
     
 
     double startTime = nowTime();
-	while (1) {
+    while (1) {
         // Process XML-RPC commands for a brief bit
         rpcServer.work(0.01);
         
@@ -636,23 +636,23 @@ main(int argc, char** argv)
         }
 
         if (_usr2) {
-          cerr << "USR2 received...disabling triggers, resetting serial port and re-anbling triggers " << endl;
-	   RaiseXmitTtyResetMethod resetTty;
-	   XmlRpcValue  paramList,  retvalP;
-	   resetTty.execute(paramList, retvalP);
-          _usr2 = false;
+            cerr << "USR2 received...disabling triggers, resetting serial port and re-anbling triggers " << endl;
+            RaiseXmitTtyResetMethod resetTty;
+            XmlRpcValue  paramList,  retvalP;
+            resetTty.execute(paramList, retvalP);
+            _usr2 = false;
         }
-		// How long since our last status print?
-		double currentTime = nowTime();
-		double elapsed = currentTime - startTime;
-		
-		// If it's been long enough, go on to the status print below, otherwise
-		// go back to the top of the loop.
-		if (elapsed > 10.0) {
-		    startTime = currentTime;
-		} else {
-		    continue;
-		}
+        // How long since our last status print?
+        double currentTime = nowTime();
+        double elapsed = currentTime - startTime;
+
+        // If it's been long enough, go on to the status print below, otherwise
+        // go back to the top of the loop.
+        if (elapsed > 10.0) {
+            startTime = currentTime;
+        } else {
+            continue;
+        }
 
         ILOG << std::setprecision(3) << std::setw(5) << "H channel " <<
                 hThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
@@ -671,7 +671,7 @@ main(int argc, char** argv)
                 " MB/s  ovr: " << burstThread.downconverter()->overUnderCount() <<
                 " drop: " << burstThread.downconverter()->droppedPulses() <<
                 " sync errs: " << burstThread.downconverter()->syncErrors();
-	}
+    }
 
     // Turn off transmitter trigger enable
     cerr << "Setting trigger enable to false" << endl;
