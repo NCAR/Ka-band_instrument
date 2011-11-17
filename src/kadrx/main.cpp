@@ -55,11 +55,12 @@ bool _allowBlanking = true;     ///< Are we allowing sector blanking via XML-RPC
 Pentek::p7142sd3c * _sd3c;       ///< Our SD3C instance
 
 // Note that the transmitter should only fire if _limitersWorking is true
-// and _inBlankingSector is false.
+// and both _inBlankingSector and _xmlrpcDisabledTx are false.
 bool _limitersWorking = false;   ///< Set true when timers are seen, 
                                  /// so T/R limiters should be functioning
 bool _inBlankingSector;          ///< Set true if antenna is in a sector which
                                  /// should be blanked (i.e., xmitter must be off)
+bool _xmlrpcDisabledTx = false;  /// was transmit disabled via XML-RPC call?
 
 bool _terminate = false;         ///< set true to signal the main loop to terminate
 bool _hup = false;               ///< set true to signal the main loop we got a hup signal
@@ -194,9 +195,10 @@ void startUpConverter(Pentek::p7142Up& upConverter,
 ///////////////////////////////////////////////////////////
 void
 setTxEnableLine() {
-    bool enableTx = _limitersWorking && ! _inBlankingSector;
+    bool enableTx = _limitersWorking && ! _inBlankingSector &&
+            ! _xmlrpcDisabledTx;
     // Enable the transmitter iff the T/R limiters are working and we're not
-    // in a blanking sector.
+    // in a blanking sector and transmit has not been disabled via XMLRPC call.
     KaPmc730::setTxTriggerEnable(enableTx);
     _triggersEnabled = enableTx;
 }
@@ -306,51 +308,26 @@ verifyPpsAndNtp(const KaMonitor & kaMonitor) {
 }
 
 /////////////////////////////////////////////////////////////////////
-/// Xmlrpc++ method to raise the Ka transmitter serial reset line
-
-/// 2011/10/1 Joe VanAndel & Mike Dixon
-/// This method is called when ka_xmitd lost communication with the
-/// transmitter's serial line.  We've found it is sometimes necessary to disable
-/// triggers before the reset works.
-/// 
-/// This method implements the entire reset strategy. 
-/// The LowerXmitTtyResetMethod is no longer needed
-/// (but is harmless)
+/// Xmlrpc++ method to raise the Ka transmitter serial reset line.
+//
+// Control of the transmitter serial reset is really the concern of ka_xmitd,
+// but access to the line is via the PMC-730 card, which is owned here. Hence,
+// we have to provide an API for driving the line.
 class RaiseXmitTtyResetMethod : public XmlRpcServerMethod {
 public:
     RaiseXmitTtyResetMethod() : XmlRpcServerMethod("raiseXmitTtyReset") {}
     void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
-        static const int TX_SERIAL_RESET_TIME_MS = 1000;
         ILOG << "Received 'raiseXmitTtyReset' command";
-        // Turn off transmitter trigger enable
-        ILOG << "Transmitter triggers disabled";
-        KaPmc730::setTxTriggerEnable(false);
-        _triggersEnabled = false;
-        usleep(TX_SERIAL_RESET_TIME_MS* 1000);
-
-        // raise serial reset
         KaPmc730::setTxSerialResetLine(true);
-        ILOG << "serial reset line is HIGH";
-        usleep(TX_SERIAL_RESET_TIME_MS* 1000);
-
-        // lower serial reset
-        KaPmc730::setTxSerialResetLine(false);
-        ILOG << "serial reset line is LOW";
-        usleep(TX_SERIAL_RESET_TIME_MS* 1000);
-
-        // Turn on transmitter trigger enable
-        verifyTimersAndEnableTx();
-        ILOG << "Transmitter triggers enabled";
-
-        ILOG << "Completed 'raiseXmitTtyReset' command";
     }
 };
 
 /////////////////////////////////////////////////////////////////////
 /// Xmlrpc++ method to lower the Ka transmitter serial reset line
-///
-/// The LowerXmitTtyResetMethod is no longer needed
-/// (but is harmless)
+//
+// Control of the transmitter serial reset is really the concern of ka_xmitd,
+// but access to the line is via the PMC-730 card, which is owned here. Hence,
+// we have to provide an API for driving the line.
 class LowerXmitTtyResetMethod : public XmlRpcServerMethod {
 public:
     LowerXmitTtyResetMethod() : XmlRpcServerMethod("lowerXmitTtyReset") {}
@@ -418,6 +395,35 @@ public:
         pTime += boost::posix_time::microseconds(usecs);
         int64_t pulseSeqNum = _sd3c->pulseAtTime(pTime);
         setBlankingOff(pulseSeqNum);
+        retvalP = 0;
+    }
+};
+
+/////////////////////////////////////////////////////////////////////
+/// Xmlrpc++ method to disable the transmitter.
+// If this method is called, then the XMLRPC "enableTransmit" method must be
+// called to re-enable transmit.
+class DisableTransmitMethod : public XmlRpcServerMethod {
+public:
+    DisableTransmitMethod() : XmlRpcServerMethod("disableTransmit") {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        DLOG << "Received 'disableTransmit' command";
+        _xmlrpcDisabledTx = true;
+        setTxEnableLine();
+        retvalP = 0;
+    }
+};
+
+/////////////////////////////////////////////////////////////////////
+/// Xmlrpc++ method to re-enable the transmitter after a call to the
+/// XMLRPC "disableTransmit" method.
+class EnableTransmitMethod : public XmlRpcServerMethod {
+public:
+    EnableTransmitMethod() : XmlRpcServerMethod("enableTransmit") {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        DLOG << "Received 'enableTransmit' command";
+        _xmlrpcDisabledTx = false;
+        setTxEnableLine();
         retvalP = 0;
     }
 };
@@ -636,10 +642,11 @@ main(int argc, char** argv)
         }
 
         if (_usr2) {
-            cerr << "USR2 received...disabling triggers, resetting serial port and re-anbling triggers " << endl;
-            RaiseXmitTtyResetMethod resetTty;
-            XmlRpcValue  paramList,  retvalP;
-            resetTty.execute(paramList, retvalP);
+//            cerr << "USR2 received...disabling triggers, resetting serial port and re-anbling triggers " << endl;
+//            RaiseXmitTtyResetMethod resetTty;
+//            XmlRpcValue  paramList,  retvalP;
+//            resetTty.execute(paramList, retvalP);
+            ILOG << "USR2 signal handling is now a no-op!";
             _usr2 = false;
         }
         // How long since our last status print?

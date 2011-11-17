@@ -88,6 +88,10 @@ bool Foreground = false;
 /// Instance name for procmap
 std::string InstanceName = "";
 
+/// Host and port for XMLRPC comminucation with the kadrx process
+std::string KadrxHost = "localhost";
+int KadrxPort = 8081;
+
 /// Xmlrpc++ method to get transmitter status from ka_xmitd. The method
 /// returns a XmlRpc::XmlRpcValue struct (dictionary) mapping std::string keys 
 /// to XmlRpc::XmlRpcValue values. The dictionary will contain:
@@ -619,7 +623,9 @@ handlePulseInputFault() {
 }
 
 
-
+// Raise the transmitter's TTY reset line briefly, in an attempt to restore
+// serial communication with it. This function will sleep if necessary to 
+// enforce at least 5 seconds between each reset attempt.
 void
 resetXmitterTty() {
     // How long do we hold the reset line high?
@@ -659,16 +665,14 @@ resetXmitterTty() {
     } else {
         ILOG << "Resetting transmitter serial port via XML-RPC calls to kadrx.";
         // Try to have the kadrx process reset the transmitter serial port. 
-        std::string kadrxHost = "localhost";
-        int kadrxPort = 8081;
-        XmlRpcClient client(kadrxHost.c_str(), kadrxPort);
+        XmlRpcClient client(KadrxHost.c_str(), KadrxPort);
         
         XmlRpcValue params;
         XmlRpcValue result;
         // Raise the reset line
         if (! client.execute("raiseXmitTtyReset", params, result)) {
             ELOG << "Error executing kadrx 'raiseXmitTtyReset' command @ " << 
-                    kadrxHost << ":" << kadrxPort;
+                    KadrxHost << ":" << KadrxPort;
             ELOG << "Transmitter serial port reset failed";
         }
         // Leave the line raised for TX_SERIAL_RESET_TIME_MS milliseconds
@@ -676,13 +680,48 @@ resetXmitterTty() {
         // Lower the reset line
         if (! client.execute("lowerXmitTtyReset", params, result)) {
             ELOG << "Error executing kadrx 'lowerXmitTtyReset' command @ " << 
-                    kadrxHost << ":" << kadrxPort;
+                    KadrxHost << ":" << KadrxPort;
             ELOG << "Transmitter serial port reset failed";
         }
         client.close();
     }
     // Now re-open the serial connection to the transmitter
     Xmitter->reopenTty();
+}
+
+
+// Try to have kadrx lower the transmit trigger enable line
+void
+lowerXmitEnableLine() {
+    ILOG << "Disabling transmit XML-RPC call to kadrx.";
+    XmlRpcClient client(KadrxHost.c_str(), KadrxPort);
+
+    XmlRpcValue params;
+    XmlRpcValue result;
+    // Send the "disableTransmit" command to kadrx
+    if (! client.execute("disableTransmit", params, result)) {
+        ELOG << "Error executing kadrx 'disableTransmit' command @ " <<
+                KadrxHost << ":" << KadrxPort;
+        ELOG << "Transmit disable via kadrx failed";
+    }
+    client.close();
+}
+
+// Try to have kadrx raise the transmit trigger enable line
+void
+raiseXmitEnableLine() {
+    ILOG << "Enabling transmit XML-RPC call to kadrx.";
+    XmlRpcClient client(KadrxHost.c_str(), KadrxPort);
+
+    XmlRpcValue params;
+    XmlRpcValue result;
+    // Send the "enableTransmit" command to kadrx
+    if (! client.execute("enableTransmit", params, result)) {
+        ELOG << "Error executing kadrx 'enableTransmit' command @ " <<
+                KadrxHost << ":" << KadrxPort;
+        ELOG << "Transmit enable via kadrx failed";
+    }
+    client.close();
 }
 
 /// Print usage information
@@ -796,6 +835,17 @@ main(int argc, char *argv[]) {
     RpcServer.enableIntrospection(true);
     
     /*
+     * How many times do we try to reset the serial port gently before moving
+     * to more harsh methods?
+     */
+    static const int MAX_GENTLE_RESETS = 2;
+
+    /*
+     * How many consecutive times have we failed to talk to the serial port?
+     */
+    int consecutiveNoSerial = 0;
+
+    /*
      * Get current status. Listen for XML-RPC commands for a while. Repeat.
      */
     while (true) {
@@ -804,8 +854,36 @@ main(int argc, char *argv[]) {
         updateStatus();
         
         // Try to reset the transmitter serial port if necessary.
-        if (! XmitStatus.serialConnected)
-            resetXmitterTty();
+        if (XmitStatus.serialConnected) {
+            if (consecutiveNoSerial > 0) {
+                int nHarsh = (consecutiveNoSerial > MAX_GENTLE_RESETS) ?
+                        consecutiveNoSerial - MAX_GENTLE_RESETS : 0;
+                ILOG << "Serial communications re-established after " <<
+                        consecutiveNoSerial << " reset attempts (" <<
+                        nHarsh << " harsh)!";
+            }
+            consecutiveNoSerial = 0;
+        } else {
+            // Increment the count of consecutive serial port failures
+            consecutiveNoSerial++;
+
+            // If we have had fewer than MAX_GENTLE_RESETS consecutive failures,
+            // try to just lower and raise the serial reset line. This will not
+            // stop the Ka transmitter, and is sometimes successful in restoring
+            // serial communication with the transmitter.
+            //
+            // If we have more consecutive failures than that, try disabling
+            // the transmitter before doing the serial line reset. This means
+            // no Ka data for a bit, but (almost?) always allows the serial
+            // reset to work successfully.
+            if (consecutiveNoSerial <= MAX_GENTLE_RESETS) {
+                resetXmitterTty();
+            } else {
+                lowerXmitEnableLine();
+                resetXmitterTty();
+                raiseXmitEnableLine();
+            }
+        }
 
         // If we got a pulse input fault, try to handle it
         if (XmitStatus.pulseInputFault)
