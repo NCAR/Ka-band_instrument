@@ -561,7 +561,7 @@ void KaMerge::_sendIwrfMetaData()
 
   // write individual messages for each struct
 
-  if (_sock->writeBuffer(&_radarInfo, sizeof(_radarInfo))) {
+  if (_sock && _sock->writeBuffer(&_radarInfo, sizeof(_radarInfo))) {
     cerr << "ERROR - KaMerge::_sendIwrfMetaData()" << endl;
     cerr << "  Writing IWRF_RADAR_INFO" << endl;
     cerr << "  " << _sock->getErrStr() << endl;
@@ -569,7 +569,7 @@ void KaMerge::_sendIwrfMetaData()
     return;
   }
   
-  if (_sock->writeBuffer(&_tsProc, sizeof(_tsProc))) {
+  if (_sock && _sock->writeBuffer(&_tsProc, sizeof(_tsProc))) {
     cerr << "ERROR - KaMerge::_sendIwrfMetaData()" << endl;
     cerr << "  Writing IWRF_TS_PROCESSING" << endl;
     cerr << "  " << _sock->getErrStr() << endl;
@@ -577,7 +577,7 @@ void KaMerge::_sendIwrfMetaData()
     return;
   }
   
-  if (_sock->writeBuffer(&_calib, sizeof(_calib))) {
+  if (_sock && _sock->writeBuffer(&_calib, sizeof(_calib))) {
     cerr << "ERROR - KaMerge::_sendIwrfMetaData()" << endl;
     cerr << "  Writing IWRF_CALIBRATION" << endl;
     cerr << "  " << _sock->getErrStr() << endl;
@@ -730,7 +730,7 @@ void KaMerge::_sendIwrfPulsePacket()
     return;
   }
   
-  if (_sock->writeBuffer(_pulseBuf, _pulseBufLen)) {
+  if (_sock && _sock->writeBuffer(_pulseBuf, _pulseBufLen)) {
     cerr << "ERROR - KaMerge::_sendIwrfPulsePacket()" << endl;
     cerr << "  Writing pulse packet" << endl;
     cerr << "  " << _sock->getErrStr() << endl;
@@ -814,7 +814,7 @@ void KaMerge::_sendIwrfBurstPacket()
     return;
   }
   
-  if (_sock->writeBuffer(_burstBuf, _burstBufLen)) {
+  if (_sock && _sock->writeBuffer(_burstBuf, _burstBufLen)) {
     cerr << "ERROR - KaMerge::_sendIwrfBurstPacket()" << endl;
     cerr << "  Writing burst packet" << endl;
     cerr << "  " << _sock->getErrStr() << endl;
@@ -916,7 +916,7 @@ void KaMerge::_sendIwrfXmitPowerPacket()
     return;
   }
   
-  if (_sock->writeBuffer(&_xmitPower, sizeof(_xmitPower))) {
+  if (_sock && _sock->writeBuffer(&_xmitPower, sizeof(_xmitPower))) {
     cerr << "ERROR - KaMerge::_sendIwrfXmitPowerPacket()" << endl;
     cerr << "  Writing transmit power packet" << endl;
     cerr << "  " << _sock->getErrStr() << endl;
@@ -1121,7 +1121,7 @@ void KaMerge::_sendIwrfStatusXmlPacket()
     return;
   }
   
-  if (_sock->writeBuffer(_statusBuf, _statusLen)) {
+  if (_sock && _sock->writeBuffer(_statusBuf, _statusLen)) {
     cerr << "ERROR - KaMerge::_sendIwrfStatusXmlPacket()" << endl;
     cerr << "  Writing status xml packet" << endl;
     cerr << "  " << _sock->getErrStr() << endl;
