@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.join(os.getcwd(),'config'))
 import eol_scons
 import SCons
 
-options = eol_scons.GlobalOptions()
+options = eol_scons.GlobalVariables()
 
 def KaSetup(env):
     env.AppendUnique(CCFLAGS = ['-g'])
@@ -17,10 +17,9 @@ def KaSetup(env):
     return env
     
 env = Environment(tools = ['default'], 
-                  GLOBAL_TOOLS = ['prefixoptions', 'buildmode', 'svninfo', KaSetup])
-svnInfo = env.SvnInfo('svnInfo.h', '#')
+                  GLOBAL_TOOLS = ['prefixoptions', 'buildmode', 'gitinfo', KaSetup])
+gitInfo = env.GitInfo('gitInfo.h', '#')
 
-SConscript("pentek/SConscript")
 SConscript("ka_xmit/SConscript")
 SConscript("kadrx/SConscript")
 SConscript("tcpscope/SConscript")
