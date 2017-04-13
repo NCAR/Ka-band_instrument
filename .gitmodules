@@ -1,0 +1,21 @@
+[submodule "src/site_scons"]
+	path = src/site_scons
+	url = https://github.com/ncareol/eol_scons.git
+[submodule "src/Pentek7142"]
+	path = src/Pentek7142
+	url = https://github.com/ncar/Pentek7142
+[submodule "src/Pmc730"]
+	path = src/Pmc730
+	url = https://github.com/NCAR/Pmc730
+[submodule "src/ReadyFlow7142_428"]
+	path = src/ReadyFlow7142_428
+	url = ssh://burghart@localhost:2222/net/cds/git/ReadyFlow7142_428.git
+[submodule "src/qttoolbox"]
+	path = src/qttoolbox
+	url = https://github.com/ncareol/qttoolbox.git
+[submodule "src/tcpscope"]
+	path = src/tcpscope
+	url = https://github.com/NCAR/tcpscope
+[submodule "src/logx"]
+	path = src/logx
+	url = https://github.com/ncareol/logx.git
