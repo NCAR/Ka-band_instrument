@@ -1,0 +1,5 @@
+# Ignore Eclipse-generated files
+.cproject
+.project
+.settings
+# end of Eclipse-generated files
