@@ -21,7 +21,7 @@
 
 #include <QResource>
 
-#include "svnInfo.h"
+#include "gitInfo.h"
 #include "KaOscControl.h"
 #include "KaDrxPub.h"
 #include "KaPmc730.h"
