@@ -8,11 +8,11 @@
 #include "KaPmc730.h"
 #include <sys/time.h>
 /*
- * Include Acromag headers.
+ * Include low-level Acromag headers.
  */
 extern "C" {
-#  include "pmccommon/pmcmulticommon.h"
-#  include "pmc730/pmc730.h"
+#  include <Acromag/pmccommon/pmcmulticommon.h>
+#  include <Acromag/pmc730/pmc730.h>
 }
 
 #include <logx/Logging.h>
