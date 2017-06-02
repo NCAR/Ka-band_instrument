@@ -114,6 +114,9 @@ void KaDrxPub::run() {
     int64_t pulseSeqNum;
 
     char* buf = _down->getBeam(pulseSeqNum);
+    if (buf == NULL) {
+      continue; // bad beam
+    }
 
     // derive burst values if this is the burst channel
     if (_chanId == KA_BURST_CHANNEL) {
