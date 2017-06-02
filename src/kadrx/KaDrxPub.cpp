@@ -70,8 +70,8 @@ KaDrxPub::KaDrxPub(
         width = _config.burst_sample_width();
     }
     
-    _down = _sd3c.addDownconverter(_chanId, burstSampling, tsLength,
-        delay, width, gaussianFile, kaiserFile, simPauseMS, simWavelength, 
+    _down = _sd3c.addDownconverter(_chanId, 128 * 1024, burstSampling,
+        tsLength, delay, width, gaussianFile, kaiserFile, simWavelength,
         !(_config.external_clock()));
 
     if (burstSampling) {
