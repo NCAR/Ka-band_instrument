@@ -1,0 +1,6 @@
+ka_xmitctl
+ka_xmitd
+
+moc_*.cc
+qrc_*.cc
+ui_*.h

@@ -1,0 +1,5 @@
+/.scon*
+
+/apidocs
+/config.log
+/gitInfo.h
