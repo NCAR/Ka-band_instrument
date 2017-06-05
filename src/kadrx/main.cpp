@@ -21,11 +21,13 @@
 
 #include <QResource>
 
-#include "gitInfo.h"
+#include <gitInfo.h>
+#include <p7142sd3c.h>
+#include <p7142Up.h>
+
 #include "KaOscControl.h"
 #include "KaDrxPub.h"
 #include "KaPmc730.h"
-#include "p7142sd3c.h"
 #include "KaDrxConfig.h"
 #include "KaMerge.h"
 #include "KaMonitor.h"
@@ -39,7 +41,6 @@ namespace po = boost::program_options;
 /// Our RPC server
 using namespace XmlRpc;
 
-std::string _devRoot("/dev/pentek/p7142/0"); ///< Device root e.g. /dev/pentek/0
 std::string _drxConfig;          ///< DRX configuration file
 std::string _instance;           ///< application instance
 int _chans = KaDrxPub::KA_N_CHANNELS; ///< number of channels
@@ -106,7 +107,6 @@ void parseOptions(int argc,
     po::options_description descripts("Options");
     descripts.add_options()
     ("help", "Describe options")
-    ("devRoot", po::value<std::string>(&_devRoot), "Device root (e.g. /dev/pentek/0)")
     ("drxConfig", po::value<std::string>(&_drxConfig), "DRX configuration file")
     ("instance", po::value<std::string>(&_instance), "App instance for procmap")
     ("simulate",                                   "Enable simulation")
@@ -441,7 +441,7 @@ main(int argc, char** argv)
     // parse the command line options
     parseOptions(argc, argv);
 
-    ILOG << "kadrx - svn revision " << SVNREVISION << "," << SVNEXTERNALREVS;
+    ILOG << "kadrx - Git commit " << REPO_REVISION << "," << REPO_EXTERNALS;
 
     // set up registration with procmap if instance is specified
     if (_instance.size() > 0) {
@@ -485,10 +485,22 @@ main(int argc, char** argv)
 
     // Instantiate our p7142sd3c
     PMU_auto_register("pentek initialize");
-    _sd3c = new Pentek::p7142sd3c(_devRoot, _simulate, kaConfig.tx_delay(),
-        kaConfig.tx_pulse_width(), kaConfig.prt1(), kaConfig.prt2(),
-        kaConfig.staggered_prt(), kaConfig.gates(), 1, false,
-        Pentek::p7142sd3c::DDC10DECIMATE, kaConfig.external_start_trigger());
+    _sd3c = new Pentek::p7142sd3c(false,	// simulate?
+    		kaConfig.tx_delay(),
+			kaConfig.tx_pulse_width(),
+			kaConfig.prt1(),
+			kaConfig.prt2(),
+			kaConfig.staggered_prt(),
+			kaConfig.gates(),
+			1,		// nsum
+			false,	// free run
+			Pentek::p7142sd3c::DDC10DECIMATE,
+			kaConfig.external_start_trigger(),
+			50,		// sim pause, ms
+			true,	// use first card
+			false,
+			0,		// code length (N/A for us)
+			0);		// ADC clock (0 = use default for our DDC type)
 
     // Use SD3C's general purpose timer 0 (timer 3) for transmit pulse modulation
     PMU_auto_register("timers enable");
@@ -504,7 +516,7 @@ main(int argc, char** argv)
     //     double trLimiterWidth = kaConfig.tx_pulse_mod_delay() +
     //         kaConfig.tx_pulse_mod_width() + 4.7e-6;
 
-    // XXXX ERIC/MIKED/JOHNATHAN - DYNAMO - increase to total of 2 km
+    // XXXX ERIC/MIKED/JONATHAN - DYNAMO - increase to total of 2 km
 
     double trLimiterWidth = 13.33e-6;
 
@@ -532,8 +544,10 @@ main(int argc, char** argv)
     // Create the upConverter.
     // Configure the DAC to use CMIX by fDAC/4 (coarse mixer mode = 9)
     PMU_auto_register("create upconverter");
-    Pentek::p7142Up & upConverter = *_sd3c->addUpconverter("0C",
-        _sd3c->adcFrequency(), _sd3c->adcFrequency() / 4, 9);
+    Pentek::p7142Up & upConverter = *_sd3c->addUpconverter(
+    		_sd3c->adcFrequency(),
+    		_sd3c->adcFrequency() / 4,
+			9);
 
     // Set up oscillator control/AFC
     PMU_auto_register("oscillator control");
@@ -663,20 +677,17 @@ main(int argc, char** argv)
 
         ILOG << std::setprecision(3) << std::setw(5) << "H channel " <<
                 hThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
-                " MB/s  ovr: " << hThread.downconverter()->overUnderCount() <<
-                " drop: " << hThread.downconverter()->droppedPulses() <<
-                " sync errs: " << hThread.downconverter()->syncErrors();
+                " MB/s, drop: " << hThread.downconverter()->droppedPulses() <<
+                ", sync errs: " << hThread.downconverter()->syncErrors();
 
         ILOG << std::setprecision(3) << std::setw(5) << "V channel " <<
                 vThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
-                " MB/s  ovr: " << vThread.downconverter()->overUnderCount() <<
-                " drop: " << vThread.downconverter()->droppedPulses() <<
+                " MB/s, drop: " << vThread.downconverter()->droppedPulses() <<
                 " sync errs: " << vThread.downconverter()->syncErrors();
 
         ILOG << std::setprecision(3) << std::setw(5) << "burst channel " <<
                 burstThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
-                " MB/s  ovr: " << burstThread.downconverter()->overUnderCount() <<
-                " drop: " << burstThread.downconverter()->droppedPulses() <<
+                " MB/s, drop: " << burstThread.downconverter()->droppedPulses() <<
                 " sync errs: " << burstThread.downconverter()->syncErrors();
     }
 
