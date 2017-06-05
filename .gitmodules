@@ -19,3 +19,6 @@
 [submodule "src/logx"]
 	path = src/logx
 	url = https://github.com/ncareol/logx.git
+[submodule "src/ascope"]
+	path = src/ascope
+	url = https://github.com/NCAR/ascope.git
