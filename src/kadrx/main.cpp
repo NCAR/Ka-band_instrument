@@ -282,29 +282,31 @@ verifyPpsAndNtp(const KaMonitor & kaMonitor) {
         exit(1);
     }
     
-    // Copy the local ntp_offset.sh script into a NULL-terminated character
-    // array.
-    QResource ntpOffsetScript(":/ntp_offset.sh");
-    int scriptLen = ntpOffsetScript.size();
-    char *script = new char[scriptLen + 1];
-    memcpy(script, ntpOffsetScript.data(), scriptLen);
-    script[scriptLen] = '\0';
+    // Get the SystemClockOffset.py script as a QResource
+    QResource pyScriptResource(":/SystemClockOffset.py");
+
+    // Build a simple sh script to execute the Python script
+    std::string shScript("python << __EOF__\n");
+    shScript.append(reinterpret_cast<const char*>(pyScriptResource.data()),
+    		        pyScriptResource.size());
+    shScript.append("\n__EOF__");
+
     
-    // Execute the ntp_offset.sh script and get the output, which is NTP
-    // offset in ms.
-    FILE *scriptOutput = popen(script, "r");
-    float offset_ms;
-    fscanf(scriptOutput, "%f", &offset_ms);
+    // Execute the sh script via popen and get the output, which will be
+    // the system clock offset in seconds.
+    FILE *scriptOutput = popen(shScript.c_str(), "r");
+    float offset_s;
+    fscanf(scriptOutput, "%f", &offset_s);
     if (pclose(scriptOutput) != 0) {
-        ELOG << "Failed to get NTP time offset. Not starting.";
+        ELOG << "Failed to get system clock offset. Not starting.";
         exit(1);
     }
     // p7142sd3c::timersStartStop() currently assumes we're within 200 ms
-    if (fabs(offset_ms) >= 200) {
-        ELOG << "System time offset of " << offset_ms << " ms is too large!";
+    if (fabs(offset_s) >= 0.2) {
+        ELOG << "System time offset of " << offset_s << " s is too large!";
         exit(1);
     }
-    ILOG << "System clock NTP offset is currently " << offset_ms << " ms";
+    ILOG << "System clock offset is currently " << offset_s << " s";
 }
 
 /////////////////////////////////////////////////////////////////////
