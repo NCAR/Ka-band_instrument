@@ -7,9 +7,9 @@
 [submodule "src/Pmc730"]
 	path = src/Pmc730
 	url = https://github.com/NCAR/Pmc730
-[submodule "src/ReadyFlow7142_428"]
-	path = src/ReadyFlow7142_428
-	url = ssh://burghart@localhost:2222/net/cds/git/ReadyFlow7142_428.git
+[submodule "src/ReadyFlow7142_428_WinDriver1150"]
+	path = src/ReadyFlow7142_428_WinDriver1150
+	url = ssh://localhost:2200/net/cds/git/ReadyFlow7142_428_WinDriver1150
 [submodule "src/qttoolbox"]
 	path = src/qttoolbox
 	url = https://github.com/ncareol/qttoolbox.git
