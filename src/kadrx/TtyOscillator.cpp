@@ -11,8 +11,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
-#include <termios.h>
 #include <fcntl.h>
+#include <termios.h>
+#include <unistd.h>
 #include <logx/Logging.h>
 
 LOGGING("TtyOscillator")

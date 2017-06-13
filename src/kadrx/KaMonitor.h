@@ -27,6 +27,7 @@ float voltage;
 /// available via the multi-IO card as well as transmitter status information 
 /// obtained from the ka_xmitd process.
 class KaMonitor : public QThread {
+	Q_OBJECT
 public:
     /**
      * Construct a KaMonitor which will get transmitter status from ka_xmitd

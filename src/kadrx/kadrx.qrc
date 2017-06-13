@@ -1,5 +1,5 @@
 <RCC>
   <qresource>
-    <file>ntp_offset.sh</file>
+    <file>SystemClockOffset.py</file>
   </qresource>
 </RCC>

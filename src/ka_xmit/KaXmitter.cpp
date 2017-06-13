@@ -12,8 +12,9 @@
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
-#include <termios.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <termios.h>
 
 #include <logx/Logging.h>
 

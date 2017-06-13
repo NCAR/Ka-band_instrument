@@ -1,15 +1,15 @@
 # -*- python -*-
 
 tools = Split("""
-logx
-pentek
 boost_date_time
-boost_mutex
+boost_thread
 boost_program_options
 doxygen
-qt4
+logx
+lrose
+Pentek7142
 pmc730
-rapradar
+qtcore
 xmitclient
 xmlrpc
 """)
@@ -56,7 +56,7 @@ env.Qrc(qrcfiles)
 
 kadrx = env.Program('kadrx', sources)
 
-html = env.Apidocs(sources + headers, DOXYFILE_FILE = "Doxyfile")
+html = env.Apidocs(sources + headers)
 
 Default(kadrx, html)
 

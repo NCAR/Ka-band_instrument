@@ -18,7 +18,7 @@ class BurstData;
 ///
 /// KaDrxPub provides a separate thread for performing
 /// the data processing. It is initiated by calling the start() method,
-/// which then invokes the run() method. run() simple loops, reading beams
+/// which then invokes the run() method. run() simply loops, reading beams
 /// from p7142sd3cDn and publishing them via the TSWriter.
 ///
 /// Since KaDrxPub does not use a Qt event loop at this point, the thread

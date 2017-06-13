@@ -1,12 +1,12 @@
 # -*- python -*-
 
 xmitdTools = Split("""
-logx
-doxygen
-xmlrpc
-rapradar
 boost_program_options
+doxygen
+logx
+lrose
 pmc730
+xmlrpc
 """)
 
 xmitdEnv = Environment(tools = ['default'] + xmitdTools)
@@ -55,6 +55,5 @@ KaXmitCtlMainWindow.h
 KaXmitter.h
 """)
 
-html = xmitctlEnv.Apidocs(xmitd_sources + xmitctl_sources + headers, 
-                   DOXYFILE_FILE = "Doxyfile")
+html = xmitctlEnv.Apidocs(xmitd_sources + xmitctl_sources + headers)
 Default(html)

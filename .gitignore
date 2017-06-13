@@ -1,5 +1,9 @@
-# Ignore Eclipse-generated files
-.cproject
-.project
-.settings
+*.a
+*.o
+
+# Eclipse-generated files
+/.cproject
+/.project
+/.pydevproject
+/.settings
 # end of Eclipse-generated files
