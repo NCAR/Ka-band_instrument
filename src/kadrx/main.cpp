@@ -514,13 +514,12 @@ main(int argc, char** argv)
     // Use SD3C's general purpose timer 2 (timer 6) for T/R LIMITER trigger.
     // It must be *low* from T0 to 1.7 us after the transmit pulse ends, and
     // high for the rest of the PRT.
-
-    //     double trLimiterWidth = kaConfig.tx_pulse_mod_delay() +
-    //         kaConfig.tx_pulse_mod_width() + 4.7e-6;
-
-    // XXXX ERIC/MIKED/JONATHAN - DYNAMO - increase to total of 2 km
-
-    double trLimiterWidth = 13.33e-6;
+    double tx_delay = 600e-9;	// ~600 ns from leading edge of pulse modulation
+    							// signal to leading edge of transmit pulse
+    double far_field_time = 1.1e-6;	// out-and-back time to far field for
+    								// 0.7 m antenna at 34.7 GHz
+    double trLimiterWidth = kaConfig.tx_pulse_mod_delay() +
+    		kaConfig.tx_pulse_mod_width() + tx_delay + far_field_time;
 
     _sd3c->setGPTimer2(0.0, trLimiterWidth, true);
 
