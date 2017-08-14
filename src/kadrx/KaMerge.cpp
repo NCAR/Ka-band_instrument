@@ -693,7 +693,15 @@ void KaMerge::_assembleIwrfPulsePacket()
   _pulseHdr.start_range_m = _tsProc.start_range_m;
   _pulseHdr.gate_spacing_m = _tsProc.gate_spacing_m;
 
+  // Put in antenna angles. Since we have no real antenna angles available,
+  // we either simulate a surveillance scan or report fixed vertical pointing.
+  //
+  // The following parameters will be overridden by real values when the
+  // Ka-band data are merged with S-Pol's S-band data downstream. However, the
+  // values below are useful to allow for simple display of the Ka-band data
+  // even if it is not merged with real angle data.
   if (_simAntennaAngles) {
+    // Simulate a surveillance volume scan using our simulation parameters.
     double dAz = _pulseHdr.prt * _simAzRate;
     _simAz += dAz;
     if (_simAz >= 360.0) {
@@ -712,6 +720,14 @@ void KaMerge::_assembleIwrfPulsePacket()
     _pulseHdr.fixed_el = _simElev;
     _pulseHdr.elevation = _simElev;
     _pulseHdr.azimuth = _simAz;
+  } else {
+    // Just report fixed vertical pointing
+    _pulseHdr.scan_mode = IWRF_SCAN_MODE_VERTICAL_POINTING;
+    _pulseHdr.volume_num = 0;
+    _pulseHdr.sweep_num = 0;
+    _pulseHdr.fixed_el = 90.0;
+    _pulseHdr.elevation = 90.0;
+    _pulseHdr.azimuth = 0.0;
   }
   
   memcpy(_pulseBuf, &_pulseHdr, sizeof(_pulseHdr));
