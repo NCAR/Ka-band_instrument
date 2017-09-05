@@ -50,9 +50,9 @@ std::string _kaiserFile = "";    ///< kaiser filter coefficient file
 bool _simulate = false;          ///< Set true for simulate mode
 int _simWavelength = 5000;       ///< The simulated data wavelength, in samples
 int _simPauseMs = 20;            ///< The number of milliseconds to pause when reading in simulate mode.
-std::string _xmitdHost("kadrx"); ///< The host on which ka_xmitd is running
+std::string _xmitdHost("localhost"); ///< The host on which ka_xmitd is running
 int _xmitdPort = 8080;           ///< The port on which ka_xmitd is listening
-bool _allowBlanking = true;     ///< Are we allowing sector blanking via XML-RPC calls?
+bool _allowBlanking = true;      ///< Are we allowing sector blanking via XML-RPC calls?
 Pentek::p7142sd3c * _sd3c;       ///< Our SD3C instance
 
 // Note that the transmitter should only fire if _limitersWorking is true
