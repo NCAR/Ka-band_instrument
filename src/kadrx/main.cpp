@@ -504,6 +504,15 @@ main(int argc, char** argv)
 			0,		// code length (N/A for us)
 			0);		// ADC clock (0 = use default for our DDC type)
 
+    // Die if the card has DDC10 rev. 783 loaded, since it has a known problem
+    // with timer programming
+    if (_sd3c->sd3cRev() == 783) {
+        ELOG << "Timer programming in SD3C DDC10 revision 783 is broken!";
+        ELOG << "Load revision 535, or a revision later than 783.";
+        ELOG << "EXITING kadrx";
+        exit(0);
+    }
+
     // Use SD3C's general purpose timer 0 (timer 3) for transmit pulse modulation
     PMU_auto_register("timers enable");
     _sd3c->setGPTimer0(kaConfig.tx_pulse_mod_delay(), kaConfig.tx_pulse_mod_width());
