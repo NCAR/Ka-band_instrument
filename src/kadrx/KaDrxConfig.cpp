@@ -326,12 +326,6 @@ KaDrxConfig::isValid(bool verbose) const {
             std::cerr << "'tx_pulse_width' unset in DRX configuration" << std::endl;
         valid = false;
     }
-    if (tx_pulse_width() != rcvr_pulse_width()) {
-        if (verbose)
-            std::cerr << "'rcvr_pulse_width' must be the same as " <<
-                "'tx_pulse_width' for Ka" << std::endl;
-            valid = false;
-    }
     if (tx_delay() == UNSET_DOUBLE) {
         if (verbose)
             std::cerr << "'tx_delay' unset in DRX configuration" << std::endl;
