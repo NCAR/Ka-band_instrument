@@ -45,8 +45,7 @@ class KaDrxPub : public QThread {
          * @param sd3c reference to the p7142sd3c object for our P7142 card
          * @param chanId the P7142 channel this thread will read
          * @param config KaDrxConfig defining the desired configuration.
-         * @param tsWriter the time series DDS writer to be used.
-         * @param publish should we publish data via DDS?
+         * @param merge pointer to the KaMerge instance used for merging
          * @param tsLength the number of time series pulses to be sent when
          *     we publish
          * @param gaussianFile Name of the file containing the Gaussian

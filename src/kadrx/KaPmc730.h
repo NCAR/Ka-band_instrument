@@ -37,7 +37,7 @@ public:
 
     /**
      * Set the transmitter trigger enable line (DIO channel 14) on or off.
-     * @param bool true iff TX trigger should be enabled
+     * @param enable true iff TX trigger should be enabled
      */
     static void setTxTriggerEnable(bool enable) {
         theKaPmc730().setDioLine(_KA_DOUT_TXENABLE, enable ? 1 : 0);
