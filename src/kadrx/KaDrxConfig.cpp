@@ -15,6 +15,9 @@
 #include <climits>
 #include <cmath>
 #include <cstring>
+#include <logx/Logging.h>
+
+LOGGING("KaDrxConfig")
 
 const double KaDrxConfig::UNSET_DOUBLE = -INFINITY;
 const int KaDrxConfig::UNSET_INT = INT_MIN;
@@ -165,6 +168,8 @@ KaDrxConfig::KaDrxConfig(std::string configFile) {
         std::cerr << "Error opening config file '" << configFile << "': " <<
             strerror(errno) << std::endl;
         exit(1);
+    } else {
+        ILOG << "=== config file: " << configFile << " ===============";
     }
     // Read each line from the file, discarding empty lines and lines
     // beginning with '#'.
@@ -176,6 +181,8 @@ KaDrxConfig::KaDrxConfig(std::string configFile) {
         std::getline(infile, line);
         if (infile.eof())
             break;
+
+        ILOG << "   " << line;
         // Trim comments and leading and trailing space from the line
         line = trimmedString(line);
 //        // Skip empty lines and comment lines beginning with '#'
@@ -223,6 +230,7 @@ KaDrxConfig::KaDrxConfig(std::string configFile) {
             exit(1);
         }
     }
+    ILOG << "=== end of config file ===============";
 }
 
 KaDrxConfig::~KaDrxConfig() {
