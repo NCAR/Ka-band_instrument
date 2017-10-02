@@ -165,8 +165,8 @@ valueFromLine(const std::string& line) {
 KaDrxConfig::KaDrxConfig(std::string configFile) {
     std::fstream infile(configFile.c_str(), std::ios_base::in);
     if (infile.fail()) {
-        std::cerr << "Error opening config file '" << configFile << "': " <<
-            strerror(errno) << std::endl;
+        ELOG << "Error opening config file '" << configFile << "': " <<
+            strerror(errno);
         exit(1);
     } else {
         ILOG << "=== config file: " << configFile << " ===============";
@@ -198,16 +198,16 @@ KaDrxConfig::KaDrxConfig(std::string configFile) {
         if (_DoubleLegalKeys.find(key) != _DoubleLegalKeys.end()) {
             double fVal;
             if ((valueStream >> fVal).fail()) {
-                std::cerr << "Bad double value '" << strValue << "' for key " <<
-                    key << " in config file" << std::endl;
+                ELOG << "Bad double value '" << strValue << "' for key " <<
+                    key << " in config file";
                 exit(1);
             }
             _doubleVals[key] = fVal;
         } else if (_IntLegalKeys.find(key) != _IntLegalKeys.end()) {
             int iVal;
             if ((valueStream >> iVal).fail()) {
-                std::cerr << "Bad int value '" << strValue << "' for key " <<
-                    key << " in config file" << std::endl;
+                ELOG << "Bad int value '" << strValue << "' for key " <<
+                    key << " in config file";
                 exit(1);
             }
             _intVals[key] = iVal;
@@ -218,15 +218,15 @@ KaDrxConfig::KaDrxConfig(std::string configFile) {
             } else if (strValue == "false") {
                 bVal = false;
             } else if ((valueStream >> bVal).fail()) {
-                std::cerr << "Bad bool value '" << strValue << "' for key " <<
-                    key << " in config file" << std::endl;
+                ELOG << "Bad bool value '" << strValue << "' for key " <<
+                    key << " in config file";
                 exit(1);
             }
             _boolVals[key] = bVal;
         } else if (_StringLegalKeys.find(key) != _StringLegalKeys.end()) {
             _stringVals[key] = strValue;
         } else {
-            std::cerr << "Illegal key '" << key << "' in config file" << std::endl;
+            ELOG << "Illegal key '" << key << "' in config file";
             exit(1);
         }
     }
@@ -241,232 +241,232 @@ KaDrxConfig::isValid(bool verbose) const {
     bool valid = true;
     if (gates() == UNSET_INT) {
         if (verbose)
-            std::cerr << "'gates' unset in DRX configuration" << std::endl;
+            ELOG << "'gates' unset in DRX configuration";
         valid = false;
     }
     if (ant_gain() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'ant_gain' unset in DRX configuration" << std::endl;
+            ELOG << "'ant_gain' unset in DRX configuration";
         valid = false;
     }
     if (ant_hbeam_width() == UNSET_INT) {
         if (verbose)
-            std::cerr << "'ant_hbeam_width' unset in DRX configuration" << std::endl;
+            ELOG << "'ant_hbeam_width' unset in DRX configuration";
         valid = false;
     }
     if (ant_vbeam_width() == UNSET_INT) {
         if (verbose)
-            std::cerr << "'ant_vbeam_width' unset in DRX configuration" << std::endl;
+            ELOG << "'ant_vbeam_width' unset in DRX configuration";
         valid = false;
     }
     if (staggered_prt() == UNSET_BOOL) {
         if (verbose)
-            std::cerr << "'staggered_prt' unset in DRX configuration" << std::endl;
+            ELOG << "'staggered_prt' unset in DRX configuration";
         valid = false;
     }
     if (prt1() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'prt1' unset in DRX configuration" << std::endl;
+            ELOG << "'prt1' unset in DRX configuration";
         valid = false;
     }
     if (rcvr_bandwidth() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'rcvr_bandwidth' unset in DRX configuration" << std::endl;
+            ELOG << "'rcvr_bandwidth' unset in DRX configuration";
         valid = false;
     }
     if (rcvr_digital_gain() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'rcvr_digital_gain' unset in DRX configuration" << std::endl;
+            ELOG << "'rcvr_digital_gain' unset in DRX configuration";
         valid = false;
     }
     if (rcvr_filter_mismatch() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'rcvr_filter_mismatch' unset in DRX configuration" << std::endl;
+            ELOG << "'rcvr_filter_mismatch' unset in DRX configuration";
         valid = false;
     }
     if (rcvr_gate0_delay() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'rcvr_gate0_delay' unset in DRX configuration" << std::endl;
+            ELOG << "'rcvr_gate0_delay' unset in DRX configuration";
         valid = false;
     }
     if (rcvr_noise_figure() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'rcvr_noise_figure' unset in DRX configuration" << std::endl;
+            ELOG << "'rcvr_noise_figure' unset in DRX configuration";
         valid = false;
     }
     if (rcvr_pulse_width() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'rcvr_pulse_width' unset in DRX configuration" << std::endl;
+            ELOG << "'rcvr_pulse_width' unset in DRX configuration";
         valid = false;
     }
     if (rcvr_rf_gain() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'rcvr_rf_gain' unset in DRX configuration" << std::endl;
+            ELOG << "'rcvr_rf_gain' unset in DRX configuration";
         valid = false;
     }
     if (rcvr_h_power_corr() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'rcvr_h_power_corr' unset in DRX configuration" << std::endl;
+            ELOG << "'rcvr_h_power_corr' unset in DRX configuration";
         valid = false;
     }
     if (rcvr_v_power_corr() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'rcvr_v_power_corr' unset in DRX configuration" << std::endl;
+            ELOG << "'rcvr_v_power_corr' unset in DRX configuration";
         valid = false;
     }
     if (rcvr_tt_power_corr() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'rcvr_tt_power_corr' unset in DRX configuration" << std::endl;
+            ELOG << "'rcvr_tt_power_corr' unset in DRX configuration";
         valid = false;
     }
     if (tx_cntr_freq() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'tx_cntr_freq' unset in DRX configuration" << std::endl;
+            ELOG << "'tx_cntr_freq' unset in DRX configuration";
         valid = false;
     }
     if (tx_peak_power() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'tx_peak_power' unset in DRX configuration" << std::endl;
+            ELOG << "'tx_peak_power' unset in DRX configuration";
         valid = false;
     }
     if (tx_pulse_width() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'tx_pulse_width' unset in DRX configuration" << std::endl;
+            ELOG << "'tx_pulse_width' unset in DRX configuration";
         valid = false;
     }
     if (tx_delay() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'tx_delay' unset in DRX configuration" << std::endl;
+            ELOG << "'tx_delay' unset in DRX configuration";
         valid = false;
     }
     if (tx_pulse_mod_delay() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'tx_pulse_mod_delay' unset in DRX configuration" << std::endl;
+            ELOG << "'tx_pulse_mod_delay' unset in DRX configuration";
         valid = false;
     }
     if (tx_pulse_mod_width() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'tx_pulse_mod_width' unset in DRX configuration" << std::endl;
+            ELOG << "'tx_pulse_mod_width' unset in DRX configuration";
         valid = false;
     }
     if (burst_sample_delay() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'burst_sample_delay' unset in DRX configuration" << std::endl;
+            ELOG << "'burst_sample_delay' unset in DRX configuration";
         valid = false;
     }
     if (burst_sample_width() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'burst_sample_width' unset in DRX configuration" << std::endl;
+            ELOG << "'burst_sample_width' unset in DRX configuration";
         valid = false;
     }
     if (burst_sample_frequency() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'burst_sample_frequency' unset in DRX configuration" << std::endl;
+            ELOG << "'burst_sample_frequency' unset in DRX configuration";
         valid = false;
     }
     if (external_clock() == UNSET_BOOL) {
         if (verbose)
-            std::cerr << "'external_clock' unset in DRX configuration" << std::endl;
+            ELOG << "'external_clock' unset in DRX configuration";
         valid = false;
     }
     if (external_start_trigger() == UNSET_BOOL) {
         if (verbose)
-            std::cerr << "'external_start_trigger' unset in DRX configuration" << std::endl;
+            ELOG << "'external_start_trigger' unset in DRX configuration";
         valid = false;
     }
     if (afc_enabled() == UNSET_BOOL) {
         if (verbose)
-            std::cerr << "'afc_enabled' unset in DRX configuration" << std::endl;
+            ELOG << "'afc_enabled' unset in DRX configuration";
         valid = false;
     }
     if (afc_g0_threshold_dbm() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'afc_g0_threshold_dbm' unset in DRX configuration" << std::endl;
+            ELOG << "'afc_g0_threshold_dbm' unset in DRX configuration";
         valid = false;
     }
     if (afc_coarse_step() == UNSET_INT) {
         if (verbose)
-            std::cerr << "'afc_coarse_step' unset in DRX configuration" << std::endl;
+            ELOG << "'afc_coarse_step' unset in DRX configuration";
         valid = false;
     }
     if (afc_fine_step() == UNSET_INT) {
         if (verbose)
-            std::cerr << "'afc_fine_step' unset in DRX configuration" << std::endl;
+            ELOG << "'afc_fine_step' unset in DRX configuration";
         valid = false;
     }
     if (ldr_mode() == UNSET_BOOL) {
         if (verbose)
-            std::cerr << "'ldr_mode' unset in DRX configuration" << std::endl;
+            ELOG << "'ldr_mode' unset in DRX configuration";
         valid = false;
     }
     if (merge_queue_size() == UNSET_INT) {
         if (verbose)
-            std::cerr << "'merge_queue_size' unset in DRX configuration" << std::endl;
+            ELOG << "'merge_queue_size' unset in DRX configuration";
         valid = false;
     }
     if (iwrf_server_tcp_port() == UNSET_INT) {
         if (verbose)
-            std::cerr << "'iwrf_server_tcp_port' unset in DRX configuration" << std::endl;
+            ELOG << "'iwrf_server_tcp_port' unset in DRX configuration";
         valid = false;
     }
     if (pulse_interval_per_iwrf_meta_data() == UNSET_INT) {
         if (verbose)
-            std::cerr << "'pulse_interval_per_iwrf_meta_data' unset in DRX configuration" << std::endl;
+            ELOG << "'pulse_interval_per_iwrf_meta_data' unset in DRX configuration";
         valid = false;
     }
     if (iqcount_scale_for_mw() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'iqcount_scale_for_mw' unset in DRX configuration" << std::endl;
+            ELOG << "'iqcount_scale_for_mw' unset in DRX configuration";
         valid = false;
     }
     if (cohere_iq_to_burst() == UNSET_BOOL) {
         if (verbose)
-            std::cerr << "'cohere_iq_to_burst' unset in DRX configuration" << std::endl;
+            ELOG << "'cohere_iq_to_burst' unset in DRX configuration";
         valid = false;
     }
     if (combine_every_second_gate() == UNSET_BOOL) {
         if (verbose)
-            std::cerr << "'combine_every_second_gate' unset in DRX configuration" << std::endl;
+            ELOG << "'combine_every_second_gate' unset in DRX configuration";
         valid = false;
     }
     if (test_target_delay() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'test_target_delay' unset in DRX configuration" << std::endl;
+            ELOG << "'test_target_delay' unset in DRX configuration";
         valid = false;
     }
     if (test_target_width() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'test_target_width' unset in DRX configuration" << std::endl;
+            ELOG << "'test_target_width' unset in DRX configuration";
         valid = false;
     }
     if (range_to_gate0() == UNSET_DOUBLE) {
         if (verbose)
-            std::cerr << "'range_to_gate0' unset in DRX configuration" << std::endl;
+            ELOG << "'range_to_gate0' unset in DRX configuration";
         valid = false;
     }
     if (write_pei_files() == UNSET_BOOL) {
         if (verbose)
-            std::cerr << "'write_pei_files' unset in DRX configuration" << std::endl;
+            ELOG << "'write_pei_files' unset in DRX configuration";
         valid = false;
     }
     if (max_pei_gates() == UNSET_INT) {
         if (verbose)
-            std::cerr << "'max_pei_gates' unset in DRX configuration" << std::endl;
+            ELOG << "'max_pei_gates' unset in DRX configuration";
         valid = false;
     }
     if (simulate_pmc730() == UNSET_BOOL) {
         if (verbose)
-            std::cerr << "'simulate_pmc730' unset in DRX configuration" << std::endl;
+            ELOG << "'simulate_pmc730' unset in DRX configuration";
         valid = false;
     }
     if (simulate_tty_oscillators() == UNSET_BOOL) {
         if (verbose)
-            std::cerr << "'simulate_tty_oscillators' unset in DRX configuration" << std::endl;
+            ELOG << "'simulate_tty_oscillators' unset in DRX configuration";
         valid = false;
     }
     if (allow_blanking() == UNSET_BOOL) {
         if (verbose)
-            std::cerr << "'allow_blanking' unset in DRX configuration" << std::endl;
+            ELOG << "'allow_blanking' unset in DRX configuration";
         valid = false;
     }
     return valid;
