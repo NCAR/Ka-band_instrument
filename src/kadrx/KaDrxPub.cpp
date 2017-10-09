@@ -51,10 +51,6 @@ KaDrxPub::KaDrxPub(
      _peiFile(0),
      _maxPeiGates(config.max_pei_gates())
 {
-    // Bail out if we're not configured legally.
-    if (! _configIsValid())
-        abort();
-
     // scaling between A2D counts and volts
 
     _iqScaleForMw = _config.iqcount_scale_for_mw();
@@ -246,46 +242,6 @@ void
 
 }
     
-////////////////////////////////////////////////////////////////////////////////
-bool
-KaDrxPub::_configIsValid() const {
-    bool valid = true;
-    
-    // gate count must be in the interval [1,1023]
-    if (_nGates < 1 || _nGates > 1023) {
-        std::cerr << "gates is " << _nGates <<
-            "; it must be greater than 0 and less than 1024." << std::endl;
-        valid = false;
-    }
-    
-    // Tests for non-burst data channels
-    if (_chanId != KA_BURST_CHANNEL) {
-        // PRT must be a multiple of the pulse width
-        if (_sd3c.prtCounts() % _sd3c.txPulseWidthCounts()) {
-            std::cerr << "PRT is " << _sd3c.prt() << " (" << 
-                _sd3c.prtCounts() << ") and pulse width is " << 
-                _sd3c.txPulseWidth() << 
-                " (" << _sd3c.txPulseWidthCounts() << 
-                "): PRT must be an integral number of pulse widths." << std::endl;
-            valid = false;
-        }
-        // PRT must be longer than (gates + 1) * pulse width
-        if (_sd3c.prtCounts() <= ((_nGates + 1) * _sd3c.txPulseWidthCounts())) {
-            std::cerr << "PRT must be greater than (gates+1)*(pulse width)." <<
-                    std::endl;
-            valid = false;
-        }
-        // Make sure the Pentek's FPGA is using DDC10DECIMATE
-        if (_sd3c.ddcType() != Pentek::p7142sd3c::DDC10DECIMATE) {
-            std::cerr << "The Pentek FPGA is using DDC type " << 
-                    _sd3c.ddcTypeName() << 
-                    ", but Ka requires DDC10DECIMATE." << std::endl;
-            valid = false;
-        }
-    }
-    return valid;
-}
-
 ////////////////////////////////////////////////////////////////////////////////
 void
 KaDrxPub::_handleBurst(const int16_t * iqData, int64_t pulseSeqNum) {

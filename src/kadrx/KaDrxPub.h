@@ -93,12 +93,6 @@ class KaDrxPub : public QThread {
         /// @param pulseSeqNum The pulse number. Will be zero for raw data.
         void _addToMerge(const int16_t *iq, int64_t pulseSeqNum);
         
-        /**
-         * Return true iff the current configuration is valid.
-         * @return true iff the current configuration is valid.
-         */
-        bool _configIsValid() const;
-        
         /// Our associated p7142sd3c
         Pentek::p7142sd3c& _sd3c;
        
