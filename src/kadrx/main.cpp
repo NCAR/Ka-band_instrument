@@ -485,24 +485,39 @@ main(int argc, char** argv)
     KaPmc730::setTxTriggerEnable(false);
     _triggersEnabled = false;
 
+    // check PRT, set timer divisor accordingly
+    // if PRF < 800 Hz (PRT > 0.00125 sec) set divisor to 4
+    // otherwise use the default of 2
+
+    int sd3cTimerDivisor = 2;
+    if (kaConfig.prt1() > 0.00125) {
+      sd3cTimerDivisor = 4;
+    }
+    DLOG << "==>> prt1, sd3cTimerDivisor: " << kaConfig.prt1() << ", " << sd3cTimerDivisor;
+    
     // Instantiate our p7142sd3c
+
     PMU_auto_register("pentek initialize");
-    _sd3c = new Pentek::p7142sd3c(false,	// simulate?
-    		kaConfig.tx_delay(),
-			kaConfig.tx_pulse_width(),
-			kaConfig.prt1(),
-			kaConfig.prt2(),
-			kaConfig.staggered_prt(),
-			kaConfig.gates(),
-			1,		// nsum
-			false,	// free run
-			Pentek::p7142sd3c::DDC10DECIMATE,
-			kaConfig.external_start_trigger(),
-			50,		// sim pause, ms
-			true,	// use first card
-			false,
-			0,		// code length (N/A for us)
-			0);		// ADC clock (0 = use default for our DDC type)
+    _sd3c = new Pentek::p7142sd3c(false, // simulate?
+                                  kaConfig.tx_delay(),
+                                  kaConfig.tx_pulse_width(),
+                                  kaConfig.prt1(),
+                                  kaConfig.prt2(),
+                                  kaConfig.staggered_prt(),
+                                  kaConfig.gates(),
+                                  1, // nsum
+                                  false, // free run
+                                  Pentek::p7142sd3c::DDC10DECIMATE,
+                                  kaConfig.external_start_trigger(),
+                                  50, // sim pause, ms
+                                  true, // use first card
+                                  false, // rim
+                                  0, // code length (N/A for us)
+                                  0, // ADC clock (0 = use default for our DDC type)
+                                  true, // reset_clock_managers
+                                  true, // abortOnError
+                                  sd3cTimerDivisor
+                                  );
 
     // Die if the card has DDC10 rev. 783 loaded, since it has a known problem
     // with timer programming
