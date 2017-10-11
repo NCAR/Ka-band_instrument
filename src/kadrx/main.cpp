@@ -511,8 +511,6 @@ main(int argc, char** argv)
         exit(1);
     }
 
-    DLOG << "==>> PRT: " << 1.0e6 * maxPrt << " us, sd3cTimerDivisor: " <<
-            sd3cTimerDivisor;
     if (sd3cTimerDivisor > 2) {
         ILOG << "Using SD3C timer divisor of " << sd3cTimerDivisor <<
                 " to fit a PRT of " << 1.0e6 * maxPrt << " us";
