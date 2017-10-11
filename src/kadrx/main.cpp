@@ -35,6 +35,7 @@
 LOGGING("kadrx")
 
 using namespace std;
+using namespace Pentek;
 using namespace boost::posix_time;
 namespace po = boost::program_options;
 
@@ -53,7 +54,7 @@ int _simPauseMs = 20;            ///< The number of milliseconds to pause when r
 std::string _xmitdHost("localhost"); ///< The host on which ka_xmitd is running
 int _xmitdPort = 8080;           ///< The port on which ka_xmitd is listening
 bool _allowBlanking = true;      ///< Are we allowing sector blanking via XML-RPC calls?
-Pentek::p7142sd3c * _sd3c;       ///< Our SD3C instance
+p7142sd3c * _sd3c;       ///< Our SD3C instance
 
 // Note that the transmitter should only fire if _limitersWorking is true
 // and both _inBlankingSector and _xmlrpcDisabledTx are false.
@@ -171,7 +172,7 @@ double nowTime()
 }
 
 ///////////////////////////////////////////////////////////
-void startUpConverter(Pentek::p7142Up& upConverter,
+void startUpConverter(p7142Up& upConverter,
         unsigned int pulsewidth_counts) {
 
     // create the signal
@@ -458,8 +459,8 @@ main(int argc, char** argv)
         exit(1);
     }
     
-    // Initial value for _inBlankingSector is true if we're allowing for 
-    // blanking (we'll blank until we're explicitly told we're *not* in a 
+    // Initial value for _inBlankingSector is true if we're allowing for
+    // blanking (we'll blank until we're explicitly told we're *not* in a
     // blanking sector), otherwise false (since no sectors will be blanked).
     _allowBlanking = kaConfig.allow_blanking();
     _inBlankingSector = _allowBlanking ? true : false;
@@ -485,39 +486,61 @@ main(int argc, char** argv)
     KaPmc730::setTxTriggerEnable(false);
     _triggersEnabled = false;
 
-    // check PRT, set timer divisor accordingly
-    // if PRF < 800 Hz (PRT > 0.00125 sec) set divisor to 4
-    // otherwise use the default of 2
-
+    // Figure out the lowest SD3C timer clock divisor which will support the
+    // given PRT(s). Allowed divisor values are 2, 4, 8, or 16.
+    double maxPrt = fmax(kaConfig.prt1(), kaConfig.prt2());
+    double adcFrequency = p7142sd3c::DefaultAdcFrequency(p7142sd3c::DDC10DECIMATE);
     int sd3cTimerDivisor = 2;
-    if (kaConfig.prt1() > 0.00125) {
-      sd3cTimerDivisor = 4;
+    for (; sd3cTimerDivisor <= 16; sd3cTimerDivisor *= 2) {
+        // Get PRT counts in SD3C timer clock units (ADC clock / divisor). We
+        // assume the default ADC clock for DDC10.
+        double prtCounts = maxPrt * (adcFrequency / sd3cTimerDivisor);
+
+        // Highest count which can be used for a SD3C timer is 65535, so if
+        // our PRT count is below that, we're good using this divisor. Otherwise
+        // double the divisor and try again.
+        if (prtCounts <= 65535) {
+            break;
+        }
     }
-    DLOG << "==>> prt1, sd3cTimerDivisor: " << kaConfig.prt1() << ", " << sd3cTimerDivisor;
-    
+
+    if (sd3cTimerDivisor > 16) {
+        ELOG << "PRT of " << 1.0e6 * maxPrt << " us is too large to fit " <<
+                "in an SD3C timer, even using the max timer clock divider!";
+        ELOG << "Exiting kadrx";
+        exit(1);
+    }
+
+    DLOG << "==>> PRT: " << 1.0e6 * maxPrt << " us, sd3cTimerDivisor: " <<
+            sd3cTimerDivisor;
+    if (sd3cTimerDivisor > 2) {
+        ILOG << "Using SD3C timer divisor of " << sd3cTimerDivisor <<
+                " to fit a PRT of " << 1.0e6 * maxPrt << " us";
+    }
+
     // Instantiate our p7142sd3c
 
     PMU_auto_register("pentek initialize");
-    _sd3c = new Pentek::p7142sd3c(false, // simulate?
-                                  kaConfig.tx_delay(),
-                                  kaConfig.tx_pulse_width(),
-                                  kaConfig.prt1(),
-                                  kaConfig.prt2(),
-                                  kaConfig.staggered_prt(),
-                                  kaConfig.gates(),
-                                  1, // nsum
-                                  false, // free run
-                                  Pentek::p7142sd3c::DDC10DECIMATE,
-                                  kaConfig.external_start_trigger(),
-                                  50, // sim pause, ms
-                                  true, // use first card
-                                  false, // rim
-                                  0, // code length (N/A for us)
-                                  0, // ADC clock (0 = use default for our DDC type)
-                                  true, // reset_clock_managers
-                                  true, // abortOnError
-                                  sd3cTimerDivisor
-                                  );
+    _sd3c = new p7142sd3c(false,    // simulate?
+                          kaConfig.tx_delay(),
+                          kaConfig.tx_pulse_width(),
+                          kaConfig.prt1(),
+                          kaConfig.prt2(),
+                          kaConfig.staggered_prt(),
+                          kaConfig.gates(),
+                          1,        // nsum
+                          false,    // free run
+                          p7142sd3c::DDC10DECIMATE,
+                          kaConfig.external_start_trigger(),
+                          50,       // sim pause, ms
+                          true,     // use first card
+                          false,    // rim
+                          0,        // code length (N/A for us)
+                          0,        // ADC clock (0 = use default for our DDC type)
+                          true,     // reset_clock_managers
+                          true,     // abortOnError
+                          sd3cTimerDivisor
+                          );
 
     // Die if the card has DDC10 rev. 783 loaded, since it has a known problem
     // with timer programming
@@ -525,7 +548,7 @@ main(int argc, char** argv)
         ELOG << "Timer programming in SD3C DDC10 revision 783 is broken!";
         ELOG << "Load revision 535, or a revision later than 783.";
         ELOG << "EXITING kadrx";
-        exit(0);
+        exit(1);
     }
 
     // Use SD3C's general purpose timer 0 (timer 3) for transmit pulse modulation
@@ -573,7 +596,7 @@ main(int argc, char** argv)
     // Create the upConverter.
     // Configure the DAC to use CMIX by fDAC/4 (coarse mixer mode = 9)
     PMU_auto_register("create upconverter");
-    Pentek::p7142Up & upConverter = *_sd3c->addUpconverter(
+    p7142Up & upConverter = *_sd3c->addUpconverter(
     		_sd3c->adcFrequency(),
     		_sd3c->adcFrequency() / 4,
 			9);
