@@ -82,20 +82,25 @@ public:
     
     /**
      * Get the state of oscillator3's ADF4001 PLL muxout line.
-     * @return 0 if the line is high or zero if the line is low
+     * @return 1 if the line is high or 0 if the line is low
      */
     static uint8_t getPllMuxout() {
         return(theKaPmc730().getDioLine(_KA_DIN_OSC3));
     }
 
-    /**
-     * Return true iff waveguide pressure between the Ka transmitter and the
-     * antenna is OK.
-     * @return true iff waveguide pressure between the Ka transmitter and the
-     * antenna is OK.
-     */
+    /// @brief Return true iff waveguide N2 pressure between the Ka transmitter
+    /// and the antenna is high enough to operate.
+    ///
+    /// The digital input line is held high at the PMC730 by the card's pull-up
+    /// resistor, and is also connected to a normally open pressure switch at
+    /// the N2 regulator in the transmitter box. When high-enough pressure is
+    /// seen at the switch, it closes and ties the digital input line to
+    /// ground. Hence a high voltage on the digital line means low pressure and
+    /// and a low voltage means good pressure.
+    /// @return true iff waveguide N2 pressure between the Ka transmitter
+    /// and the antenna is high enough to operate.
     static bool wgPressureValid() {
-        return(theKaPmc730().getDioLine(_KA_DIN_WGPRES_OK));
+        return(!theKaPmc730().getDioLine(_KA_DIN_WGPRES_LOW));
     }
 
     /**
@@ -144,7 +149,7 @@ private:
         _KA_DIN_COUNTER = 2,        // pulse counter input
         _KA_DIN_UNUSED3 = 3,
         _KA_DIN_GPSCLOCK_ALM = 4,   // GPS clock alarm
-        _KA_DIN_WGPRES_OK = 5,      // waveguide pressure OK
+        _KA_DIN_WGPRES_LOW = 5,      // waveguide pressure OK
         _KA_DIN_100MHZ_ALM = 6,     // 100 MHz oscillator alarm
         _KA_DIN_OSC3 = 7            // muxout line from oscillator 3 PLL chip
     } DinLine_t;

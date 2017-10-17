@@ -38,11 +38,11 @@ KaPmc730::KaPmc730() : Pmc730(_DoSimulate ? -1 : 0) {
     // Verify that our defined input DIO lines are all actually set for input
     if (getDioDirection(_KA_DIN_COUNTER) != DIO_INPUT ||
             getDioDirection(_KA_DIN_GPSCLOCK_ALM) != DIO_INPUT ||
-            getDioDirection(_KA_DIN_WGPRES_OK) != DIO_INPUT ||
+            getDioDirection(_KA_DIN_WGPRES_LOW) != DIO_INPUT ||
             getDioDirection(_KA_DIN_OSC3) != DIO_INPUT) {
         ELOG << __PRETTY_FUNCTION__ << ": Ka PMC-730 DIO lines " <<
                 _KA_DIN_COUNTER << ", " << _KA_DIN_GPSCLOCK_ALM << ", " <<
-                _KA_DIN_WGPRES_OK << ", and " << _KA_DIN_OSC3 <<
+                _KA_DIN_WGPRES_LOW << ", and " << _KA_DIN_OSC3 <<
                 " are not all set for input!";
         abort();
     }
