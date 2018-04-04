@@ -139,7 +139,25 @@ static const int QEA_CalLen_VChan = (sizeof(QEA_Cal_VChan) / (sizeof(QEA_Cal_Val
 KaMonitor::KaMonitor(std::string xmitdHost, int xmitdPort) :
     QThread(),
     _mutex(QMutex::Recursive),
-    _xmitClient(xmitdHost, xmitdPort) {
+    _procEnclosureTemps(),
+    _procDrxTemps(),
+    _txEnclosureTemps(),
+    _rxTopTemps(),
+    _rxBackTemps(),
+    _rxFrontTemps(),
+    _hTxPowerRaw(0.0),
+    _vTxPowerRaw(0.0),
+    _testTargetPowerRaw(0.0),
+    _psVoltage(0.0),
+    _wgPressureGood(false),
+    _locked100MHz(false),
+    _gpsTimeServerGood(false),
+    _osc0Frequency(0),
+    _osc1Frequency(0),
+    _osc2Frequency(0),
+    _osc3Frequency(0),
+    _xmitClient(xmitdHost, xmitdPort),
+    _xmitStatus() {
 }
 
 KaMonitor::~KaMonitor() {

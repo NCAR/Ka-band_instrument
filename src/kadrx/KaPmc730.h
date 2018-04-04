@@ -8,7 +8,8 @@
 #ifndef KAPMC730_H_
 #define KAPMC730_H_
 
-#include "Pmc730.h"
+#include <Pmc730.h>
+#include <cstdint>
 
 /// Control a singleton instance of Pmc730 for the one PMC730 card on the
 /// Ka-band DRX machine. At some point, this can actually subclass Pmc730 and
@@ -88,17 +89,17 @@ public:
         return(theKaPmc730().getDioLine(_KA_DIN_OSC3));
     }
 
-    /// @brief Return true iff waveguide N2 pressure between the Ka transmitter
-    /// and the antenna is high enough to operate.
+    /// @brief Return true iff waveguide N<sub>2</sub> pressure between the Ka
+    /// transmitter and the antenna is high enough to operate.
     ///
     /// The digital input line is held high at the PMC730 by the card's pull-up
     /// resistor, and is also connected to a normally open pressure switch at
-    /// the N2 regulator in the transmitter box. When high-enough pressure is
-    /// seen at the switch, it closes and ties the digital input line to
-    /// ground. Hence a high voltage on the digital line means low pressure and
-    /// and a low voltage means good pressure.
-    /// @return true iff waveguide N2 pressure between the Ka transmitter
-    /// and the antenna is high enough to operate.
+    /// the N<sub>2</sub> regulator in the transmitter box. When high-enough
+    /// pressure is seen at the switch, it closes and ties the digital input
+    /// line to ground. Hence a high voltage on the digital line means low
+    /// pressure and and a low voltage means good pressure.
+    /// @return true iff waveguide N<sub>2</sub> pressure between the Ka
+    /// transmitter and the antenna is high enough to operate.
     static bool wgPressureValid() {
         return(!theKaPmc730().getDioLine(_KA_DIN_WGPRES_LOW));
     }
