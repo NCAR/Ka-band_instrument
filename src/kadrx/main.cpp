@@ -335,7 +335,7 @@ setBlankingOff(int64_t pulseSeqNum) {
     // We don't care about pulseSeqNum here, since we get calls from the 
     // synchro-to-digital box with effectively zero latency. Just enable
     // the transmitter.
-    
+
     // Clear the NOXMIT_IN_BLANKING_SECTOR bit
     DLOG << "Left blanking sector";
     clearNoXmitBit(NOXMIT_IN_BLANKING_SECTOR);
