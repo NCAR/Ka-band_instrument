@@ -233,7 +233,7 @@ setTxEnableLine() {
             // List the reason(s) transmit is now disallowed
             WLOG << "Transmit is now disallowed for the following reason(s):";
             for (uint16_t bitnum = 0; bitnum < NOXMIT_NBITS; bitnum++) {
-                if (_noXmitBitmap & bitnum) {
+                if (_noXmitBitmap & (0x1 << bitnum)) {
                     WLOG << "    " << NoXmitReason[bitnum];
                 }
             }
