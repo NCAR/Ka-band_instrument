@@ -18,9 +18,9 @@
 
 class KaMonitorPriv;
 typedef struct {
-float power;
-float voltage;
-}QEA_Cal_Val;
+    float power;
+    float voltage;
+} QEA_Cal_Val;
 
 
 /// QThread object which handles Ka monitoring, regularly sampling all status 

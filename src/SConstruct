@@ -12,6 +12,7 @@ def KaSetup(env):
     env.AppendUnique(CCFLAGS = ['-g'])
     env.AppendUnique(CCFLAGS=['-Wall','-Wno-char-subscripts'])
     env.AppendUnique(CXXFLAGS=['-Wno-non-virtual-dtor'])  
+    env.AppendUnique(CXXFLAGS=['-std=c++11'])  
     env['DOXYFILE_DICT'] = dict()
     env['DOXYFILE_DICT'].update({ 'HTML_HEADER' : env.File("#header.html") })
     return env
