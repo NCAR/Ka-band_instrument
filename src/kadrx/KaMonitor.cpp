@@ -342,7 +342,7 @@ KaMonitor::_getMultiIoValues() {
     _psVoltage = analogData[9];
     
     // We read the "waveguide pressure valid" signal from DIO line 5
-    _wgPressureGood = pmc730.wgPressureValid();
+    _wgPressureGood = pmc730.wgPressureGood();
     
     // Get the 100 MHz oscillator locked signal from DIO line 6
     // (Things are OK when this line is high)

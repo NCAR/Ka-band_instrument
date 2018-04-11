@@ -100,7 +100,7 @@ public:
     /// pressure and and a low voltage means good pressure.
     /// @return true iff waveguide N<sub>2</sub> pressure between the Ka
     /// transmitter and the antenna is high enough to operate.
-    static bool wgPressureValid() {
+    static bool wgPressureGood() {
         return(!theKaPmc730().getDioLine(_KA_DIN_WGPRES_LOW));
     }
 
