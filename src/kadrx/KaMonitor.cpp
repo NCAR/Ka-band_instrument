@@ -341,7 +341,7 @@ KaMonitor::_getMultiIoValues() {
     // Channel 9 gives us the voltage read from our 5V power supply
     _psVoltage = analogData[9];
     
-    // We read the "waveguide pressure valid" signal from DIO line 5
+    // We read the "N2 waveguide pressure valid" signal from DIO line 5
     _wgPressureGood = pmc730.wgPressureGood();
     
     // Get the 100 MHz oscillator locked signal from DIO line 6
@@ -366,7 +366,7 @@ KaMonitor::_getMultiIoValues() {
         "drx: " << procDrxTemp() << " C";
     DLOG << std::fixed << std::setprecision(2) << 
         "5V PS: " << _psVoltage << " V";
-    DLOG << "wg pressure OK: " << (_wgPressureGood ? "true" : "false");
+    DLOG << "N2 waveguide pres OK: " << (_wgPressureGood ? "true" : "false");
     DLOG << "100 MHz oscillator locked: " << (_locked100MHz ? "true" : "false");
     DLOG << "GPS time server OK: " << (_gpsTimeServerGood ? "true" : "false");
 }

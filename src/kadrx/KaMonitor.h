@@ -90,8 +90,10 @@ public:
      */
     float psVoltage() const;
     /**
-     * Is waveguide pressure outside of the transmitter good?
-     * @return true iff waveguide pressure outside the transmitter is good.
+     * Return true iff the N2 waveguide pressure outside of the transmitter
+     * is good
+     * @return true iff the N2 waveguide pressure outside the transmitter is
+     *good.
      */
     bool wgPressureGood() const;
     /**
