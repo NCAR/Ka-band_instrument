@@ -749,6 +749,12 @@ main(int argc, char** argv)
 
     double startTime = nowTime();
     while (1) {
+	// Set or clear the NOXMIT_N2_PRESSURE_LOW bit based on the current
+	// state of the N2 pressure switch
+	KaPmc730::wgPressureGood() ?
+            clearNoXmitBit(NOXMIT_N2_PRESSURE_LOW) :
+            setNoXmitBit(NOXMIT_N2_PRESSURE_LOW);
+
         // Process XML-RPC commands for a brief bit
         rpcServer.work(0.01);
         
