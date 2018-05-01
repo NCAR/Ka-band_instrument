@@ -26,8 +26,8 @@ KaOscillator3.cpp
 KaPmc730.cpp
 PulseData.cpp
 TtyOscillator.cpp
+kadrx.cpp
 qrc_kadrx.cc
-main.cpp
 """)
 
 headers = Split("""
