@@ -11,9 +11,9 @@
 
 #include <XmitClient.h>
 
-#include <QDateTime>
-#include <QTimer>
-#include <QMutexLocker>
+#include <QtCore/QDateTime>
+#include <QtCore/QTimer>
+#include <QtCore/QMutexLocker>
 
 #include <iomanip>
 #include <cmath>

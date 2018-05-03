@@ -19,7 +19,7 @@
 #include <toolsa/pmu.h>
 #include <XmlRpc.h>
 
-#include <QResource>
+#include <QtCore/QResource>
 
 #include <gitInfo.h>
 #include <p7142sd3c.h>

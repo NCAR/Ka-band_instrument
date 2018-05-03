@@ -11,8 +11,8 @@
 #include <stdint.h>
 #include <deque>
 
-#include <QThread>
-#include <QMutex>
+#include <QtCore/QThread>
+#include <QtCore/QMutex>
 
 #include <XmitClient.h>
 
