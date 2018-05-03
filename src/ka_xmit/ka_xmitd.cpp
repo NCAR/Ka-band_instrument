@@ -693,7 +693,7 @@ resetXmitterTty() {
 // Try to have kadrx lower the transmit trigger enable line
 void
 lowerXmitEnableLine() {
-    ILOG << "Disabling transmit XML-RPC call to kadrx.";
+    ILOG << "Disabling transmit via XML-RPC call to kadrx.";
     XmlRpcClient client(KadrxHost.c_str(), KadrxPort);
 
     XmlRpcValue params;
@@ -710,7 +710,7 @@ lowerXmitEnableLine() {
 // Try to have kadrx raise the transmit trigger enable line
 void
 raiseXmitEnableLine() {
-    ILOG << "Enabling transmit XML-RPC call to kadrx.";
+    ILOG << "Enabling transmit via XML-RPC call to kadrx.";
     XmlRpcClient client(KadrxHost.c_str(), KadrxPort);
 
     XmlRpcValue params;
