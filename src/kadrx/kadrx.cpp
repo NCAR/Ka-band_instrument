@@ -93,8 +93,7 @@ static uint16_t _noXmitBitmap = noXmitBitmask(NOXMIT_N2_PRESSURE_LOW) |
 bool _terminate = false;         ///< set true to signal the main loop to terminate
 bool _hup = false;               ///< set true to signal the main loop we got a hup signal
 bool _usr1 = false;              ///< set true to signal the main loop we got a usr1 signal
-bool _usr2 = false;              ///< set true to signal the main loop we got a usr2 signal
-bool _triggersEnabled = false;
+bool _transmitEnabled = false;
 
 /////////////////////////////////////////////////////////////////////
 void sigHandler(int sig) {
@@ -112,12 +111,6 @@ void hupHandler(int sig) {
 void usr1Handler(int sig) {
   ILOG << "USR1 received...response  may take a few seconds";
   _usr1 = true;
-}
-
-/////////////////////////////////////////////////////////////////////
-void usr2Handler(int sig) {
-  ILOG << "USR2 received...response  may take a few seconds";
-  _usr2 = true;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -243,8 +236,8 @@ setTxEnableLine() {
 
     // Enable transmit if no bits are set in _noXmitBitmap
     bool enableTx = (_noXmitBitmap == 0);
-    KaPmc730::setTxTriggerEnable(enableTx);
-    _triggersEnabled = enableTx;
+    KaPmc730::setTxEnable(enableTx);
+    _transmitEnabled = enableTx;
 }
 
 ///////////////////////////////////////////////////////////
@@ -555,8 +548,8 @@ main(int argc, char** argv)
     // timing signals (and hence that the T/R limiters are presumably
     // operating).
     PMU_auto_register("trigger enable");
-    KaPmc730::setTxTriggerEnable(false);
-    _triggersEnabled = false;
+    KaPmc730::setTxEnable(false);
+    _transmitEnabled = false;
 
     // Figure out the lowest SD3C timer clock divisor which will support the
     // given PRT(s). Allowed divisor values are 2, 4, 8, or 16.
@@ -685,7 +678,6 @@ main(int argc, char** argv)
     signal(SIGTERM, sigHandler);
     signal(SIGHUP, hupHandler);
     signal(SIGUSR1, usr1Handler);
-    signal(SIGUSR2, usr2Handler);
 
     // Start monitor and merge
     PMU_auto_register("start monitor and merge");
@@ -764,33 +756,23 @@ main(int argc, char** argv)
         }
 
         if (_hup) {
-          cerr << "HUP received...disabling the triggers" << endl;
-          // Turn off transmitter trigger enable
-          KaPmc730::setTxTriggerEnable(false);
-          cerr << "HUP received...disabling the triggers - done" << endl;
+          ILOG << "HUP received...disabling transmit";
+          // Drop the TX Enable line
+          _transmitEnabled = false;
+          KaPmc730::setTxEnable(_transmitEnabled);
           _hup = false;
-          _triggersEnabled = false;
         }
 
         if (_usr1) {
-          cerr << "USR1 received...re-enabling the triggers" << endl;
-          if (_triggersEnabled) {
-            cerr << "Triggers already enabled - no action taken" << endl;
+          if (_transmitEnabled) {
+              ILOG << "USR1 received but transmit is already enabled";
           } else {
-            verifyTimersAndEnableTx();
-            cerr << "USR1 received...re-enabling the triggers - done" << endl;
+              ILOG << "USR1 received, enabling transmit";
+              verifyTimersAndEnableTx();
           }
           _usr1 = false;
         }
 
-        if (_usr2) {
-//            cerr << "USR2 received...disabling triggers, resetting serial port and re-anbling triggers " << endl;
-//            RaiseXmitTtyResetMethod resetTty;
-//            XmlRpcValue  paramList,  retvalP;
-//            resetTty.execute(paramList, retvalP);
-            ILOG << "USR2 signal handling is now a no-op!";
-            _usr2 = false;
-        }
         // How long since our last status print?
         double currentTime = nowTime();
         double elapsed = currentTime - startTime;
@@ -819,14 +801,14 @@ main(int argc, char** argv)
                 " sync errs: " << burstThread.downconverter()->syncErrors();
     }
 
-    // Turn off transmitter trigger enable
-    cerr << "Setting trigger enable to false" << endl;
-    KaPmc730::setTxTriggerEnable(false);
-    cerr << "Setting trigger enable to false - done" << endl;
+    // Drop the Transmit Enable line
+    ILOG << "Setting transmit enable to false";
+    _transmitEnabled = false;
+    KaPmc730::setTxEnable(_transmitEnabled);
 
-    cerr << "Sleeping 2 sec" << endl;
+    ILOG << "Sleeping 2 sec";
     sleep(2);
-    cerr << "Sleep done" << endl;
+    ILOG << "Sleep done";
 
     // Stop the downconverter threads. These have no event loops, so they
     // must be stopped using "terminate()"
@@ -843,9 +825,9 @@ main(int argc, char** argv)
     upConverter.stopDAC();
 
     // stop the timers
-    cerr << "Stopping the timers" << endl;
+    ILOG << "Stopping the timers";
     _sd3c->timersStartStop(false);
-    cerr << "Stopping the timers - done" << endl;
+    ILOG << "Stopping the timers - done";
 
     ILOG << "terminated on command";
 }
