@@ -568,9 +568,10 @@ handlePulseInputFault() {
         ILOG << "Pulse input fault auto reset";
     } else {
         std::ostringstream ss;
-        WLOG << "Pulse input fault auto reset disabled after 10 faults in " << 
-            (PulseFaultTimes[MAX_PF_ENTRIES - 1] - PulseFaultTimes[0]) << 
-            " seconds!";
+        WLOG << "Pulse input fault auto reset disabled after " <<
+                MAX_PF_ENTRIES << " faults in " <<
+                (PulseFaultTimes[MAX_PF_ENTRIES - 1] - PulseFaultTimes[0]) <<
+                " seconds!";
         // Disable auto fault resets. They will be re-enabled if the user
         // pushes the "Fault Reset" button.
         DoAutoFaultReset = false;
