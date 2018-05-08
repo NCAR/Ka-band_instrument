@@ -1,0 +1,39 @@
+# -*- python -*-
+
+guiTools = Split("""
+logx
+doxygen
+xmitclient
+qt4
+""")
+guiEnv = Environment(tools = ['default'] + guiTools)
+guiEnv.EnableQt4Modules(['QtCore', 'QtGui'])
+
+gui_sources = Split("""
+ka_gui.cpp
+KaGuiMainWindow.cpp
+qrc_KaGuiMainWindow.cc
+XmitterFaultDetails.cpp
+""")
+ka_gui = guiEnv.Program('ka_gui', gui_sources)
+Default(ka_gui)
+
+uifiles = Split("""
+KaGuiMainWindow.ui
+XmitterFaultDetails.ui
+""")
+guiEnv.Uic4(uifiles)
+
+# This generates the rules for *.qrc -> qrc_*.cc
+qrcfiles = Split("""
+KaGuiMainWindow.qrc
+""")
+guiEnv.Qrc(qrcfiles)
+
+headers = Split("""
+KaGuiMainWindow.h
+XmitterFaultDetails.h
+""")
+
+html = guiEnv.Apidocs(gui_sources + headers)
+Default(html)
