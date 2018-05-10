@@ -9,8 +9,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>513</width>
-    <height>427</height>
+    <width>499</width>
+    <height>371</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -571,6 +571,9 @@
     </item>
     <item>
      <widget class="QGroupBox" name="kadrxBox">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
       <property name="sizePolicy">
        <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
         <horstretch>0</horstretch>
@@ -702,7 +705,7 @@
  <resources>
   <include location="KaGuiMainWindow.qrc"/>
   <include location="KaGuiMainWindow.qrc"/>
-  <include location="../../../../../../h/eol/burghart/git/Ka-band_instrument/src/ka_gui/KaGuiMainWindow.qrc"/>
+  <include location="KaGuiMainWindow.qrc"/>
  </resources>
  <connections/>
  <slots>
