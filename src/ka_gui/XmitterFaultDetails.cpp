@@ -50,7 +50,7 @@ XmitterFaultDetails::_faultTimeLabel(time_t time) {
 }
 
 void
-XmitterFaultDetails::update(const XmitClient::XmitStatus & status) {
+XmitterFaultDetails::update(const XmitdStatus & status) {
     // fault lights
     _ui.magCurrFaultIcon->
         setPixmap(status.magnetronCurrentFault() ? _redLED : _redLED_off);

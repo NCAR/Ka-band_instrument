@@ -67,7 +67,7 @@ private:
     QPixmap _greenLED;
     QPixmap _greenLED_off;
     // Last status read
-    XmitClient::XmitStatus _status;
+    XmitdStatus _status;
     
     // next log index to get from ka_xmitd
     unsigned int _nextLogIndex;

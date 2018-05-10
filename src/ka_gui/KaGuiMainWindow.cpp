@@ -41,7 +41,7 @@ KaGuiMainWindow::~KaGuiMainWindow() {
 
 void
 KaGuiMainWindow::on_xmitterPowerButton_clicked() {
-    if (_status.unitOn()) {
+    if (_xmitdStatus.unitOn()) {
         _xmitClient.powerOff();
     } else {
         _xmitClient.powerOn();
@@ -79,8 +79,8 @@ KaGuiMainWindow::_ColorText(QString text, QString colorName) {
 void
 KaGuiMainWindow::_update() {
     // Get status from ka_xmitd
-    _status = XmitClient::XmitStatus(); // start with uninitialized status
-    if (! _xmitClient.getStatus(_status)) {
+    _xmitdStatus = XmitdStatus(); // start with uninitialized status
+    if (! _xmitClient.getStatus(_xmitdStatus)) {
         _noXmitDaemon();
         return;
     }
@@ -94,7 +94,7 @@ KaGuiMainWindow::_update() {
 	ILOG << os.str();
 	_noXmitd = false;
     } 
-    if (! _status.serialConnected()) {
+    if (! _xmitdStatus.serialConnected()) {
         _noXmitterSerial();
         return;
     }
@@ -103,43 +103,43 @@ KaGuiMainWindow::_update() {
 
     // boolean status values
     _ui.xmitterHvpsRunupIcon->
-        setPixmap(_status.hvpsRunup() ? _greenLED : _greenLED_off);
+        setPixmap(_xmitdStatus.hvpsRunup() ? _greenLED : _greenLED_off);
     _ui.xmitterStandbyIcon->
-        setPixmap(_status.standby() ? _greenLED : _greenLED_off);
+        setPixmap(_xmitdStatus.standby() ? _greenLED : _greenLED_off);
     _ui.xmitterWarmupIcon->
-        setPixmap(_status.heaterWarmup() ? _greenLED : _greenLED_off);
+        setPixmap(_xmitdStatus.heaterWarmup() ? _greenLED : _greenLED_off);
     _ui.xmitterCooldownIcon->
-        setPixmap(_status.cooldown() ? _greenLED : _greenLED_off);
+        setPixmap(_xmitdStatus.cooldown() ? _greenLED : _greenLED_off);
     _ui.xmitterHvpsOnIcon->
-        setPixmap(_status.hvpsOn() ? _greenLED : _greenLED_off);
+        setPixmap(_xmitdStatus.hvpsOn() ? _greenLED : _greenLED_off);
     
     // Turn on the Fault LED if any transmitter faults are active
     _ui.xmitterFaultIcon->
-        setPixmap(_status.faultSummary() ? _redLED : _redLED_off);
+        setPixmap(_xmitdStatus.faultSummary() ? _redLED : _redLED_off);
 
     // Populate the fault details dialog
-    _xmitterFaultDetails.update(_status);
+    _xmitterFaultDetails.update(_xmitdStatus);
 
     // Text displays for voltage, currents, and temperature
     QString txt;
-    txt.setNum(_status.hvpsVoltage(), 'f', 1);
+    txt.setNum(_xmitdStatus.hvpsVoltage(), 'f', 1);
     _ui.xmitterHvpsVoltageValue->setText(txt);
     
-    txt.setNum(_status.magnetronCurrent(), 'f', 1);
+    txt.setNum(_xmitdStatus.magnetronCurrent(), 'f', 1);
     _ui.xmitterMagCurrentValue->setText(txt);
     
-    txt.setNum(_status.hvpsCurrent(), 'f', 1);
+    txt.setNum(_xmitdStatus.hvpsCurrent(), 'f', 1);
     _ui.xmitterHvpsCurrentValue->setText(txt);
     
-    txt.setNum(_status.temperature(), 'f', 0);
+    txt.setNum(_xmitdStatus.temperature(), 'f', 0);
     _ui.xmitterTemperatureValue->setText(txt);
     
     // "unit on" light
-    _ui.xmitterUnitOnIcon->setPixmap(_status.unitOn() ? _greenLED : _greenLED_off);
+    _ui.xmitterUnitOnIcon->setPixmap(_xmitdStatus.unitOn() ? _greenLED : _greenLED_off);
     
     // If the transmitter is allowing remote control, enable the transmitter
     // control button box on the GUI
-    bool remoteEnabled = _status.remoteEnabled();
+    bool remoteEnabled = _xmitdStatus.remoteEnabled();
     if (! remoteEnabled) {
         _ui.xmitterStatusLabel->
             setText(_ColorText("Remote xmitter control is disabled", "darkred"));
@@ -148,15 +148,15 @@ KaGuiMainWindow::_update() {
     _ui.xmitterPowerButton->setEnabled(remoteEnabled);
 
     // Set enable/disable state of the Standby and Operate buttons
-    if (remoteEnabled && _status.unitOn()) {
-        if (_status.faultSummary()) {
+    if (remoteEnabled && _xmitdStatus.unitOn()) {
+        if (_xmitdStatus.faultSummary()) {
             _ui.xmitterStandbyButton->setEnabled(false);
             _ui.xmitterOperateButton->setEnabled(false);
         } else {
             _ui.xmitterStandbyButton->
-                setEnabled(_status.hvpsRunup() && ! _status.heaterWarmup());
+                setEnabled(_xmitdStatus.hvpsRunup() && ! _xmitdStatus.heaterWarmup());
             _ui.xmitterOperateButton->
-                setEnabled(! _status.hvpsRunup() && ! _status.heaterWarmup());
+                setEnabled(! _xmitdStatus.hvpsRunup() && ! _xmitdStatus.heaterWarmup());
         }
     } else {
         _ui.xmitterStandbyButton->setEnabled(false);
@@ -221,4 +221,10 @@ KaGuiMainWindow::_enableXmitterUi() {
     _ui.xmitterControlAndStateFrame->setEnabled(true);
     _ui.xmitterValuesFrame->setEnabled(true);
     _xmitterFaultDetails.setEnabled(true);
+}
+
+void
+KaGuiMainWindow::_updateXmitdStatus(const XmitdStatus & xmitdStatus) {
+    _xmitdStatus = xmitdStatus;
+    _update();
 }

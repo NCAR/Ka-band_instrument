@@ -110,7 +110,7 @@ public:
      * Get the transmitter status.
      * @return the transmitter status.
      */
-    XmitClient::XmitStatus transmitterStatus() const;
+    XmitdStatus transmitterStatus() const;
     
     /**
      * Oscillator 0 frequency, in Hz.
@@ -225,7 +225,7 @@ private:
     
     /// XML-RPC access to ka_xmitd for its status
     XmitClient _xmitClient;
-    XmitClient::XmitStatus _xmitStatus;
+    XmitdStatus _xmitStatus;
 };
 
 

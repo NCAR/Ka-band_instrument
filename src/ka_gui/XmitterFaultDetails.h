@@ -19,9 +19,9 @@ public:
     XmitterFaultDetails(QWidget * parent);
     virtual ~XmitterFaultDetails();
 
-    /// @brief Update the widget with information from the given XmitStatus
-    /// @param status current XmitStatus to be used in populating the widget.
-    void update(const XmitClient::XmitStatus & status);
+    /// @brief Update the widget with information from the given XmitdStatus
+    /// @param status current XmitdStatus to be used in populating the widget.
+    void update(const XmitdStatus & status);
 
     /// @brief Clear the widget
     void clearWidget();

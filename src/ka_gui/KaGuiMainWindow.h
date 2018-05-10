@@ -24,6 +24,7 @@ class KaGuiMainWindow : public QMainWindow {
 public:
     KaGuiMainWindow(std::string xmitterHost, int xmitterPort);
     virtual ~KaGuiMainWindow();
+
 private slots:
     void on_xmitterPowerButton_clicked();
     void resetXmitterFault();
@@ -31,6 +32,8 @@ private slots:
     void on_xmitterOperateButton_clicked();
     void on_xmitterFaultDetailsButton_clicked();
     void _update();
+    void _updateXmitdStatus(const XmitdStatus & xmitdStatus);
+
 private:
     /// @brief Disable the transmitter portion of the GUI
     void _disableXmitterUi();
@@ -62,7 +65,7 @@ private:
     QPixmap _greenLED_off;
 
     // Last transmitter status delivered by ka_xmitd
-    XmitClient::XmitStatus _status;
+    XmitdStatus _xmitdStatus;
 
     /// true iff we are not in contact with ka_xmitd
     bool _noXmitd;

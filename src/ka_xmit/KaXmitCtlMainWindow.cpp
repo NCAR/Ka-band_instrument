@@ -89,7 +89,7 @@ KaXmitCtlMainWindow::_update() {
     _appendXmitdLogMsgs();
     
     // Get status from ka_xmitd
-    _status = XmitClient::XmitStatus(); // start with uninitialized status
+    _status = XmitdStatus(); // start with uninitialized status
     if (! _xmitClient.getStatus(_status)) {
         _noDaemon();
         return;

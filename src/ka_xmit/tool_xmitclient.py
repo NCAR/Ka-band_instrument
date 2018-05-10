@@ -10,7 +10,11 @@ env = Environment(tools=['default'] + tools)
 tooldir = env.Dir('.').srcnode().abspath    # this directory
 includeDir = tooldir
 
-lib = env.Library('xmitclient', 'XmitClient.cpp')
+sources = Split("""
+    XmitClient.cpp
+    XmitdStatus.cpp
+""")
+lib = env.Library('xmitclient', sources)
     
 def xmitclient(env):
     env.Require(tools)
