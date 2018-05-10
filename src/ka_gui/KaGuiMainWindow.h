@@ -29,7 +29,7 @@ private slots:
     void on_faultResetButton_clicked();
     void on_standbyButton_clicked();
     void on_operateButton_clicked();
-    void on_xmitFaultDetailsButton_clicked();
+    void on_xmitterFaultDetailsButton_clicked();
     void _update();
 private:
     /// @brief Disable the transmitter portion of the GUI

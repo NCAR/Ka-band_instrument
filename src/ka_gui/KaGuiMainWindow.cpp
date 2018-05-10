@@ -64,7 +64,7 @@ KaGuiMainWindow::on_operateButton_clicked() {
 }
 
 void
-KaGuiMainWindow::on_xmitFaultDetailsButton_clicked() {
+KaGuiMainWindow::on_xmitterFaultDetailsButton_clicked() {
     _xmitterFaultDetails.show();
 }
 
@@ -134,7 +134,8 @@ KaGuiMainWindow::_update() {
     _ui.xmitterUnitOnIcon->setPixmap(_status.unitOn() ? _greenLED : _greenLED_off);
     
     // enable/disable buttons
-    if (_status.remoteEnabled() && _status.unitOn()) {
+    bool remoteEnabled = _status.remoteEnabled();
+    if (remoteEnabled && _status.unitOn()) {
         if (_status.faultSummary()) {
             _ui.xmitterStandbyButton->setEnabled(false);
             _ui.xmitterOperateButton->setEnabled(false);
@@ -151,7 +152,11 @@ KaGuiMainWindow::_update() {
 
     // If the transmitter is allowing remote control, enable the transmitter
     // control button box on the GUI
-    _ui.xmitterControlFrame->setEnabled(_status.remoteEnabled());
+    _ui.xmitterControlFrame->setEnabled(remoteEnabled);
+    if (! remoteEnabled) {
+        _ui.xmitterStatusLabel->
+            setText(_ColorText("Remote xmitter control is disabled", "darkred"));
+    }
 }
 
 void
@@ -205,6 +210,8 @@ KaGuiMainWindow::_disableXmitterUi() {
 
 void
 KaGuiMainWindow::_enableXmitterUi() {
+    std::ostringstream os;
+    _ui.xmitterStatusLabel->setText("ka_xmitd is alive");
     _ui.xmitterControlAndStateFrame->setEnabled(true);
     _ui.xmitterValuesFrame->setEnabled(true);
     _xmitterFaultDetails.setEnabled(true);
