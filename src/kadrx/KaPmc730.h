@@ -150,7 +150,7 @@ private:
         _KA_DIN_COUNTER = 2,        // pulse counter input
         _KA_DIN_UNUSED3 = 3,
         _KA_DIN_GPSCLOCK_ALM = 4,   // GPS clock alarm
-        _KA_DIN_WGPRES_LOW = 5,      // waveguide pressure OK
+        _KA_DIN_WGPRES_LOW = 5,     // N2 waveguide pressure low
         _KA_DIN_100MHZ_ALM = 6,     // 100 MHz oscillator alarm
         _KA_DIN_OSC3 = 7            // muxout line from oscillator 3 PLL chip
     } DinLine_t;
