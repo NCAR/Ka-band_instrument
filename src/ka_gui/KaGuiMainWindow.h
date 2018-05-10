@@ -5,7 +5,6 @@
 #ifndef KAGUIMAINWINDOW_H_
 #define KAGUIMAINWINDOW_H_
 
-#include <ka_gui/XmitterFaultDetails.h>
 #include <string>
 #include <map>
 #include <deque>
@@ -18,6 +17,8 @@
 #include <XmitClient.h>
 
 #include "ui_KaGuiMainWindow.h"
+#include "XmitterFaultDetails.h"
+#include "XmitdStatusThread.h"
 
 class KaGuiMainWindow : public QMainWindow {
     Q_OBJECT
@@ -31,10 +32,19 @@ private slots:
     void on_xmitterStandbyButton_clicked();
     void on_xmitterOperateButton_clicked();
     void on_xmitterFaultDetailsButton_clicked();
-    void _update();
-    void _updateXmitdStatus(const XmitdStatus & xmitdStatus);
+
+    /// @brief Update latest ka_xmitd status
+    /// @param xmitdStatus the new status
+    void _updateXmitdStatus(XmitdStatus xmitdStatus);
+
+    /// @brief Slot called to set ka_xmitd responsiveness
+    /// @param responsive true iff ka_xmitd is responsive
+    void _setXmitdResponsiveness(bool responsive);
 
 private:
+    /// @brief Update contents of the GUI
+    void _updateGui();
+
     /// @brief Disable the transmitter portion of the GUI
     void _disableXmitterUi();
 
@@ -49,6 +59,12 @@ private:
     /// the transmitter
     void _noXmitterSerial();
 
+    /// @brief Return a reference to the XmitClient instance from our
+    /// XmitdStatusThread
+    /// @return a reference to the XmitClient instance from our
+    /// XmitdStatusThread
+    XmitClient & _xmitdRpcClient() { return(_xmitdStatusThread.xmlRpcClient()); }
+
     /// @brief Return a string which surrounds the given text in a <font>
     /// block using the given color name
     /// @param text the text to be colored
@@ -57,8 +73,8 @@ private:
 
     Ui::KaGuiMainWindow _ui;
     XmitterFaultDetails _xmitterFaultDetails;
-    XmitClient _xmitClient;
-    QTimer _updateTimer;
+    XmitdStatusThread _xmitdStatusThread;
+    bool _xmitdResponsive;
     QPixmap _redLED;
     QPixmap _redLED_off;
     QPixmap _greenLED;

@@ -19,8 +19,8 @@ KaGuiMainWindow::KaGuiMainWindow(std::string xmitterHost, int xmitterPort) :
     QMainWindow(),
     _ui(),
     _xmitterFaultDetails(this),
-    _xmitClient(xmitterHost, xmitterPort),
-    _updateTimer(this),
+    _xmitdStatusThread(xmitterHost, xmitterPort),
+    _xmitdResponsive(false),
     _redLED(":/redLED.png"),
     _redLED_off(":/redLED_off.png"),
     _greenLED(":/greenLED.png"),
@@ -29,11 +29,15 @@ KaGuiMainWindow::KaGuiMainWindow(std::string xmitterHost, int xmitterPort) :
     // Set up the UI
     _ui.setupUi(this);
 
-    connect(&_updateTimer, SIGNAL(timeout()), this, SLOT(_update()));
-    _updateTimer.start(1000);
+    // Handle signals from our XmitdStatusThread
+    connect(&_xmitdStatusThread, SIGNAL(newStatus(XmitdStatus)),
+            this, SLOT(_updateXmitdStatus(XmitdStatus)));
+    connect(&_xmitdStatusThread, SIGNAL(serverResponsive(bool)),
+            this, SLOT(_setXmitdResponsiveness(bool)));
 
     connect(&_xmitterFaultDetails, SIGNAL(faultResetClicked()),
             this, SLOT(resetXmitterFault()));
+
 }
 
 KaGuiMainWindow::~KaGuiMainWindow() {
@@ -42,29 +46,25 @@ KaGuiMainWindow::~KaGuiMainWindow() {
 void
 KaGuiMainWindow::on_xmitterPowerButton_clicked() {
     if (_xmitdStatus.unitOn()) {
-        _xmitClient.powerOff();
+        _xmitdRpcClient().powerOff();
     } else {
-        _xmitClient.powerOn();
+        _xmitdRpcClient().powerOn();
     }
-    _update();
 }
 
 void
 KaGuiMainWindow::resetXmitterFault() {
-    _xmitClient.faultReset();
-    _update();
+    _xmitdRpcClient().faultReset();
 }
 
 void
 KaGuiMainWindow::on_xmitterStandbyButton_clicked() {
-    _xmitClient.standby();
-    _update();
+    _xmitdRpcClient().standby();
 }
 
 void
 KaGuiMainWindow::on_xmitterOperateButton_clicked() {
-    _xmitClient.operate();
-    _update();
+    _xmitdRpcClient().operate();
 }
 
 void
@@ -77,23 +77,13 @@ KaGuiMainWindow::_ColorText(QString text, QString colorName) {
     return(QString("<font color='" + colorName + "'>" + text + "</font>"));
 }
 void
-KaGuiMainWindow::_update() {
-    // Get status from ka_xmitd
-    _xmitdStatus = XmitdStatus(); // start with uninitialized status
-    if (! _xmitClient.getStatus(_xmitdStatus)) {
+KaGuiMainWindow::_updateGui() {
+    if (! _xmitdResponsive) {
         _noXmitDaemon();
         return;
     }
 
     // If we had been out of contact with ka_xmitd, log the new contact
-    if (_noXmitd) {
-        // Log new contact with ka_xmitd
-	std::ostringstream os;
-	os << "Connected to ka_xmitd @ " << _xmitClient.getXmitdHost() << ":" <<
-		_xmitClient.getXmitdPort();
-	ILOG << os.str();
-	_noXmitd = false;
-    } 
     if (! _xmitdStatus.serialConnected()) {
         _noXmitterSerial();
         return;
@@ -167,10 +157,10 @@ KaGuiMainWindow::_update() {
 
 void
 KaGuiMainWindow::_noXmitDaemon() {
-    // Log lack of xmitd connection in the status bar
+    // Log lack of xmitd connection in the status label
     std::ostringstream os;
     os << "No ka_xmitd @ " <<
-          _xmitClient.getXmitdHost() << ":" << _xmitClient.getXmitdPort();
+          _xmitdRpcClient().getXmitdHost() << ":" << _xmitdRpcClient().getXmitdPort();
     _ui.xmitterStatusLabel->setText(_ColorText(os.str().c_str(), "darkred"));
 
     // If we were previously in contact with ka_xmitd, log that we lost contact
@@ -224,7 +214,24 @@ KaGuiMainWindow::_enableXmitterUi() {
 }
 
 void
-KaGuiMainWindow::_updateXmitdStatus(const XmitdStatus & xmitdStatus) {
+KaGuiMainWindow::_updateXmitdStatus(XmitdStatus xmitdStatus) {
+    _setXmitdResponsiveness(true);
     _xmitdStatus = xmitdStatus;
-    _update();
+    _updateGui();
+}
+
+void
+KaGuiMainWindow::_setXmitdResponsiveness(bool responsive) {
+    // If no change, just return
+    if (responsive == _xmitdResponsive) {
+        return;
+    }
+
+    if (responsive) {
+        ILOG << "ka_xmitd is now responding";
+    } else {
+        WLOG << "ka_xmitd is no longer responding";
+    }
+    _xmitdResponsive = responsive;
+    _updateGui();
 }
