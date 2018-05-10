@@ -16,6 +16,10 @@ XmitterFaultDetails::XmitterFaultDetails(QWidget * parent) :
     _greenLED_off(":/greenLED_off.png")
 {
     _ui.setupUi(this);
+
+    // Emit faultResetClicked() when the Fault Reset button is clicked
+    connect(_ui.faultResetButton, SIGNAL(clicked()),
+            this, SIGNAL(faultResetClicked()));
 }
 
 XmitterFaultDetails::~XmitterFaultDetails() {

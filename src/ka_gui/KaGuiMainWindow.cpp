@@ -31,13 +31,16 @@ KaGuiMainWindow::KaGuiMainWindow(std::string xmitterHost, int xmitterPort) :
 
     connect(&_updateTimer, SIGNAL(timeout()), this, SLOT(_update()));
     _updateTimer.start(1000);
+
+    connect(&_xmitterFaultDetails, SIGNAL(faultResetClicked()),
+            this, SLOT(resetXmitterFault()));
 }
 
 KaGuiMainWindow::~KaGuiMainWindow() {
 }
 
 void
-KaGuiMainWindow::on_powerButton_clicked() {
+KaGuiMainWindow::on_xmitterPowerButton_clicked() {
     if (_status.unitOn()) {
         _xmitClient.powerOff();
     } else {
@@ -47,19 +50,19 @@ KaGuiMainWindow::on_powerButton_clicked() {
 }
 
 void
-KaGuiMainWindow::on_faultResetButton_clicked() {
+KaGuiMainWindow::resetXmitterFault() {
     _xmitClient.faultReset();
     _update();
 }
 
 void
-KaGuiMainWindow::on_standbyButton_clicked() {
+KaGuiMainWindow::on_xmitterStandbyButton_clicked() {
     _xmitClient.standby();
     _update();
 }
 
 void
-KaGuiMainWindow::on_operateButton_clicked() {
+KaGuiMainWindow::on_xmitterOperateButton_clicked() {
     _xmitClient.operate();
     _update();
 }

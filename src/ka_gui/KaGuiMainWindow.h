@@ -25,10 +25,10 @@ public:
     KaGuiMainWindow(std::string xmitterHost, int xmitterPort);
     virtual ~KaGuiMainWindow();
 private slots:
-    void on_powerButton_clicked();
-    void on_faultResetButton_clicked();
-    void on_standbyButton_clicked();
-    void on_operateButton_clicked();
+    void on_xmitterPowerButton_clicked();
+    void resetXmitterFault();
+    void on_xmitterStandbyButton_clicked();
+    void on_xmitterOperateButton_clicked();
     void on_xmitterFaultDetailsButton_clicked();
     void _update();
 private:

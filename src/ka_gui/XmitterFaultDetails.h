@@ -14,6 +14,7 @@
 #include "ui_XmitterFaultDetails.h"
 
 class XmitterFaultDetails : public QDialog {
+    Q_OBJECT
 public:
     XmitterFaultDetails(QWidget * parent);
     virtual ~XmitterFaultDetails();
@@ -24,6 +25,11 @@ public:
 
     /// @brief Clear the widget
     void clearWidget();
+
+signals:
+    /// @brief Signal emitted when the "Fault Reset" button is clicked
+    void faultResetClicked();
+
 private:
     /// @brief Return a fault count label string: "-" for no faults or an
     /// integer label with the fault count.
