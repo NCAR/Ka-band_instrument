@@ -78,7 +78,8 @@ XmitterFaultDetails::update(const XmitClient::XmitStatus & status) {
         setText(_countLabel(status.reversePowerFaultCount()));
     _ui.pulseInputFaultCount->
         setText(_countLabel(status.pulseInputFaultCount()));
-    _ui.autoResetCount->setText(QString::number(status.autoPulseFaultResets()));
+    _ui.autoResetCount->
+        setText(_countLabel(status.autoPulseFaultResets()));
     _ui.hvpsCurrFaultCount->
         setText(_countLabel(status.hvpsCurrentFaultCount()));
     _ui.wgPresFaultCount->
