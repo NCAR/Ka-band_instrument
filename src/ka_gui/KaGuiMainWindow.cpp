@@ -38,6 +38,8 @@ KaGuiMainWindow::KaGuiMainWindow(std::string xmitterHost, int xmitterPort) :
     connect(&_xmitterFaultDetails, SIGNAL(faultResetClicked()),
             this, SLOT(resetXmitterFault()));
 
+    // Start XmitdStatusThread
+    _xmitdStatusThread.start();
 }
 
 KaGuiMainWindow::~KaGuiMainWindow() {
