@@ -18,6 +18,7 @@
 #include <logx/Logging.h>
 #include <toolsa/pmu.h>
 #include <XmlRpc.h>
+#include <XmlRpcValue.h>
 
 #include <QtCore/QResource>
 
@@ -31,6 +32,7 @@
 #include "KaDrxConfig.h"
 #include "KaMerge.h"
 #include "KaMonitor.h"
+#include "NoXmitBitmap.h"
 
 LOGGING("kadrx")
 
@@ -56,39 +58,9 @@ int _xmitdPort = 8080;           ///< The port on which ka_xmitd is listening
 bool _allowBlanking = true;      ///< Are we allowing sector blanking via XML-RPC calls?
 p7142sd3c * _sd3c;       ///< Our SD3C instance
 
-// Bit numbers in _noXmitBitmap (declared below) for conditions which will
-// disable transmit
-typedef enum _NOXMIT_BITNUM {
-        NOXMIT_XMLRPC_REQUEST = 0,
-        NOXMIT_N2_PRESSURE_LOW,
-        NOXMIT_NO_LIMITER_TRIGGERS,
-        NOXMIT_IN_BLANKING_SECTOR,
-        NOXMIT_NBITS    // Count of "no transmit" conditions
-} NOXMIT_BITNUM;
-
-// String descriptions for the bits listed above
-static std::string NoXmitReason[NOXMIT_NBITS] = {
-        "On XML-RPC request",
-        "N2 waveguide pressure low",
-        "No limiter triggers detected",
-        "In blanking sector"
-};
-
-// Return the bitmask for a given bit number
-static inline uint16_t noXmitBitmask(NOXMIT_BITNUM bitnum) {
-    return(0x1 << bitnum);
-}
-
 // Bitmap of conditions which currently disable transmit. The transmitter
-// will not be allowed to fire if _noXmitBitmap is not zero.
-//
-// Start with all NOXMIT bits set except for the NOXMIT_XMLRPC_REQUEST bit.
-// These bits will normally be cleared during startup as their associated
-// conditions are tested.
-static uint16_t _noXmitBitmap = noXmitBitmask(NOXMIT_N2_PRESSURE_LOW) |
-                                noXmitBitmask(NOXMIT_NO_LIMITER_TRIGGERS) |
-                                noXmitBitmask(NOXMIT_IN_BLANKING_SECTOR);
-
+// will not be allowed to fire if _noXmitBitmap has any bits set.
+static NoXmitBitmap _noXmitBitmap;
 
 bool _terminate = false;         ///< set true to signal the main loop to terminate
 bool _hup = false;               ///< set true to signal the main loop we got a hup signal
@@ -215,19 +187,20 @@ void startUpConverter(p7142Up& upConverter,
 ///////////////////////////////////////////////////////////
 void
 setTxEnableLine() {
-    static uint16_t prevNoXmitBitmap = 0;
+    static NoXmitBitmap prevNoXmitBitmap;
 
     // If _noXmitBitmap changed from the last time this was called, log
     // whether transmit is allowed, and the reasons why if disallowed.
     if (_noXmitBitmap != prevNoXmitBitmap) {
-        if (_noXmitBitmap == 0) {
+        if (_noXmitBitmap.allBitsClear()) {
             ILOG << "Transmit is now allowed";
         } else {
             // List the reason(s) transmit is now disallowed
             WLOG << "Transmit is now disallowed for the following reason(s):";
-            for (uint16_t bitnum = 0; bitnum < NOXMIT_NBITS; bitnum++) {
-                if (_noXmitBitmap & (0x1 << bitnum)) {
-                    WLOG << "    " << NoXmitReason[bitnum];
+            for (NoXmitBitmap::BITNUM bitnum = NoXmitBitmap::BITNUM(0);
+                 bitnum < NoXmitBitmap::NBITS; bitnum++) {
+                if (_noXmitBitmap.bitIsSet(bitnum)) {
+                    WLOG << "    " << NoXmitBitmap::NoXmitReason(bitnum);
                 }
             }
         }
@@ -235,7 +208,7 @@ setTxEnableLine() {
     prevNoXmitBitmap = _noXmitBitmap;
 
     // Enable transmit if no bits are set in _noXmitBitmap
-    bool enableTx = (_noXmitBitmap == 0);
+    bool enableTx = _noXmitBitmap.allBitsClear();
     KaPmc730::setTxEnable(enableTx);
     _transmitEnabled = enableTx;
 }
@@ -244,10 +217,10 @@ setTxEnableLine() {
 // Set the selected bit in _noXmitBitmap, then call setTxEnableLine()
 // to set the state of the Tx Enable line based on the new bitmap.
 void
-setNoXmitBit(NOXMIT_BITNUM bitnum) {
+setNoXmitBit(NoXmitBitmap::BITNUM bitnum) {
     // Set the selected bit in _noXmitBitmap, then set the state
     // of the Tx Enable line
-    _noXmitBitmap |= noXmitBitmask(bitnum);
+    _noXmitBitmap.setBit(bitnum);
     setTxEnableLine();
 }
 
@@ -255,10 +228,10 @@ setNoXmitBit(NOXMIT_BITNUM bitnum) {
 // Clear the selected bit in _noXmitBitmap, then call setTxEnableLine()
 // to set the state of the Tx Enable line based on the new bitmap.
 void
-clearNoXmitBit(NOXMIT_BITNUM bitnum) {
+clearNoXmitBit(NoXmitBitmap::BITNUM bitnum) {
     // Clear the selected bit in _noXmitBitmap, then set the state
     // of the Tx Enable line
-    _noXmitBitmap &= ~noXmitBitmask(bitnum);
+    _noXmitBitmap.clearBit(bitnum);
     setTxEnableLine();
 }
 
@@ -294,10 +267,10 @@ verifyTimersAndEnableTx() {
         ELOG << "Pentek timers don't seem to be running...";
         exit(1);
     }
-    // Clear the NOXMIT_NO_LIMITER_TRIGGERS bit in _noXmitBitmap, since we've
+    // Clear the NO_LIMITER_TRIGGERS bit in _noXmitBitmap, since we've
     // seen the triggers
     ILOG << "T/R limiters should now be working";
-    clearNoXmitBit(NOXMIT_NO_LIMITER_TRIGGERS);
+    clearNoXmitBit(NoXmitBitmap::NO_LIMITER_TRIGGERS);
 }
 
 ///////////////////////////////////////////////////////////
@@ -313,7 +286,7 @@ setBlankingOn(int64_t pulseSeqNum) {
 
     // Set the NOXMIT_IN_BLANKING_SECTOR bit
     DLOG << "Entered blanking sector";
-    setNoXmitBit(NOXMIT_IN_BLANKING_SECTOR);
+    setNoXmitBit(NoXmitBitmap::NOXMIT_IN_BLANKING_SECTOR);
 
     KaOscControl::theControl().setBlankingEnabled(true, pulseSeqNum);
 }
@@ -331,7 +304,7 @@ setBlankingOff(int64_t pulseSeqNum) {
 
     // Clear the NOXMIT_IN_BLANKING_SECTOR bit
     DLOG << "Left blanking sector";
-    clearNoXmitBit(NOXMIT_IN_BLANKING_SECTOR);
+    clearNoXmitBit(NoXmitBitmap::NOXMIT_IN_BLANKING_SECTOR);
     
     KaOscControl::theControl().setBlankingEnabled(false, pulseSeqNum);
 }
@@ -473,7 +446,7 @@ public:
     void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
         DLOG << "Received 'disableTransmit' command";
         // set the NOXMIT_ON_XMLRPC_REQUEST bit
-        setNoXmitBit(NOXMIT_XMLRPC_REQUEST);
+        setNoXmitBit(NoXmitBitmap::XMLRPC_REQUEST);
         retvalP = 0;
     }
 };
@@ -487,7 +460,21 @@ public:
     void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
         DLOG << "Received 'enableTransmit' command";
         // clear the NOXMIT_ON_XMLRPC_REQUEST bit
-        clearNoXmitBit(NOXMIT_XMLRPC_REQUEST);
+        clearNoXmitBit(NoXmitBitmap::XMLRPC_REQUEST);
+        retvalP = 0;
+    }
+};
+
+////////////////////////////////////////////////////////////////////
+/// Xmlrpc++ method which returns an XmlRpcValue::ValueStruct dictionary
+/// containing current kadrx status.
+class GetStatusMethod : public XmlRpcServerMethod {
+public:
+    GetStatusMethod() : XmlRpcServerMethod("getStatus") {}
+    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
+        DLOG << "Received 'getStatus' command";
+        XmlRpcValue::ValueStruct statusDict;
+        statusDict["a"] = 1;
         retvalP = 0;
     }
 };
@@ -519,15 +506,20 @@ main(int argc, char** argv)
         ELOG << "Exiting on incomplete configuration!";
         exit(1);
     }
-    
+
+    // Start out assuming we have no limiter triggers and that N2 waveguide
+    // pressure is low until we confirm otherwise.
+    _noXmitBitmap.setBit(NoXmitBitmap::N2_PRESSURE_LOW);
+    _noXmitBitmap.setBit(NoXmitBitmap::NO_LIMITER_TRIGGERS);
+
     // Start with the NOXMIT_IN_BLANKING_SECTOR bit set if we're allowing for
     // blanking (we'll blank until we're explicitly told we're *not* in a
     // blanking sector), otherwise false (since no sectors will be blanked).
     _allowBlanking = kaConfig.allow_blanking();
     if (_allowBlanking) {
-        setNoXmitBit(NOXMIT_IN_BLANKING_SECTOR);
+        setNoXmitBit(NoXmitBitmap::NOXMIT_IN_BLANKING_SECTOR);
     } else {
-        clearNoXmitBit(NOXMIT_IN_BLANKING_SECTOR);
+        clearNoXmitBit(NoXmitBitmap::NOXMIT_IN_BLANKING_SECTOR);
     }
 
     // Make sure our KaPmc730 is created in simulation mode if requested
@@ -741,11 +733,11 @@ main(int argc, char** argv)
 
     double startTime = nowTime();
     while (1) {
-	// Set or clear the NOXMIT_N2_PRESSURE_LOW bit based on the current
+	// Set or clear the N2_PRESSURE_LOW bit based on the current
 	// state of the N2 pressure switch
 	KaPmc730::wgPressureGood() ?
-            clearNoXmitBit(NOXMIT_N2_PRESSURE_LOW) :
-            setNoXmitBit(NOXMIT_N2_PRESSURE_LOW);
+            clearNoXmitBit(NoXmitBitmap::N2_PRESSURE_LOW) :
+            setNoXmitBit(NoXmitBitmap::N2_PRESSURE_LOW);
 
         // Process XML-RPC commands for a brief bit
         rpcServer.work(0.01);
