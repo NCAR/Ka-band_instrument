@@ -62,6 +62,9 @@ p7142sd3c * _sd3c;       ///< Our SD3C instance
 // will not be allowed to fire if _noXmitBitmap has any bits set.
 static NoXmitBitmap _noXmitBitmap;
 
+// Our KaMonitor instance
+KaMonitor * _kaMonitor = NULL;
+
 bool _terminate = false;         ///< set true to signal the main loop to terminate
 bool _hup = false;               ///< set true to signal the main loop we got a hup signal
 bool _usr1 = false;              ///< set true to signal the main loop we got a usr1 signal
@@ -311,8 +314,8 @@ setBlankingOff(int64_t pulseSeqNum) {
 
 ///////////////////////////////////////////////////////////
 void
-verifyPpsAndNtp(const KaMonitor & kaMonitor) {
-    if (! kaMonitor.gpsTimeServerGood()) {
+verifyPpsAndNtp() {
+    if (! _kaMonitor->gpsTimeServerGood()) {
         ELOG << "GPS time server is reporting fault, so we don't trust 1 PPS!";
         exit(1);
     }
@@ -473,9 +476,9 @@ public:
     GetStatusMethod() : XmlRpcServerMethod("getStatus") {}
     void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
         DLOG << "Received 'getStatus' command";
-        XmlRpcValue::ValueStruct statusDict;
-        statusDict["a"] = 1;
-        retvalP = 0;
+        XmlRpcValue statusDict;
+        statusDict["n2PressureGood"] = _kaMonitor->wgPressureGood();
+        retvalP = statusDict;
     }
 };
 
@@ -527,14 +530,13 @@ main(int argc, char** argv)
 
     // set to ignore SIGPIPE errors which occur when sockets
     // are broken between client and server
-
     signal(SIGPIPE, SIG_IGN);
 
     // Create our status monitoring thread.
-    KaMonitor kaMonitor(_xmitdHost, _xmitdPort);
+    _kaMonitor = new KaMonitor(_xmitdHost, _xmitdPort);
 
     // create the merge object (which is also the IWRF TCP server)
-    KaMerge merge(kaConfig, kaMonitor);
+    KaMerge merge(kaConfig, *_kaMonitor);
 
     // Turn off transmitter trigger enable until we know we're generating
     // timing signals (and hence that the T/R limiters are presumably
@@ -673,7 +675,7 @@ main(int argc, char** argv)
 
     // Start monitor and merge
     PMU_auto_register("start monitor and merge");
-    kaMonitor.start();
+    _kaMonitor->start();
     merge.start();
 
     // Start the downconverter threads.
@@ -708,7 +710,7 @@ main(int argc, char** argv)
     // sure our system time is close enough that we can calculate the correct
     // start second.
     if (kaConfig.external_start_trigger()) {
-        verifyPpsAndNtp(kaMonitor);
+        verifyPpsAndNtp();
     }
 
     // Start the timers, which will allow data to flow.
@@ -720,6 +722,7 @@ main(int argc, char** argv)
 
     // Initialize our RPC server on port 8081
     XmlRpc::XmlRpcServer rpcServer;
+    rpcServer.addMethod(new GetStatusMethod());
     rpcServer.addMethod(new RaiseXmitTtyResetMethod());
     rpcServer.addMethod(new LowerXmitTtyResetMethod());
     rpcServer.addMethod(new SetBlankingOnMethod());
@@ -802,19 +805,24 @@ main(int argc, char** argv)
     sleep(2);
     ILOG << "Sleep done";
 
-    // Stop the downconverter threads. These have no event loops, so they
+    // Stop the various threads. These have no event loops, so they
     // must be stopped using "terminate()"
+    _kaMonitor->terminate();
     hThread.terminate();
     vThread.terminate();
     burstThread.terminate();
 
     // Wait for threads' termination (up to 1 second for each)
+    _kaMonitor->wait(100);
     hThread.wait(1000);
     vThread.wait(1000);
     burstThread.wait(1000);
 
     // stop the DAC
     upConverter.stopDAC();
+
+    // Delete the KaMonitor
+    delete(_kaMonitor);
 
     // stop the timers
     ILOG << "Stopping the timers";
