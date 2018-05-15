@@ -52,33 +52,28 @@ public:
         return(desc);
     }
 
-    /// @brief Return a mask for the given BITNUM bit.
-    static uint16_t MaskForBit(BITNUM bitnum) {
-        return(1 << bitnum);
-    }
-
     /// @brief Set the selected bit in the bitmap
     /// @param bitnum the bit number to be set
     void setBit(BITNUM bitnum) {
-        _noXmitBitmap |= MaskForBit(bitnum);
+        _noXmitBitmap |= _MaskForBit(bitnum);
     }
 
     /// @brief Return true iff the selected bit is set in the bitmap
     /// @return true iff the selected bit is set in the bitmap
     bool bitIsSet(BITNUM bitnum) const {
-        return(_noXmitBitmap & MaskForBit(bitnum));
+        return(_noXmitBitmap & _MaskForBit(bitnum));
     }
 
     /// @brief Clear the selected bit in the bitmap
     /// @param bitnum the bit number to be cleared
     void clearBit(BITNUM bitnum) {
-        _noXmitBitmap &= ~MaskForBit(bitnum);
+        _noXmitBitmap &= ~_MaskForBit(bitnum);
     }
 
     /// @brief Return true iff the selected bit is clear in the bitmap
     /// @return true iff the selected bit is clear in the bitmap
     bool bitIsClear(BITNUM bitnum) const {
-        return(~_noXmitBitmap & MaskForBit(bitnum));
+        return(~_noXmitBitmap & _MaskForBit(bitnum));
     }
 
     /// @brief Return true iff the bitmap has no bits set
@@ -86,11 +81,42 @@ public:
     bool allBitsClear() const {
         return(_noXmitBitmap == 0);
     }
-    
+
+    /// @brief Return the raw value of our bitmap.
+    ///
+    /// This bitmap value can be used to create a clone instance with the
+    /// NoXmitBitmap(int bitmap) constructor.
+    int rawBitmap() const { return(_noXmitBitmap); }
+
     bool operator!=(const NoXmitBitmap& other) const {
         return(_noXmitBitmap == other._noXmitBitmap);
     }
 private:
+    /// @brief KadrxStatus is a friend so that it can use the private
+    /// constructor.
+    friend class KadrxStatus;
+
+    /// @brief Construct from a raw bitmap value
+    /// @param rawBitmap a raw bitmap value, as returned by the rawBitmap()
+    /// method
+    NoXmitBitmap(int rawBitmap) {
+        // Test that the given bitmap value is valid
+        const int MaxBitmap = (1 << NBITS) - 1;
+        if (rawBitmap < 0 || rawBitmap > MaxBitmap) {
+            std::ostringstream os;
+            os << "Bitmap value " << rawBitmap <<
+                  " is outside legal interval [0," << MaxBitmap << "]";
+            throw(std::range_error(os.str()));
+        }
+        _noXmitBitmap = rawBitmap;
+    }
+
+    /// @brief Return a mask for the given BITNUM bit.
+    static uint16_t _MaskForBit(BITNUM bitnum) {
+        return(1 << bitnum);
+    }
+
+    /// Bitmap with bits marking reasons transmit is disabled.
     uint16_t _noXmitBitmap;
 };
 
