@@ -41,6 +41,7 @@ KaMonitor.h
 KaOscControl.h
 KaOscillator3.h
 KaPmc730.h
+NoXmitBitmap.h
 PulseData.h
 TtyOscillator.h
 """)
