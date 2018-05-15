@@ -56,7 +56,7 @@ int _simPauseMs = 20;            ///< The number of milliseconds to pause when r
 std::string _xmitdHost("localhost"); ///< The host on which ka_xmitd is running
 int _xmitdPort = 8080;           ///< The port on which ka_xmitd is listening
 bool _allowBlanking = true;      ///< Are we allowing sector blanking via XML-RPC calls?
-p7142sd3c * _sd3c;       ///< Our SD3C instance
+p7142sd3c * _sd3c;               ///< Our SD3C instance
 
 // Bitmap of conditions which currently disable transmit. The transmitter
 // will not be allowed to fire if _noXmitBitmap has any bits set.
@@ -476,8 +476,31 @@ public:
     GetStatusMethod() : XmlRpcServerMethod("getStatus") {}
     void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
         DLOG << "Received 'getStatus' command";
+        // Dictionary to hold the kadrx status
         XmlRpcValue statusDict;
+
+        // Populate with the status values provided by KaMonitor
+        statusDict["derivedTxFrequency"] = float(_kaMonitor->derivedTxFrequency());
+        statusDict["gpsTimeServerGood"] = _kaMonitor->gpsTimeServerGood();
+        statusDict["hTxPowerRaw"] = _kaMonitor->hTxPowerRaw();
+        statusDict["locked100MHz"] = _kaMonitor->locked100MHz();
         statusDict["n2PressureGood"] = _kaMonitor->wgPressureGood();
+        statusDict["osc0Frequency"] = float(_kaMonitor->osc0Frequency());
+        statusDict["osc1Frequency"] = float(_kaMonitor->osc1Frequency());
+        statusDict["osc2Frequency"] = float(_kaMonitor->osc2Frequency());
+        statusDict["osc3Frequency"] = float(_kaMonitor->osc3Frequency());
+        statusDict["procDrxTemp"] = _kaMonitor->procDrxTemp();
+        statusDict["procEnclosureTemp"] = _kaMonitor->procEnclosureTemp();
+        statusDict["psVoltage"] = _kaMonitor->psVoltage();
+        statusDict["rxBackTemp"] = _kaMonitor->rxBackTemp();
+        statusDict["rxFrontTemp"] = _kaMonitor->rxFrontTemp();
+        statusDict["rxTopTemp"] = _kaMonitor->rxTopTemp();
+        statusDict["testTargetPowerRaw"] = _kaMonitor->testTargetPowerRaw();
+        statusDict["txEnclosureTemp"] = _kaMonitor->txEnclosureTemp();
+        statusDict["vTxPowerRaw"] = _kaMonitor->vTxPowerRaw();
+
+        // Add the bitmap of reasons (if any) transmit is currently disallowed
+        statusDict["noXmitBitmap"] = _noXmitBitmap.rawBitmap();
         retvalP = statusDict;
     }
 };
