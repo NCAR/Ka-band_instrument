@@ -99,7 +99,9 @@ private:
 
   /// IQ data
 
-  static const int NCHANNELS = 3;
+  /// @brief Number of non-burst data channels (currently 2: H and V)
+  static const int N_DATA_CHANNELS = 2;
+
   int _nGates;
   int _nGatesAlloc;
   int _pulseIntervalPerIwrfMetaData;

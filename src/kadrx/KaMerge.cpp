@@ -675,11 +675,11 @@ void KaMerge::_assembleIwrfPulsePacket()
 
   _pulseHdr.pulse_width_us = _tsProc.pulse_width_us;
   _pulseHdr.n_gates = _nGates;
-  _pulseHdr.n_channels = NCHANNELS;
+  _pulseHdr.n_channels = N_DATA_CHANNELS;
   _pulseHdr.iq_encoding = IWRF_IQ_ENCODING_SCALED_SI16;
   _pulseHdr.hv_flag = 1;
   _pulseHdr.phase_cohered = _cohereIqToBurst;
-  _pulseHdr.n_data = _nGates * NCHANNELS * 2;
+  _pulseHdr.n_data = _nGates * N_DATA_CHANNELS * 2;
   _pulseHdr.iq_offset[0] = 0;
   _pulseHdr.iq_offset[1] = _nGates * 2;
   _pulseHdr.iq_offset[2] = _nGates * 4;
@@ -769,7 +769,7 @@ void KaMerge::_allocPulseBuf()
     }
 
     _pulseBufLen =
-      sizeof(iwrf_pulse_header) + (_nGates * NCHANNELS * 2 * sizeof(int16_t));
+      sizeof(iwrf_pulse_header) + (_nGates * N_DATA_CHANNELS * 2 * sizeof(int16_t));
     _pulseBuf = new char[_pulseBufLen];
     _iq = reinterpret_cast<int16_t *>(_pulseBuf + sizeof(iwrf_pulse_header));
 
@@ -777,7 +777,7 @@ void KaMerge::_allocPulseBuf()
 
   }
 
-  memset(_iq, 0, _nGates * NCHANNELS * 2 * sizeof(int16_t));
+  memset(_iq, 0, _nGates * N_DATA_CHANNELS * 2 * sizeof(int16_t));
 
 }
 
