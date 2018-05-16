@@ -84,7 +84,7 @@ public:
 
     /// @brief Return the raw value of our bitmap.
     ///
-    /// This bitmap value can be used to create a clone instance with the
+    /// This integer value can be used to create a clone instance with the
     /// NoXmitBitmap(int bitmap) constructor.
     int rawBitmap() const { return(_noXmitBitmap); }
 
@@ -93,8 +93,11 @@ public:
     }
 private:
     /// @brief KadrxStatus is a friend so that it can use the private
-    /// constructor.
+    /// constructor and int() cast.
     friend class KadrxStatus;
+
+    /// @brief Cast to integer
+    operator int() const { return(_noXmitBitmap); }
 
     /// @brief Construct from a raw bitmap value
     /// @param rawBitmap a raw bitmap value, as returned by the rawBitmap()
