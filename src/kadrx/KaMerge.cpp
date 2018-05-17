@@ -651,10 +651,6 @@ void KaMerge::_assembleIwrfPulsePacket()
   memcpy(_iq, _pulseH->getIq(), _pulseH->getNGates() * 2 * sizeof(int16_t));
   memcpy(_iq + (_nGates * 2),
          _pulseV->getIq(), _pulseV->getNGates() * 2 * sizeof(int16_t));
-  int nSamples = _burst->getNSamples();
-  if (nSamples > _nGates) nSamples = _nGates;
-  memcpy(_iq + (_nGates * 4),
-         _burst->getIq(), nSamples * 2 * sizeof(int16_t));
 
   // pulse header
 
