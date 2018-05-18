@@ -158,7 +158,8 @@ makeRealTime()
 
 ///////////////////////////////////////////////////////////
 /// @return The current time, in seconds since Jan. 1, 1970.
-double nowTime()
+double
+nowTime()
 {
     struct timeb timeB;
     ftime(&timeB);
@@ -166,8 +167,9 @@ double nowTime()
 }
 
 ///////////////////////////////////////////////////////////
-void startUpConverter(p7142Up& upConverter,
-        unsigned int pulsewidth_counts) {
+void
+startUpConverter(p7142Up& upConverter,
+                 unsigned int pulsewidth_counts) {
 
     // create the signal
     unsigned int n = pulsewidth_counts * 2;
