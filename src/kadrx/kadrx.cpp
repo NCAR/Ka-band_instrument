@@ -275,7 +275,6 @@ verifyTimersAndEnableTx() {
     // Clear the NO_LIMITER_TRIGGERS bit in _noXmitBitmap, since we've
     // seen the triggers
     ILOG << "T/R limiters should now be working";
-    clearNoXmitBit(NoXmitBitmap::NO_LIMITER_TRIGGERS);
 }
 
 ///////////////////////////////////////////////////////////
@@ -291,7 +290,7 @@ setBlankingOn(int64_t pulseSeqNum) {
 
     // Set the NOXMIT_IN_BLANKING_SECTOR bit
     DLOG << "Entered blanking sector";
-    setNoXmitBit(NoXmitBitmap::NOXMIT_IN_BLANKING_SECTOR);
+    setNoXmitBit(NoXmitBitmap::IN_BLANKING_SECTOR);
 
     KaOscControl::theControl().setBlankingEnabled(true, pulseSeqNum);
 }
@@ -309,7 +308,7 @@ setBlankingOff(int64_t pulseSeqNum) {
 
     // Clear the NOXMIT_IN_BLANKING_SECTOR bit
     DLOG << "Left blanking sector";
-    clearNoXmitBit(NoXmitBitmap::NOXMIT_IN_BLANKING_SECTOR);
+    clearNoXmitBit(NoXmitBitmap::IN_BLANKING_SECTOR);
     
     KaOscControl::theControl().setBlankingEnabled(false, pulseSeqNum);
 }
@@ -538,16 +537,15 @@ main(int argc, char** argv)
     // Start out assuming we have no limiter triggers and that N2 waveguide
     // pressure is low until we confirm otherwise.
     _noXmitBitmap.setBit(NoXmitBitmap::N2_PRESSURE_LOW);
-    _noXmitBitmap.setBit(NoXmitBitmap::NO_LIMITER_TRIGGERS);
 
     // Start with the NOXMIT_IN_BLANKING_SECTOR bit set if we're allowing for
     // blanking (we'll blank until we're explicitly told we're *not* in a
     // blanking sector), otherwise false (since no sectors will be blanked).
     _allowBlanking = kaConfig.allow_blanking();
     if (_allowBlanking) {
-        setNoXmitBit(NoXmitBitmap::NOXMIT_IN_BLANKING_SECTOR);
+        setNoXmitBit(NoXmitBitmap::IN_BLANKING_SECTOR);
     } else {
-        clearNoXmitBit(NoXmitBitmap::NOXMIT_IN_BLANKING_SECTOR);
+        clearNoXmitBit(NoXmitBitmap::IN_BLANKING_SECTOR);
     }
 
     // Make sure our KaPmc730 is created in simulation mode if requested

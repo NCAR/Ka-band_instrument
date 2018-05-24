@@ -9,6 +9,7 @@
 #define SRC_KADRX_NOXMITBITMAP_H_
 
 #include <cstdint>
+#include <exception>
 #include <string>
 #include <sstream>
 
@@ -25,8 +26,8 @@ public:
     typedef enum _NOXMIT_BITNUM {
             XMLRPC_REQUEST = 0,
             N2_PRESSURE_LOW,
-            NO_LIMITER_TRIGGERS,
-            NOXMIT_IN_BLANKING_SECTOR,
+            IN_BLANKING_SECTOR,
+            HUP_SIGNAL_RECEIVED,
             NBITS    // Count of "no transmit" conditions
     } BITNUM;
 
@@ -39,10 +40,10 @@ public:
             desc = "On XML-RPC request"; break;
         case N2_PRESSURE_LOW:
             desc = "N2 waveguide pressure low"; break;
-        case NO_LIMITER_TRIGGERS:
-            desc = "No limiter triggers detected"; break;
-        case NOXMIT_IN_BLANKING_SECTOR:
+        case IN_BLANKING_SECTOR:
             desc = "In blanking sector"; break;
+        case HUP_SIGNAL_RECEIVED:
+            desc = "HUP signal received"; break;
         default:
             std::ostringstream os;
             os << "BUG: unhandled NOXMIT_BITNUM " << bitnum;
@@ -82,6 +83,11 @@ public:
         return(_noXmitBitmap == 0);
     }
 
+    /// @brief Set all bits in the bitmap
+    void setAllBits() {
+        _noXmitBitmap = (1 << NBITS) - 1;
+    }
+
     /// @brief Return the raw value of our bitmap.
     ///
     /// This integer value can be used to create a clone instance with the
@@ -91,6 +97,16 @@ public:
     bool operator!=(const NoXmitBitmap& other) const {
         return(_noXmitBitmap == other._noXmitBitmap);
     }
+
+    /// @brief Operator to allow for incrementing BITNUM
+    friend BITNUM operator++(BITNUM & bitnum, int dummy) {
+        int newval = bitnum + 1;
+        if (newval >= NBITS) {
+            throw(std::range_error("Attempt to increment BITNUM outside legal range"));
+        }
+        return(static_cast<BITNUM>(newval));
+    }
+
 private:
     /// @brief KadrxStatus is a friend so that it can use the private
     /// constructor and int() cast.
@@ -122,10 +138,5 @@ private:
     /// Bitmap with bits marking reasons transmit is disabled.
     uint16_t _noXmitBitmap;
 };
-
-/// @brief Operator to allow for incrementing BITNUM
-NoXmitBitmap::BITNUM operator++(NoXmitBitmap::BITNUM & bitnum, int dummy) {
-    return(static_cast<NoXmitBitmap::BITNUM>(bitnum + 1));
-}
 
 #endif /* SRC_KADRX_NOXMITBITMAP_H_ */
