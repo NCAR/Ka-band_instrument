@@ -1,24 +1,14 @@
-#include <iomanip>
-#include <iostream>
 #include <string>
-#include <sys/ioctl.h>
-#include <sys/select.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <math.h>
-#include <sched.h>
-#include <unistd.h>
-#include <sys/timeb.h>
-#include <ctime>
-#include <cerrno>
-#include <cstdlib>
-#include <boost/program_options.hpp>
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <csignal>
+#include <cmath>
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/program_options.hpp>
 #include <logx/Logging.h>
 #include <toolsa/pmu.h>
-#include <XmlRpc.h>
-#include <XmlRpcValue.h>
+#include <QFunctionWrapper.h>
+#include <QtCore/QCoreApplication>
+#include <QtCore/QTimer>
+#include <QXmlRpcServerAbyss.h>
 
 #include <QtCore/QResource>
 
@@ -30,33 +20,35 @@
 #include "KaDrxPub.h"
 #include "KaPmc730.h"
 #include "KaDrxConfig.h"
+#include "KadrxStatus.h"
 #include "KaMerge.h"
 #include "KaMonitor.h"
 #include "NoXmitBitmap.h"
 
 LOGGING("kadrx")
 
-using namespace std;
 using namespace Pentek;
-using namespace boost::posix_time;
 namespace po = boost::program_options;
 
-/// Our RPC server
-using namespace XmlRpc;
-
-std::string _drxConfig;          ///< DRX configuration file
-std::string _instance;           ///< application instance
+QCoreApplication * _app = NULL; ///< Our QApplication instance
+std::string _drxConfig;         ///< DRX configuration file
+std::string _instance;          ///< instance name for PMU
 int _chans = KaDrxPub::KA_N_CHANNELS; ///< number of channels
-int _tsLength = 256;             ///< The time series length
-std::string _gaussianFile = "";  ///< gaussian filter coefficient file
-std::string _kaiserFile = "";    ///< kaiser filter coefficient file
-bool _simulate = false;          ///< Set true for simulate mode
-int _simWavelength = 5000;       ///< The simulated data wavelength, in samples
-int _simPauseMs = 20;            ///< The number of milliseconds to pause when reading in simulate mode.
+KaDrxPub * _hThread = NULL;     ///< thread to read and publish H channel data
+KaDrxPub * _vThread = NULL;     ///< thread to read and publish H channel data
+KaDrxPub * _burstThread = NULL; ///< thread to read and publish burst channel data
+const float STATUS_INTERVAL_SECS = 10.0;        ///< interval for status logging
+int _tsLength = 256;            ///< The time series length
+std::string _gaussianFile = ""; ///< gaussian filter coefficient file
+std::string _kaiserFile = "";   ///< kaiser filter coefficient file
+bool _simulate = false;         ///< Set true for simulate mode
+int _simWavelength = 5000;      ///< The simulated data wavelength, in samples
+int _simPauseMs = 20;           ///< The number of milliseconds to pause when reading in simulate mode.
 std::string _xmitdHost("localhost"); ///< The host on which ka_xmitd is running
-int _xmitdPort = 8080;           ///< The port on which ka_xmitd is listening
-bool _allowBlanking = true;      ///< Are we allowing sector blanking via XML-RPC calls?
-p7142sd3c * _sd3c;               ///< Our SD3C instance
+int _xmitdPort = 8080;          ///< The port on which ka_xmitd is listening
+bool _afcEnabled = false;       ///< Is AFC enabled?
+bool _allowBlanking = true;     ///< Are we allowing transmit disable via XML-RPC calls?
+p7142sd3c * _sd3c = NULL;       ///< Our SD3C instance
 
 // Bitmap of conditions which currently disable transmit. The transmitter
 // will not be allowed to fire if _noXmitBitmap has any bits set.
@@ -68,24 +60,38 @@ KaMonitor * _kaMonitor = NULL;
 bool _terminate = false;         ///< set true to signal the main loop to terminate
 bool _hup = false;               ///< set true to signal the main loop we got a hup signal
 bool _usr1 = false;              ///< set true to signal the main loop we got a usr1 signal
-bool _transmitEnabled = false;
 
 /////////////////////////////////////////////////////////////////////
 void sigHandler(int sig) {
-    ILOG << "Interrupt received...termination may take a few seconds";
-    _terminate = true;
+    ILOG << "Initiating program exit on '" << strsignal(sig) << "' signal";
+    // Stop our QCoreApplication instance
+    _app->quit();
 }
 
 /////////////////////////////////////////////////////////////////////
+/// @brief Note receipt of a HUP signal
 void hupHandler(int sig) {
   ILOG << "HUP received...response  may take a few seconds";
   _hup = true;
+  // If we received a USR1 which has not been handled, this later signal
+  // overrides it
+  if (_usr1) {
+      WLOG << "HUP is overriding previously received USR1";
+      _usr1 = false;
+  }
 }
 
 /////////////////////////////////////////////////////////////////////
+/// @brief Note receipt of a USR1 signal
 void usr1Handler(int sig) {
   ILOG << "USR1 received...response  may take a few seconds";
   _usr1 = true;
+  // If we received a HUP which has not been handled, this later signal
+  // overrides it
+  if (_hup) {
+      WLOG << "USR1 is overriding previously received HUP";
+      _hup = false;
+  }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -157,22 +163,11 @@ makeRealTime()
 }
 
 ///////////////////////////////////////////////////////////
-/// @return The current time, in seconds since Jan. 1, 1970.
-double
-nowTime()
-{
-    struct timeb timeB;
-    ftime(&timeB);
-    return timeB.time + timeB.millitm/1000.0;
-}
-
-///////////////////////////////////////////////////////////
 void
-startUpConverter(p7142Up& upConverter,
-                 unsigned int pulsewidth_counts) {
+startUpconverter(p7142sd3c * sd3c) {
 
     // create the signal
-    unsigned int n = pulsewidth_counts * 2;
+    unsigned int n = sd3c->txPulseWidthCounts() * 2;
     int32_t IQ[n];
 
     for (unsigned int i = 0; i < n/2; i++) {
@@ -182,16 +177,15 @@ startUpConverter(p7142Up& upConverter,
         IQ[i]   = 0x8000 << 16 | 0x8000;
     }
     // load mem2
-    upConverter.write(IQ, n);
+    sd3c->upconverter()->write(IQ, n);
 
     // start the upconverter
-    upConverter.startDAC();
-
+    sd3c->upconverter()->startDAC();
 }
 
 ///////////////////////////////////////////////////////////
 void
-setTxEnableLine() {
+updateTxEnableLineState() {
     static NoXmitBitmap prevNoXmitBitmap;
 
     // If _noXmitBitmap changed from the last time this was called, log
@@ -215,36 +209,76 @@ setTxEnableLine() {
     // Enable transmit if no bits are set in _noXmitBitmap
     bool enableTx = _noXmitBitmap.allBitsClear();
     KaPmc730::setTxEnable(enableTx);
-    _transmitEnabled = enableTx;
 }
 
 ///////////////////////////////////////////////////////////
-// Set the selected bit in _noXmitBitmap, then call setTxEnableLine()
+// Set the selected bit in _noXmitBitmap, then call updateTxEnableLineState()
 // to set the state of the Tx Enable line based on the new bitmap.
 void
 setNoXmitBit(NoXmitBitmap::BITNUM bitnum) {
     // Set the selected bit in _noXmitBitmap, then set the state
     // of the Tx Enable line
     _noXmitBitmap.setBit(bitnum);
-    setTxEnableLine();
+    updateTxEnableLineState();
 }
 
 ///////////////////////////////////////////////////////////
-// Clear the selected bit in _noXmitBitmap, then call setTxEnableLine()
+// Clear the selected bit in _noXmitBitmap, then call updateTxEnableLineState()
 // to set the state of the Tx Enable line based on the new bitmap.
 void
 clearNoXmitBit(NoXmitBitmap::BITNUM bitnum) {
     // Clear the selected bit in _noXmitBitmap, then set the state
     // of the Tx Enable line
     _noXmitBitmap.clearBit(bitnum);
-    setTxEnableLine();
+    updateTxEnableLineState();
 }
 
 ///////////////////////////////////////////////////////////
+/// @brief Shutdown and cleanup function
 void
-verifyTimersAndEnableTx() {
+shutDownAndClean() {
+    ILOG << "Shutting down";
+    // Drop the Transmit Enable line
+    ILOG << "Lowering the transmit enable line";
+    KaPmc730::setTxEnable(false);
+
+    // Stop the various threads. These have no event loops, so they
+    // must be stopped using "terminate()"
+    _kaMonitor->terminate();
+    _hThread->terminate();
+    _vThread->terminate();
+    _burstThread->terminate();
+
+    // Wait for threads' termination (up to 1 second for each)
+    _kaMonitor->wait(100);
+    _hThread->wait(1000);
+    _vThread->wait(1000);
+    _burstThread->wait(1000);
+
+    // Clean up dynamically allocated objects
+    delete(_kaMonitor);
+    delete(_hThread);
+    delete(_vThread);
+    delete(_burstThread);
+
+    // stop the DAC
+    _sd3c->upconverter()->stopDAC();
+
+    // stop the timers
+    ILOG << "Stopping the timers";
+    _sd3c->timersStartStop(false);
+    ILOG << "Stopping the timers - done";
+
+    ILOG << "kadrx is finished";
+}
+
+///////////////////////////////////////////////////////////
+/// @brief Return true iff sync pulses are being generated by the Pentek
+void
+exitIfNoSyncPulses() {
     if (_simulate)
         return;
+
     // Wait until we see at least countThreshold pulse counts before we
     // enable the transmitter
     const uint32_t CountThreshold = 50;
@@ -270,11 +304,50 @@ verifyTimersAndEnableTx() {
         " seconds";
     if (i == MaxTries) {
         ELOG << "Pentek timers don't seem to be running...";
+        shutDownAndClean();
         exit(1);
     }
-    // Clear the NO_LIMITER_TRIGGERS bit in _noXmitBitmap, since we've
-    // seen the triggers
-    ILOG << "T/R limiters should now be working";
+    return;
+}
+
+//////////////////////////////////////////////////////////////////////
+/// @brief If the _hup or _usr1 flag is set, perform the associated actions.
+///
+/// This function should be called frequently for timely response to the
+/// received signals. It performs heavy lifting that should not be done in
+/// the signal handlers.
+void doHupAndUsr1Work() {
+    if (! _hup && ! _usr1) {
+        return;
+    }
+    // We should not see both _hup and _usr1 true. If both are true, report
+    // a bug and ignore _usr1. I.e., if the action is unclear, favor _hup
+    // which disables transmit.
+    if (_hup && _usr1) {
+        ELOG << "BUG: The _hup and _usr1 flags are both set. " <<
+                "Ignoring _usr1.";
+        _usr1 = false;
+    }
+
+    // If _hup is true, disable transmit by setting the HUP_SIGNAL_RECEIVED
+    // bit. If _usr1 is true, clear the HUP_SIGNAL_RECEIVED bit to allow
+    // transmit if no other NoXmitBitmap bits are set.
+    if (_hup) {
+      ILOG << "HUP received...disabling transmit";
+      // Set the HUP_SIGNAL_RECEIVED bit in the NoXmitBitmap
+      setNoXmitBit(NoXmitBitmap::HUP_SIGNAL_RECEIVED);
+      _hup = false;
+    } else if (_usr1) {
+      if (! _noXmitBitmap.bitIsSet(NoXmitBitmap::HUP_SIGNAL_RECEIVED)) {
+          WLOG << "USR1 ignored because transmit is not currently disabled " <<
+                  "by HUP signal";
+      } else {
+          ILOG << "USR1 received, canceling HUP transmit disable";
+          clearNoXmitBit(NoXmitBitmap::HUP_SIGNAL_RECEIVED);
+          exitIfNoSyncPulses();
+      }
+      _usr1 = false;
+    }
 }
 
 ///////////////////////////////////////////////////////////
@@ -284,7 +357,7 @@ verifyTimersAndEnableTx() {
 // state
 void
 setBlankingOn(int64_t pulseSeqNum) {
-    // We don't care about pulseSeqNum here, since we get calls from the 
+    // We don't care about pulseSeqNum here, since we get calls from the
     // synchro-to-digital box with effectively zero latency. Just disable
     // the transmitter.
 
@@ -302,14 +375,14 @@ setBlankingOn(int64_t pulseSeqNum) {
 // state
 void
 setBlankingOff(int64_t pulseSeqNum) {
-    // We don't care about pulseSeqNum here, since we get calls from the 
+    // We don't care about pulseSeqNum here, since we get calls from the
     // synchro-to-digital box with effectively zero latency. Just enable
     // the transmitter.
 
-    // Clear the NOXMIT_IN_BLANKING_SECTOR bit
+    // Clear the IN_BLANKING_SECTOR bit
     DLOG << "Left blanking sector";
     clearNoXmitBit(NoXmitBitmap::IN_BLANKING_SECTOR);
-    
+
     KaOscControl::theControl().setBlankingEnabled(false, pulseSeqNum);
 }
 
@@ -320,7 +393,7 @@ verifyPpsAndNtp() {
         ELOG << "GPS time server is reporting fault, so we don't trust 1 PPS!";
         exit(1);
     }
-    
+
     // Get the SystemClockOffset.py script as a QResource
     QResource pyScriptResource(":/SystemClockOffset.py");
 
@@ -330,7 +403,6 @@ verifyPpsAndNtp() {
     		        pyScriptResource.size());
     shScript.append("\n__EOF__");
 
-    
     // Execute the sh script via popen and get the output, which will be
     // the system clock offset in seconds.
     FILE *scriptOutput = popen(shScript.c_str(), "r");
@@ -348,161 +420,230 @@ verifyPpsAndNtp() {
     ILOG << "System clock offset is currently " << offset_s << " s";
 }
 
-/////////////////////////////////////////////////////////////////////
-/// Xmlrpc++ method to raise the Ka transmitter serial reset line.
-//
-// Control of the transmitter serial reset is really the concern of ka_xmitd,
-// but access to the line is via the PMC-730 card, which is owned here. Hence,
-// we have to provide an API for driving the line.
-class RaiseXmitTtyResetMethod : public XmlRpcServerMethod {
+///////////////////////////////////////////////////////////
+/// @brief Function which is called on a periodic basis to log
+/// some basic status.
+void
+logStatus() {
+    ILOG << std::setprecision(3) << std::setw(5) << "H channel " <<
+            _hThread->downconverter()->bytesRead() / (1.0e6 * STATUS_INTERVAL_SECS) <<
+            " MB/s, drop: " << _hThread->downconverter()->droppedPulses() <<
+            ", sync errs: " << _hThread->downconverter()->syncErrors();
+
+    ILOG << std::setprecision(3) << std::setw(5) << "V channel " <<
+            _vThread->downconverter()->bytesRead() / (1.0e6 * STATUS_INTERVAL_SECS) <<
+            " MB/s, drop: " << _vThread->downconverter()->droppedPulses() <<
+            " sync errs: " << _vThread->downconverter()->syncErrors();
+
+    ILOG << std::setprecision(3) << std::setw(5) << "burst channel " <<
+            _burstThread->downconverter()->bytesRead() / (1.0e6 * STATUS_INTERVAL_SECS) <<
+            " MB/s, drop: " << _burstThread->downconverter()->droppedPulses() <<
+            " sync errs: " << _burstThread->downconverter()->syncErrors();
+}
+
+///////////////////////////////////////////////////////////
+/// @brief Function which is called on a periodic basis to check N2
+/// waveguide pressure, and set or clear the associated NoXmitBitmap bit.
+void
+checkN2Pressure() {
+    // Set or clear the N2_PRESSURE_LOW bit based on the current
+    // state of the N2 pressure switch
+    KaPmc730::wgPressureGood() ?
+            clearNoXmitBit(NoXmitBitmap::N2_PRESSURE_LOW) :
+            setNoXmitBit(NoXmitBitmap::N2_PRESSURE_LOW);
+}
+
+/// @brief xmlrpc_c::method to get status from the kadrx process.
+///
+/// The method returns a xmlrpc_c::value_struct (dictionary) mapping
+/// std::string keys to xmlrpc_c::value values. The dictionary can be
+/// passed to the constructor for the DrxStatus class to create a DrxStatus
+/// object.
+///
+/// Example client usage, where kadrx is running on machine `drxhost`:
+/// @code
+///     #include <xmlrpc-c/client_simple.hpp>
+///     #include <KadrxStatus.h>
+///     ...
+///
+///     // Execute "getStatus" on drxhost/port 8081
+///     xmlrpc_c::clientSimple client;
+///     xmlrpc_c::value result;
+///     client.call("http://drxhost:8081/RPC2", "getStatus", "", &result);
+///
+///     // Instantiate a KadrxStatus using the returned dictionary
+///     xmlrpc_c::value_struct statusDict(result);
+///     KadrxStatus status(statusDict);
+/// @endcode
+class GetStatusMethod : public xmlrpc_c::method {
 public:
-    RaiseXmitTtyResetMethod() : XmlRpcServerMethod("raiseXmitTtyReset") {}
-    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
-        ILOG << "Received 'raiseXmitTtyReset' command";
+    GetStatusMethod() {
+        this->_signature = "S:";
+        this->_help = "This method returns the latest status from kadrx.";
+    }
+    void
+    execute(const xmlrpc_c::paramList & paramList, xmlrpc_c::value* retvalP) {
+        DLOG << "Received 'getStatus' XML-RPC command";
+        // Construct a KadrxStatus from the current values
+        KadrxStatus status(_noXmitBitmap,
+                           _afcEnabled,
+                           _kaMonitor->gpsTimeServerGood(),
+                           _kaMonitor->locked100MHz(),
+                           _kaMonitor->wgPressureGood(),
+                           _kaMonitor->osc0Frequency(),
+                           _kaMonitor->osc1Frequency(),
+                           _kaMonitor->osc2Frequency(),
+                           _kaMonitor->osc3Frequency(),
+                           _kaMonitor->derivedTxFrequency(),
+                           _kaMonitor->hTxPowerRaw(),
+                           _kaMonitor->vTxPowerRaw(),
+                           _kaMonitor->testTargetPowerRaw(),
+                           _kaMonitor->procDrxTemp(),
+                           _kaMonitor->procEnclosureTemp(),
+                           _kaMonitor->rxBackTemp(),
+                           _kaMonitor->rxFrontTemp(),
+                           _kaMonitor->rxTopTemp(),
+                           _kaMonitor->txEnclosureTemp(),
+                           _kaMonitor->psVoltage());
+        *retvalP = status.toXmlRpcValue();
+    }
+};
+
+/////////////////////////////////////////////////////////////////////
+/// @brief xmlrpc_c::method to raise the Ka transmitter serial reset line.
+///
+/// Control of the transmitter serial reset is really the concern of ka_xmitd,
+/// but access to the line is via the PMC-730 card, which is owned here. Hence,
+/// we have to provide an API for driving the line.
+class RaiseXmitTtyResetMethod : public xmlrpc_c::method {
+public:
+    RaiseXmitTtyResetMethod() {
+        this->_signature = "n:";
+        this->_help = "This method raises the transmitter TTY reset line.";
+    }
+    void
+    execute(const xmlrpc_c::paramList & paramList, xmlrpc_c::value * retvalP) {
+        ILOG << "Received 'raiseXmitTtyReset' XML-RPC command";
         KaPmc730::setTxSerialResetLine(true);
     }
 };
 
 /////////////////////////////////////////////////////////////////////
-/// Xmlrpc++ method to lower the Ka transmitter serial reset line
-//
-// Control of the transmitter serial reset is really the concern of ka_xmitd,
-// but access to the line is via the PMC-730 card, which is owned here. Hence,
-// we have to provide an API for driving the line.
-class LowerXmitTtyResetMethod : public XmlRpcServerMethod {
+/// @brief xmlrpc_c::method to lower the Ka transmitter serial reset line
+///
+/// Control of the transmitter serial reset is really the concern of ka_xmitd,
+/// but access to the line is via the PMC-730 card, which is owned here. Hence,
+/// we have to provide an API for driving the line.
+class LowerXmitTtyResetMethod : public xmlrpc_c::method {
 public:
-    LowerXmitTtyResetMethod() : XmlRpcServerMethod("lowerXmitTtyReset") {}
-    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
-        ILOG << "Received 'lowerXmitTtyReset' command";
+    LowerXmitTtyResetMethod() {
+        this->_signature = "n:";
+        this->_help = "This method lowers the transmitter TTY reset line.";
+    }
+    void
+    execute(const xmlrpc_c::paramList & paramList, xmlrpc_c::value * retvalP) {
+        ILOG << "Received 'lowerXmitTtyReset' XML-RPC command";
         KaPmc730::setTxSerialResetLine(false);
     }
 };
 
 /////////////////////////////////////////////////////////////////////
-/// Xmlrpc++ method to turn on transmit blanking (i.e., disable the transmitter)
-/// The param list should have:
-///     1) (double) the time since 1970-01-01 00:00:00 UTC in seconds
-///     2) (double) antenna elevation
-///     3) (double) antenna azimuth
+/// @brief xmlrpc_c::method to disable transmit in a blanking sector.
+///
 /// Returns 0 if the method is successful, or -1 if XML-RPC calls for blanking
 /// are currently disallowed.
-class SetBlankingOnMethod : public XmlRpcServerMethod {
+class SetBlankingOnMethod : public xmlrpc_c::method {
 public:
-    SetBlankingOnMethod() : XmlRpcServerMethod("setBlankingOn") {}
-    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
-        double time = paramList[0];
-        double elev = paramList[1];
-        double azim = paramList[2];
-        DLOG << "Received 'setBlankingOn' command with time: " << time <<
-                ", elev: " << elev << ", azim: " << azim;
+    SetBlankingOnMethod() {
+        this->_signature = "i:ddd";
+        this->_help = "This method disables transmit in a blanking sector.";
+    }
+    void
+    execute(const xmlrpc_c::paramList & paramList, xmlrpc_c::value * retvalP) {
         if (! _allowBlanking) {
             DLOG << "Blanking via XML-RPC calls is currently disallowed";
-            retvalP = -1;
+            *retvalP = xmlrpc_c::value_int(-1);
             return;
         }
-        ptime pTime = boost::posix_time::from_time_t(int(time));
-        int usecs = int(1.0e6 * fmod(time, 1.0));
+        double epochSeconds(paramList.getDouble(0));
+        double elev(paramList.getDouble(1));
+        double azim(paramList.getDouble(2));
+        DLOG << "Received 'setBlankingOn' command with time: " <<
+                epochSeconds << ", elev: " << elev << ", azim: " << azim;
+        boost::posix_time::ptime pTime =
+                boost::posix_time::from_time_t(int(epochSeconds));
+        int usecs = int(1.0e6 * fmod(epochSeconds, 1.0));
         pTime += boost::posix_time::microseconds(usecs);
         int64_t pulseSeqNum = _sd3c->pulseAtTime(pTime);
         setBlankingOn(pulseSeqNum);
-        retvalP = 0;
+        *retvalP = xmlrpc_c::value_int(0);
     }
 };
 
 /////////////////////////////////////////////////////////////////////
-/// Xmlrpc++ method to turn off transmit blanking (i.e., enable the transmitter)
-/// The param list should have:
-///     1) (double) the time since 1970-01-01 00:00:00 UTC in seconds
-///     2) (double) antenna elevation
-///     3) (double) antenna azimuth
+/// @brief xmlrpc_c::method to allow transmit after leaving a blanking sector.
+///
 /// Returns 0 if the method is successful, or -1 if XML-RPC calls for blanking
 /// are currently disallowed.
-class SetBlankingOffMethod : public XmlRpcServerMethod {
+class SetBlankingOffMethod : public xmlrpc_c::method {
 public:
-    SetBlankingOffMethod() : XmlRpcServerMethod("setBlankingOff") {}
-    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
-        double time = paramList[0];
-        double elev = paramList[1];
-        double azim = paramList[2];
-        DLOG << "Received 'setBlankingOff' command with time: " << time <<
-                ", elev: " << elev << ", azim: " << azim;
+    SetBlankingOffMethod() {
+        this->_signature = "i:ddd";
+        this->_help = "This method allows transmit after leaving a blanking sector.";
+    }
+    void
+    execute(const xmlrpc_c::paramList & paramList, xmlrpc_c::value * retvalP) {
         if (! _allowBlanking) {
             DLOG << "Blanking via XML-RPC calls is currently disallowed";
-            retvalP = -1;
+            *retvalP = xmlrpc_c::value_int(-1);
             return;
         }
-        ptime pTime = boost::posix_time::from_time_t(int(time));
-        int usecs = int(1.0e6 * fmod(time, 1.0));
+        double epochSeconds(paramList.getDouble(0));
+        double elev(paramList.getDouble(1));
+        double azim(paramList.getDouble(2));
+        DLOG << "Received 'setBlankingOff' command with time: " <<
+                epochSeconds << ", elev: " << elev << ", azim: " << azim;
+        boost::posix_time::ptime pTime =
+                boost::posix_time::from_time_t(int(epochSeconds));
+        int usecs = int(1.0e6 * fmod(epochSeconds, 1.0));
         pTime += boost::posix_time::microseconds(usecs);
         int64_t pulseSeqNum = _sd3c->pulseAtTime(pTime);
         setBlankingOff(pulseSeqNum);
-        retvalP = 0;
+        *retvalP = xmlrpc_c::value_int(0);
     }
 };
 
 /////////////////////////////////////////////////////////////////////
-/// Xmlrpc++ method to disable the transmitter.
-// If this method is called, then the XMLRPC "enableTransmit" method must be
-// called to re-enable transmit.
-class DisableTransmitMethod : public XmlRpcServerMethod {
+/// @brief xmlrpc_c::method to set the XMLRPC_REQUEST 'no transmit' bit.
+/// If this method is called, then the XML-RPC "enableTransmit" method must be
+/// called to re-enable transmit.
+class DisableTransmitMethod : public xmlrpc_c::method {
 public:
-    DisableTransmitMethod() : XmlRpcServerMethod("disableTransmit") {}
-    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
-        DLOG << "Received 'disableTransmit' command";
-        // set the NOXMIT_ON_XMLRPC_REQUEST bit
+    DisableTransmitMethod() {
+        this->_signature = "n:";
+        this->_help = "This method sets the XMLRPC_REQUEST 'no transmit' bit";
+    }
+    void
+    execute(const xmlrpc_c::paramList & paramList, xmlrpc_c::value* retvalP) {
+        DLOG << "Received 'disableTransmit' XML-RPC command";
+        // set the XMLRPC_REQUEST bit
         setNoXmitBit(NoXmitBitmap::XMLRPC_REQUEST);
-        retvalP = 0;
     }
 };
 
 /////////////////////////////////////////////////////////////////////
-/// Xmlrpc++ method to re-enable the transmitter after a call to the
-/// XMLRPC "disableTransmit" method.
-class EnableTransmitMethod : public XmlRpcServerMethod {
+/// @brief xmlrpc_c::method to clear the XMLRPC_REQUEST 'no transmit' bit.
+class EnableTransmitMethod : public xmlrpc_c::method {
 public:
-    EnableTransmitMethod() : XmlRpcServerMethod("enableTransmit") {}
-    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
-        DLOG << "Received 'enableTransmit' command";
-        // clear the NOXMIT_ON_XMLRPC_REQUEST bit
-        clearNoXmitBit(NoXmitBitmap::XMLRPC_REQUEST);
-        retvalP = 0;
+    EnableTransmitMethod() {
+        this->_signature = "n:";
+        this->_help = "This method clears the XMLRPC_REQUEST 'no transmit' bit";
     }
-};
-
-////////////////////////////////////////////////////////////////////
-/// Xmlrpc++ method which returns an XmlRpcValue::ValueStruct dictionary
-/// containing current kadrx status.
-class GetStatusMethod : public XmlRpcServerMethod {
-public:
-    GetStatusMethod() : XmlRpcServerMethod("getStatus") {}
-    void execute(XmlRpcValue & paramList, XmlRpcValue & retvalP) {
-        DLOG << "Received 'getStatus' command";
-        // Dictionary to hold the kadrx status
-        XmlRpcValue statusDict;
-
-        // Populate with the status values provided by KaMonitor
-        statusDict["derivedTxFrequency"] = float(_kaMonitor->derivedTxFrequency());
-        statusDict["gpsTimeServerGood"] = _kaMonitor->gpsTimeServerGood();
-        statusDict["hTxPowerRaw"] = _kaMonitor->hTxPowerRaw();
-        statusDict["locked100MHz"] = _kaMonitor->locked100MHz();
-        statusDict["n2PressureGood"] = _kaMonitor->wgPressureGood();
-        statusDict["osc0Frequency"] = float(_kaMonitor->osc0Frequency());
-        statusDict["osc1Frequency"] = float(_kaMonitor->osc1Frequency());
-        statusDict["osc2Frequency"] = float(_kaMonitor->osc2Frequency());
-        statusDict["osc3Frequency"] = float(_kaMonitor->osc3Frequency());
-        statusDict["procDrxTemp"] = _kaMonitor->procDrxTemp();
-        statusDict["procEnclosureTemp"] = _kaMonitor->procEnclosureTemp();
-        statusDict["psVoltage"] = _kaMonitor->psVoltage();
-        statusDict["rxBackTemp"] = _kaMonitor->rxBackTemp();
-        statusDict["rxFrontTemp"] = _kaMonitor->rxFrontTemp();
-        statusDict["rxTopTemp"] = _kaMonitor->rxTopTemp();
-        statusDict["testTargetPowerRaw"] = _kaMonitor->testTargetPowerRaw();
-        statusDict["txEnclosureTemp"] = _kaMonitor->txEnclosureTemp();
-        statusDict["vTxPowerRaw"] = _kaMonitor->vTxPowerRaw();
-
-        // Add the bitmap of reasons (if any) transmit is currently disallowed
-        statusDict["noXmitBitmap"] = _noXmitBitmap.rawBitmap();
-        retvalP = statusDict;
+    void
+    execute(const xmlrpc_c::paramList & paramList, xmlrpc_c::value* retvalP) {
+        DLOG << "Received 'enableTransmit' XML-RPC command";
+        // clear the XMLRPC_REQUEST bit
+        clearNoXmitBit(NoXmitBitmap::XMLRPC_REQUEST);
     }
 };
 
@@ -516,10 +657,13 @@ main(int argc, char** argv)
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
 
-    // parse the command line options
+    // Parse out our command line options
     parseOptions(argc, argv);
 
     ILOG << "kadrx - Git commit " << REPO_REVISION << "," << REPO_EXTERNALS;
+
+    // QApplication
+    _app = new QCoreApplication(argc, argv);
 
     // set up registration with procmap if instance is specified
     if (_instance.size() > 0) {
@@ -538,7 +682,7 @@ main(int argc, char** argv)
     // pressure is low until we confirm otherwise.
     _noXmitBitmap.setBit(NoXmitBitmap::N2_PRESSURE_LOW);
 
-    // Start with the NOXMIT_IN_BLANKING_SECTOR bit set if we're allowing for
+    // Start with the IN_BLANKING_SECTOR bit set if we're allowing for
     // blanking (we'll blank until we're explicitly told we're *not* in a
     // blanking sector), otherwise false (since no sectors will be blanked).
     _allowBlanking = kaConfig.allow_blanking();
@@ -560,13 +704,6 @@ main(int argc, char** argv)
 
     // create the merge object (which is also the IWRF TCP server)
     KaMerge merge(kaConfig, *_kaMonitor);
-
-    // Turn off transmitter trigger enable until we know we're generating
-    // timing signals (and hence that the T/R limiters are presumably
-    // operating).
-    PMU_auto_register("trigger enable");
-    KaPmc730::setTxEnable(false);
-    _transmitEnabled = false;
 
     // Figure out the lowest SD3C timer clock divisor which will support the
     // given PRT(s). Allowed divisor values are 2, 4, 8, or 16.
@@ -662,38 +799,46 @@ main(int argc, char** argv)
 
     // H channel (0)
     PMU_auto_register("set up threads");
-    KaDrxPub hThread(*_sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, &merge,
-        _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength);
+    _hThread = new KaDrxPub(*_sd3c, KaDrxPub::KA_H_CHANNEL, kaConfig, &merge,
+                            _tsLength, _gaussianFile, _kaiserFile, _simPauseMs,
+                            _simWavelength);
 
     // V channel (1)
-    KaDrxPub vThread(*_sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, &merge,
-        _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength);
+    _vThread = new KaDrxPub(*_sd3c, KaDrxPub::KA_V_CHANNEL, kaConfig, &merge,
+                            _tsLength, _gaussianFile, _kaiserFile, _simPauseMs,
+                            _simWavelength);
 
     // Burst channel (2)
-    KaDrxPub burstThread(*_sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig, &merge,
-        _tsLength, _gaussianFile, _kaiserFile, _simPauseMs, _simWavelength);
+    _burstThread = new KaDrxPub(*_sd3c, KaDrxPub::KA_BURST_CHANNEL, kaConfig,
+                                &merge, _tsLength, _gaussianFile, _kaiserFile,
+                                _simPauseMs, _simWavelength);
 
     // Create the upConverter.
     // Configure the DAC to use CMIX by fDAC/4 (coarse mixer mode = 9)
     PMU_auto_register("create upconverter");
-    p7142Up & upConverter = *_sd3c->addUpconverter(
-    		_sd3c->adcFrequency(),
-    		_sd3c->adcFrequency() / 4,
-			9);
+    _sd3c->addUpconverter(_sd3c->adcFrequency(), _sd3c->adcFrequency() / 4, 9);
 
     // Set up oscillator control/AFC
     PMU_auto_register("oscillator control");
-    KaOscControl::createTheControl(kaConfig, 
-            burstThread.downconverter()->dataInterruptPeriod());
-    
-    if (! kaConfig.afc_enabled()) {
+    KaOscControl::createTheControl(kaConfig,
+            _burstThread->downconverter()->dataInterruptPeriod());
+
+    _afcEnabled = kaConfig.afc_enabled();
+    if (! _afcEnabled) {
         WLOG << "AFC is disabled!";
     }
 
-    // catch a SIGINT (from control-C) or SIGTERM (the default from 'kill')
+    // Shut down on SIGINT (from control-C) or SIGTERM (the default from 'kill')
     signal(SIGINT, sigHandler);
     signal(SIGTERM, sigHandler);
+
+    // Disable transmit upon receipt of HUP signal. The associated disable
+    // bit will remain set until a USR1 signal is received.
     signal(SIGHUP, hupHandler);
+
+    // On receipt of USR1 signal, release transmit disable which was initiated
+    // by a HUP signal. Other possible reasons for transmit disable will still
+    // apply.
     signal(SIGUSR1, usr1Handler);
 
     // Start monitor and merge
@@ -703,9 +848,9 @@ main(int argc, char** argv)
 
     // Start the downconverter threads.
     PMU_auto_register("start threads");
-    hThread.start();
-    vThread.start();
-    burstThread.start();
+    _hThread->start();
+    _vThread->start();
+    _burstThread->start();
 
     // wait awhile, so that the threads can all get to the first read.
     struct timespec sleepTime = { 1, 0 }; // 1 second, 0 nanoseconds
@@ -726,7 +871,7 @@ main(int argc, char** argv)
     // Load the DAC memory bank 2, clear the DACM fifo, and enable the
     // DAC memory counters. This must take place before the timers are started.
     PMU_auto_register("start upconverter");
-    startUpConverter(upConverter, _sd3c->txPulseWidthCounts());
+    startUpconverter(_sd3c);
 
     // If we're going to start timers based on an external trigger (i.e., 1 PPS
     // from the GPS time server), make sure the time server is OK. Also make
@@ -739,119 +884,43 @@ main(int argc, char** argv)
     // Start the timers, which will allow data to flow.
     _sd3c->timersStartStop(true);
 
-    // Verify that timers have started, by seeing that we have TX sync pulses
-    // being generated, then raise the TX enable line.
-    verifyTimersAndEnableTx();
+    // Verify that we have TX sync pulses being generated, or exit now
+    exitIfNoSyncPulses();
 
-    // Initialize our RPC server on port 8081
-    XmlRpc::XmlRpcServer rpcServer;
-    rpcServer.addMethod(new GetStatusMethod());
-    rpcServer.addMethod(new RaiseXmitTtyResetMethod());
-    rpcServer.addMethod(new LowerXmitTtyResetMethod());
-    rpcServer.addMethod(new SetBlankingOnMethod());
-    rpcServer.addMethod(new SetBlankingOffMethod());
-    if (! rpcServer.bindAndListen(8081)) {
-        ELOG << "Exiting on XmlRpcServer error!";
-        exit(1);
-    }
-    rpcServer.enableIntrospection(true);
-    
+    // Start our XML-RPC server on port 8081
+    xmlrpc_c::registry myRegistry;
+    myRegistry.addMethod("getStatus", new GetStatusMethod);
+    myRegistry.addMethod("raiseXmitTtyReset", new RaiseXmitTtyResetMethod);
+    myRegistry.addMethod("lowerXmitTtyReset", new LowerXmitTtyResetMethod);
+    myRegistry.addMethod("disableTransmit", new DisableTransmitMethod);
+    myRegistry.addMethod("enableTransmit", new EnableTransmitMethod);
+    myRegistry.addMethod("setBlankingOn", new SetBlankingOnMethod);
+    myRegistry.addMethod("setBlankingOff", new SetBlankingOffMethod);
+    QXmlRpcServerAbyss rpcServer(&myRegistry, 8081);
 
-    double startTime = nowTime();
-    while (1) {
-	// Set or clear the N2_PRESSURE_LOW bit based on the current
-	// state of the N2 pressure switch
-	KaPmc730::wgPressureGood() ?
-            clearNoXmitBit(NoXmitBitmap::N2_PRESSURE_LOW) :
-            setNoXmitBit(NoXmitBitmap::N2_PRESSURE_LOW);
+    // Create a QFunctionWrapper and QTimer to periodically log our status
+    QFunctionWrapper qLogStatus(logStatus);
 
-        // Process XML-RPC commands for a brief bit
-        rpcServer.work(0.01);
-        
-        // If we got a ^C or similar termination request, bail out.
-        if (_terminate) {
-            break;
-        }
+    QTimer statusTimer(_app);
+    QObject::connect(&statusTimer, SIGNAL(timeout()),
+                     &qLogStatus, SLOT(callFunction()));
+    statusTimer.setInterval(1000 * STATUS_INTERVAL_SECS);
+    statusTimer.start();
 
-        if (_hup) {
-          ILOG << "HUP received...disabling transmit";
-          // Drop the TX Enable line
-          _transmitEnabled = false;
-          KaPmc730::setTxEnable(_transmitEnabled);
-          _hup = false;
-        }
+    // Create a QFunctionWrapper and timer to periodically test N2 waveguide
+    // pressure, and set or clear the associated NoXmitBitmap bit.
+    QFunctionWrapper qCheckN2Pressure(checkN2Pressure);
 
-        if (_usr1) {
-          if (_transmitEnabled) {
-              ILOG << "USR1 received but transmit is already enabled";
-          } else {
-              ILOG << "USR1 received, enabling transmit";
-              verifyTimersAndEnableTx();
-          }
-          _usr1 = false;
-        }
+    QTimer n2TestTimer(_app);
+    QObject::connect(&n2TestTimer, SIGNAL(timeout()),
+                     &qCheckN2Pressure, SLOT(callFunction()));
+    n2TestTimer.setInterval(1000);      // check every 1000 ms
+    n2TestTimer.start();
 
-        // How long since our last status print?
-        double currentTime = nowTime();
-        double elapsed = currentTime - startTime;
+    // Run the app until we're interrupted by SIGINT or SIGTERM
+    _app->exec();
 
-        // If it's been long enough, go on to the status print below, otherwise
-        // go back to the top of the loop.
-        if (elapsed > 10.0) {
-            startTime = currentTime;
-        } else {
-            continue;
-        }
-
-        ILOG << std::setprecision(3) << std::setw(5) << "H channel " <<
-                hThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
-                " MB/s, drop: " << hThread.downconverter()->droppedPulses() <<
-                ", sync errs: " << hThread.downconverter()->syncErrors();
-
-        ILOG << std::setprecision(3) << std::setw(5) << "V channel " <<
-                vThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
-                " MB/s, drop: " << vThread.downconverter()->droppedPulses() <<
-                " sync errs: " << vThread.downconverter()->syncErrors();
-
-        ILOG << std::setprecision(3) << std::setw(5) << "burst channel " <<
-                burstThread.downconverter()->bytesRead() * 1.0e-6 / elapsed <<
-                " MB/s, drop: " << burstThread.downconverter()->droppedPulses() <<
-                " sync errs: " << burstThread.downconverter()->syncErrors();
-    }
-
-    // Drop the Transmit Enable line
-    ILOG << "Setting transmit enable to false";
-    _transmitEnabled = false;
-    KaPmc730::setTxEnable(_transmitEnabled);
-
-    ILOG << "Sleeping 2 sec";
-    sleep(2);
-    ILOG << "Sleep done";
-
-    // Stop the various threads. These have no event loops, so they
-    // must be stopped using "terminate()"
-    _kaMonitor->terminate();
-    hThread.terminate();
-    vThread.terminate();
-    burstThread.terminate();
-
-    // Wait for threads' termination (up to 1 second for each)
-    _kaMonitor->wait(100);
-    hThread.wait(1000);
-    vThread.wait(1000);
-    burstThread.wait(1000);
-
-    // stop the DAC
-    upConverter.stopDAC();
-
-    // Delete the KaMonitor
-    delete(_kaMonitor);
-
-    // stop the timers
-    ILOG << "Stopping the timers";
-    _sd3c->timersStartStop(false);
-    ILOG << "Stopping the timers - done";
-
-    ILOG << "terminated on command";
+    shutDownAndClean();
+    return(0);
 }
 
