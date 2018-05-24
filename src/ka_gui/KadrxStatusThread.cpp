@@ -22,40 +22,40 @@
 // ** WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.
 // *=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*=*
 
-// XmitdStatusThread.cpp
+// KadrxStatusThread.cpp
 //
 //  Created on: May 10, 2018
 //      Author: Chris Burghart <burghart@ucar.edu>
 
-#include "XmitdStatusThread.h"
+#include "KadrxStatusThread.h"
 #include <logx/Logging.h>
 #include <QtCore/QMetaType>
 #include <QtCore/QTimer>
 
-LOGGING("XmitdStatusThread")
+LOGGING("KadrxStatusThread")
 
-XmitdStatusThread::XmitdStatusThread(std::string xmitdHost, int xmitdPort) :
+KadrxStatusThread::KadrxStatusThread(QString kadrxHost, int kadrxPort) :
     _responsive(false),
-    _xmitdHost(xmitdHost),
-    _xmitdPort(xmitdPort),
+    _kadrxHost(kadrxHost),
+    _kadrxPort(kadrxPort),
     _client(0) {
-    // We need to register XmitdStatus as a metatype, since we'll be passing it
+    // We need to register KadrxStatus as a metatype, since we'll be passing it
     // as an argument in a signal.
-    qRegisterMetaType<XmitdStatus>("XmitdStatus");
+    qRegisterMetaType<KadrxStatus>("KadrxStatus");
     // Set thread affinity to self, so that signals connected to our slot(s)
     // will execute the slots in this thread, and not our parent's.
     moveToThread(this);
 }
 
-XmitdStatusThread::~XmitdStatusThread() {
-    DLOG << "In ~XmitdStatusThread()";
+KadrxStatusThread::~KadrxStatusThread() {
+    DLOG << "In ~KadrxStatusThread()";
     quit();
     wait();
 }
 
 void
-XmitdStatusThread::run() {
-    _client = new XmitClient(_xmitdHost, _xmitdPort);
+KadrxStatusThread::run() {
+    _client = new KadrxRpcClient(_kadrxHost.toStdString(), _kadrxPort);
 
     // Set up a 1 second timer to call _getStatus()
     QTimer timer;
@@ -67,8 +67,8 @@ XmitdStatusThread::run() {
 }
 
 void
-XmitdStatusThread::_getStatus() {
-    XmitdStatus status;
+KadrxStatusThread::_getStatus() {
+    KadrxStatus status;
     if (_client->getStatus(status)) {
         if (! _responsive) {
             _responsive = true;

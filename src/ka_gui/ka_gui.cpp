@@ -6,6 +6,7 @@
  */
  
 #include <QApplication>
+#include "KadrxStatusThread.h"
 #include "KaGuiMainWindow.h"
 
 #include <logx/Logging.h>
@@ -20,12 +21,22 @@ main(int argc, char *argv[]) {
 
     QApplication* app = new QApplication(argc, argv);
 
-    if (argc != 3) {
-        ELOG << "Usage: " << argv[0] << " <xmitd_host> <xmitd_port>";
+    if (argc != 4) {
+        ELOG << "Usage: " << argv[0] << " <host> <xmitd_port> <kadrx_port>";
         exit(1);
     }
 
-    QMainWindow* mainWindow = new KaGuiMainWindow(argv[1], atoi(argv[2]));
+    // Create and start the XmitdStatusThread
+    XmitdStatusThread xmitdStatusThread(argv[1], atoi(argv[2]));
+    xmitdStatusThread.start();
+
+    // Create and start the KadrxStatusThread
+    KadrxStatusThread kadrxStatusThread(argv[1], atoi(argv[3]));
+    kadrxStatusThread.start();
+    
+    // Create our main window
+    QMainWindow* mainWindow =
+            new KaGuiMainWindow(xmitdStatusThread, kadrxStatusThread);
     mainWindow->show();
 
     return(app->exec());

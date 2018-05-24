@@ -15,21 +15,27 @@
 LOGGING("KaGuiMainWindow")
 
 
-KaGuiMainWindow::KaGuiMainWindow(std::string xmitterHost, int xmitterPort) :
+KaGuiMainWindow::KaGuiMainWindow(const XmitdStatusThread & xmitdStatusThread,
+                                 const KadrxStatusThread & kadrxStatusThread) :
     QMainWindow(),
     _ui(),
     _xmitterFaultDetails(this),
-    _xmitdStatusThread(xmitterHost, xmitterPort),
+    _xmitdStatusThread(xmitdStatusThread),
+    _xmitdStatus(),
     _xmitdResponsive(false),
+    _kadrxMonitorDetails(this),
+    _kadrxStatusThread(kadrxStatusThread),
+    _kadrxStatus(),
+    _kadrxResponsive(false),
     _redLED(":/redLED.png"),
     _redLED_off(":/redLED_off.png"),
     _greenLED(":/greenLED.png"),
-    _greenLED_off(":/greenLED_off.png"),
-    _noXmitd(true) {
-    // Set up the UI
+    _greenLED_off(":/greenLED_off.png")
+{
+    // Initialize the UI object
     _ui.setupUi(this);
 
-    // Handle signals from our XmitdStatusThread
+    // Connect signals from our XmitdStatusThread and start the thread
     connect(&_xmitdStatusThread, SIGNAL(newStatus(XmitdStatus)),
             this, SLOT(_updateXmitdStatus(XmitdStatus)));
     connect(&_xmitdStatusThread, SIGNAL(serverResponsive(bool)),
@@ -38,11 +44,22 @@ KaGuiMainWindow::KaGuiMainWindow(std::string xmitterHost, int xmitterPort) :
     connect(&_xmitterFaultDetails, SIGNAL(faultResetClicked()),
             this, SLOT(resetXmitterFault()));
 
-    // Start XmitdStatusThread
-    _xmitdStatusThread.start();
+    // Connect signals from the KadrxStatusThread
+    QObject::connect(&kadrxStatusThread, SIGNAL(newStatus(KadrxStatus)),
+                     this, SLOT(_updateKadrxStatus(KadrxStatus)));
+    QObject::connect(&kadrxStatusThread, SIGNAL(serverResponsive(bool)),
+                     this, SLOT(_setKadrxResponsiveness(bool)));
+
+    // Populate the GUI
+    _updateGui();
 }
 
 KaGuiMainWindow::~KaGuiMainWindow() {
+}
+
+void
+KaGuiMainWindow::on_kadrxMoreButton_clicked() {
+    _kadrxMonitorDetails.show();
 }
 
 void
@@ -78,22 +95,41 @@ QString
 KaGuiMainWindow::_ColorText(QString text, QString colorName) {
     return(QString("<font color='" + colorName + "'>" + text + "</font>"));
 }
+
 void
 KaGuiMainWindow::_updateGui() {
+    _updateXmitdBox();
+    _updateKadrxBox();
+}
+
+void
+KaGuiMainWindow::_updateXmitdBox() {
+    // Empty the display and disable controls if ka_xmitd is not alive or if
+    // ka_xmitd has no connection to the transmitter.
     if (! _xmitdResponsive) {
-        _noXmitDaemon();
+        // Log lack of xmitd connection in the status label
+        std::ostringstream os;
+        os << "No ka_xmitd @ " <<
+              _xmitdRpcClient().getXmitdHost() << ":" <<
+              _xmitdRpcClient().getXmitdPort();
+        _ui.xmitterStatusLabel->setText(_ColorText(os.str().c_str(), "darkred"));
+        _disableXmitterUi();
+        return;
+    } else if (! _xmitdStatus.serialConnected()) {
+        std::ostringstream os;
+        os << "No serial connection from ka_xmitd to xmitter!";
+        _ui.xmitterStatusLabel->setText(_ColorText(os.str().c_str(), "darkred"));
+        _disableXmitterUi();  
         return;
     }
 
-    // If we had been out of contact with ka_xmitd, log the new contact
-    if (! _xmitdStatus.serialConnected()) {
-        _noXmitterSerial();
-        return;
-    }
-    
-    _enableXmitterUi();
+    // If we get here, we have real status from ka_xmitd
+    _ui.xmitterStatusLabel->setText("ka_xmitd is alive");
+    _ui.xmitterControlAndStateFrame->setEnabled(_xmitdResponsive);
+    _ui.xmitterValuesFrame->setEnabled(_xmitdResponsive);
+    _xmitterFaultDetails.setEnabled(_xmitdResponsive);
 
-    // boolean status values
+    // update boolean status values
     _ui.xmitterHvpsRunupIcon->
         setPixmap(_xmitdStatus.hvpsRunup() ? _greenLED : _greenLED_off);
     _ui.xmitterStandbyIcon->
@@ -158,29 +194,48 @@ KaGuiMainWindow::_updateGui() {
 }
 
 void
-KaGuiMainWindow::_noXmitDaemon() {
-    // Log lack of xmitd connection in the status label
-    std::ostringstream os;
-    os << "No ka_xmitd @ " <<
-          _xmitdRpcClient().getXmitdHost() << ":" << _xmitdRpcClient().getXmitdPort();
-    _ui.xmitterStatusLabel->setText(_ColorText(os.str().c_str(), "darkred"));
+KaGuiMainWindow::_updateKadrxBox() {
+    // Enable/disable the main blocks based on kadrx responsiveness
+    _ui.kadrxXmitDisableBox->setEnabled(_kadrxResponsive);
+    _ui.kadrxMonitorBox->setEnabled(_kadrxResponsive);
+    _kadrxMonitorDetails.setEnabled(_kadrxResponsive);
 
-    // If we were previously in contact with ka_xmitd, log that we lost contact
-    if (_noXmitd == false) {
-        ELOG << os.str();
+    // Empty the display and disable controls if kadrx is not responsive
+    if (! _kadrxResponsive) {
+        // Log lack of kadrx connection in the status label
+        std::ostringstream os;
+        os << "No kadrx @ " << _kadrxStatusThread.kadrxHost().toStdString() <<
+              ":" << _kadrxStatusThread.kadrxPort();
+        _ui.kadrxStatusLabel->setText(_ColorText(os.str().c_str(), "darkred"));
+        return;
     }
 
-    // Disable the transmitter part of the UI when we are out of contact
-    _noXmitd = true;
-    _disableXmitterUi();
-}
+    // If we get here, we have real status from kadrx
+    _ui.kadrxStatusLabel->setText("kadrx is alive");
+    
+    // transmit disable status
+    NoXmitBitmap noXmitBits = _kadrxStatus.noXmitBitmap();
+    _ui.disabledByN2PresIcon->
+        setPixmap(noXmitBits.bitIsSet(NoXmitBitmap::N2_PRESSURE_LOW) ?
+                  _redLED : _redLED_off);
+    _ui.disabledForBlankingIcon->
+        setPixmap(noXmitBits.bitIsSet(NoXmitBitmap::IN_BLANKING_SECTOR) ?
+                  _redLED : _redLED_off);
+    _ui.disabledViaXmlrpcIcon->
+        setPixmap(noXmitBits.bitIsSet(NoXmitBitmap::XMLRPC_REQUEST) ?
+                  _redLED : _redLED_off);
+    _ui.disabledByHupIcon->
+        setPixmap(noXmitBits.bitIsSet(NoXmitBitmap::HUP_SIGNAL_RECEIVED) ?
+                  _redLED : _redLED_off);
 
-void
-KaGuiMainWindow::_noXmitterSerial() {
-    std::ostringstream os;
-    os << "No serial connection from ka_xmitd to xmitter!";
-    _ui.xmitterStatusLabel->setText(_ColorText(os.str().c_str(), "darkred"));
-    _disableXmitterUi();
+    // boolean monitor values
+    _ui.unlockedTimeserverIcon->
+        setPixmap(_kadrxStatus.gpsTimeServerGood() ? _redLED_off : _redLED);
+    _ui.unlocked100MHzIcon->
+        setPixmap(_kadrxStatus.locked100MHz() ? _redLED_off : _redLED);
+
+    // other details
+    _kadrxMonitorDetails.update(_kadrxStatus);
 }
 
 void
@@ -207,18 +262,33 @@ KaGuiMainWindow::_disableXmitterUi() {
 }
 
 void
-KaGuiMainWindow::_enableXmitterUi() {
-    std::ostringstream os;
-    _ui.xmitterStatusLabel->setText("ka_xmitd is alive");
-    _ui.xmitterControlAndStateFrame->setEnabled(true);
-    _ui.xmitterValuesFrame->setEnabled(true);
-    _xmitterFaultDetails.setEnabled(true);
+KaGuiMainWindow::_updateKadrxStatus(KadrxStatus kadrxStatus) {
+    _setKadrxResponsiveness(true);
+    _kadrxStatus = kadrxStatus;
+    _updateGui();
 }
 
 void
 KaGuiMainWindow::_updateXmitdStatus(XmitdStatus xmitdStatus) {
     _setXmitdResponsiveness(true);
     _xmitdStatus = xmitdStatus;
+    _updateGui();
+}
+
+void
+KaGuiMainWindow::_setKadrxResponsiveness(bool responsive) {
+    // If no change, just return
+    if (responsive == _kadrxResponsive) {
+        return;
+    }
+
+    if (responsive) {
+        ILOG << "kadrx is now responding";
+    } else {
+        _kadrxStatus = KadrxStatus();
+        WLOG << "kadrx is no longer responding";
+    }
+    _kadrxResponsive = responsive;
     _updateGui();
 }
 
