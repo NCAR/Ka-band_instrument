@@ -6,54 +6,102 @@
  */
 #include "KadrxStatus.h"
 #include <sstream>
+#include <Archive_xmlrpc_c.h>
 #include <logx/Logging.h>
 
 LOGGING("KadrxStatus")
 
-/// Template function which returns the value of dict[key] as the templated type
-/// and removes the key from dict.
-template<typename T>
-T extractFromDict(XmlRpc::XmlRpcValue::ValueStruct & dict, std::string key) {
-    if (dict.count(key) == 0) {
-        std::ostringstream os;
-        os << "Key '" << key << "' missing in kadrx status dictionary";
-        throw(std::runtime_error(os.str()));
-    }
-    T value = dict[key];
-    // Clear the extracted value from the dictionary
-    dict.erase(key);
-    return(value);
+KadrxStatus::KadrxStatus() {
+    _zeroAllMembers();
 }
 
-KadrxStatus::KadrxStatus(XmlRpc::XmlRpcValue::ValueStruct status) :
-    _gpsTimeServerGood(extractFromDict<bool>(status, "gpsTimeServerGood")),
-    _locked100MHz(extractFromDict<bool>(status, "locked100MHz")),
-    _n2PressureGood(extractFromDict<bool>(status, "n2PressureGood")),
-    _osc0Frequency(extractFromDict<double>(status, "osc0Frequency")),
-    _osc1Frequency(extractFromDict<double>(status, "osc1Frequency")),
-    _osc2Frequency(extractFromDict<double>(status, "osc2Frequency")),
-    _osc3Frequency(extractFromDict<double>(status, "osc3Frequency")),
-    _derivedTxFrequency(extractFromDict<double>(status, "derivedTxFrequency")),
-    _hTxPower(extractFromDict<double>(status, "hTxPower")),
-    _vTxPower(extractFromDict<double>(status, "vTxPower")),
-    _testTargetPowerRaw(extractFromDict<double>(status, "testTargetPowerRaw")),
-    _procDrxTemp(extractFromDict<double>(status, "procDrxTemp")),
-    _procEnclosureTemp(extractFromDict<double>(status, "procEnclosureTemp")),
-    _rxBackTemp(extractFromDict<double>(status, "rxBackTemp")),
-    _rxFrontTemp(extractFromDict<double>(status, "rxFrontTemp")),
-    _rxTopTemp(extractFromDict<double>(status, "rxTopTemp")),
-    _txEnclosureTemp(extractFromDict<double>(status, "txEnclosureTemp")),
-    _psVoltage(extractFromDict<double>(status, "psVoltage")),
-    _noXmitBitmap(extractFromDict<int>(status, "noXmitBitmap"))
+KadrxStatus::KadrxStatus(const NoXmitBitmap & noXmitBitmap,
+                         bool afcEnabled,
+                         bool gpsTimeServerGood,
+                         bool locked100MHz,
+                         bool n2PressureGood,
+                         double osc0Frequency,
+                         double osc1Frequency,
+                         double osc2Frequency,
+                         double osc3Frequency,
+                         double derivedTxFrequency,
+                         double hTxPower,
+                         double vTxPower,
+                         double testPulsePower,
+                         double procDrxTemp,
+                         double procEnclosureTemp,
+                         double rxBackTemp,
+                         double rxFrontTemp,
+                         double rxTopTemp,
+                         double txEnclosureTemp,
+                         double psVoltage) :
+    _afcEnabled(afcEnabled),
+    _gpsTimeServerGood(gpsTimeServerGood),
+    _locked100MHz(locked100MHz),
+    _n2PressureGood(n2PressureGood),
+    _osc0Frequency(osc0Frequency),
+    _osc1Frequency(osc1Frequency),
+    _osc2Frequency(osc2Frequency),
+    _osc3Frequency(osc3Frequency),
+    _derivedTxFrequency(derivedTxFrequency),
+    _hTxPower(hTxPower),
+    _vTxPower(vTxPower),
+    _testPulsePower(testPulsePower),
+    _procDrxTemp(procDrxTemp),
+    _procEnclosureTemp(procEnclosureTemp),
+    _rxBackTemp(rxBackTemp),
+    _rxFrontTemp(rxFrontTemp),
+    _rxTopTemp(rxTopTemp),
+    _txEnclosureTemp(txEnclosureTemp),
+    _psVoltage(psVoltage),
+    _noXmitBitmap(noXmitBitmap)
 {
-    // We should have emptied the status dictionary during construction. If
-    // not, warn about keys which we did not use.
-    XmlRpc::XmlRpcValue::ValueStruct::const_iterator it;
-    for (it = status.begin(); it != status.end(); it++) {
-        WLOG << "Unexpected key '" << it->first <<
-                "' in kadrx status dictionary.";
-    }
+}
+
+KadrxStatus::KadrxStatus(const xmlrpc_c::value_struct & status) {
+    _zeroAllMembers();
+    // Create an input archiver wrapper around the xmlrpc_c::value_struct
+    // dictionary, and use serialize() to populate our members from its content.
+    Iarchive_xmlrpc_c iar(status);
+    iar >> *this;
 }
 
 KadrxStatus::~KadrxStatus() {
+}
+
+void
+KadrxStatus::_zeroAllMembers() {
+    _afcEnabled = false;
+    _gpsTimeServerGood = false;
+    _locked100MHz = false;
+    _n2PressureGood = false;
+    _osc0Frequency = 0.0;
+    _osc1Frequency = 0.0;
+    _osc2Frequency = 0.0;
+    _osc3Frequency = 0.0;
+    _derivedTxFrequency = 0.0;
+    _hTxPower = 0.0;
+    _vTxPower = 0.0;
+    _testPulsePower = 0.0;
+    _procDrxTemp = 0.0;
+    _procEnclosureTemp = 0.0;
+    _rxBackTemp = 0.0;
+    _rxFrontTemp = 0.0;
+    _rxTopTemp = 0.0;
+    _txEnclosureTemp = 0.0;
+    _psVoltage = 0.0;
+    _noXmitBitmap = 0;
+}
+
+xmlrpc_c::value_struct
+KadrxStatus::toXmlRpcValue() const {
+    std::map<std::string, xmlrpc_c::value> statusDict;
+    // Clone ourself to a non-const instance
+    KadrxStatus clone(*this);
+    // Stuff our content into the statusDict, i.e., _serialize() to an
+    // output archiver wrapped around the statusDict.
+    Oarchive_xmlrpc_c oar(statusDict);
+    oar << clone;
+    // Finally, return the statusDict
+    return(xmlrpc_c::value_struct(statusDict));
 }
