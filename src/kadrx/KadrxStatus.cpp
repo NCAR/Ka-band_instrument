@@ -90,7 +90,7 @@ KadrxStatus::_zeroAllMembers() {
     _rxTopTemp = 0.0;
     _txEnclosureTemp = 0.0;
     _psVoltage = 0.0;
-    _noXmitBitmap = 0;
+    _noXmitBitmap = NoXmitBitmap();
 }
 
 xmlrpc_c::value_struct

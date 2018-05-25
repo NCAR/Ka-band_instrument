@@ -12,6 +12,8 @@
 #include <exception>
 #include <string>
 #include <sstream>
+#include <boost/serialization/nvp.hpp>
+#include <boost/serialization/version.hpp>
 
 /// Class which encapsulates a bitmap of reasons that kadrx may disable
 /// transmit.
@@ -94,8 +96,12 @@ public:
     /// NoXmitBitmap(int bitmap) constructor.
     int rawBitmap() const { return(_noXmitBitmap); }
 
-    bool operator!=(const NoXmitBitmap& other) const {
+    bool operator==(const NoXmitBitmap& other) const {
         return(_noXmitBitmap == other._noXmitBitmap);
+    }
+
+    bool operator!=(const NoXmitBitmap& other) const {
+        return(_noXmitBitmap != other._noXmitBitmap);
     }
 
     /// @brief Operator to allow for incrementing BITNUM
@@ -108,12 +114,25 @@ public:
     }
 
 private:
-    /// @brief KadrxStatus is a friend so that it can use the private
-    /// constructor and int() cast.
-    friend class KadrxStatus;
+    friend class boost::serialization::access;
 
-    /// @brief Cast to integer
-    operator int() const { return(_noXmitBitmap); }
+    /// @brief Serialize our members to a boost save (output) archive or
+    /// populate our members from a boost load (input) archive.
+    /// @param ar the archive to load from or save to.
+    /// @param version the NoXmitBitmap version number
+    template<class Archive>
+    void serialize(Archive & ar, const unsigned int version) {
+        using boost::serialization::make_nvp;
+        // Version 0 (see BOOST_CLASS_VERSION macro below for latest version)
+        if (version >= 0) {
+            // Map named entries to our member variables using serialization's
+            // name/value pairs (nvp).
+            ar & BOOST_SERIALIZATION_NVP(_noXmitBitmap);
+        }
+        if (version >= 1) {
+            // Version 1 stuff will go here...
+        }
+    }
 
     /// @brief Construct from a raw bitmap value
     /// @param rawBitmap a raw bitmap value, as returned by the rawBitmap()
@@ -138,5 +157,8 @@ private:
     /// Bitmap with bits marking reasons transmit is disabled.
     uint16_t _noXmitBitmap;
 };
+
+// Increment this class version number when member variables are changed.
+BOOST_CLASS_VERSION(NoXmitBitmap, 0)
 
 #endif /* SRC_KADRX_NOXMITBITMAP_H_ */

@@ -228,7 +228,7 @@ private:
             ar & BOOST_SERIALIZATION_NVP(_rxTopTemp);
             ar & BOOST_SERIALIZATION_NVP(_txEnclosureTemp);
             ar & BOOST_SERIALIZATION_NVP(_psVoltage);
-            ar & BOOST_SERIALIZATION_NVP(_noXmitBitmap); // NoXmitBitmap <--> int
+            ar & BOOST_SERIALIZATION_NVP(_noXmitBitmap);
         }
         if (version >= 1) {
             // Version 1 stuff will go here...
