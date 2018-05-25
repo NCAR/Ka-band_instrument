@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>219</width>
-    <height>513</height>
+    <width>197</width>
+    <height>430</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -564,7 +564,7 @@
  </widget>
  <resources>
   <include location="KaGuiMainWindow.qrc"/>
-  <include location="../../../../../../h/eol/burghart/git/Ka-band_instrument/src/ka_gui/KaGuiMainWindow.qrc"/>
+  <include location="KaGuiMainWindow.qrc"/>
  </resources>
  <connections>
   <connection>
