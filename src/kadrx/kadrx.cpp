@@ -71,7 +71,7 @@ void sigHandler(int sig) {
 /////////////////////////////////////////////////////////////////////
 /// @brief Note receipt of a HUP signal
 void hupHandler(int sig) {
-  ILOG << "HUP received...response  may take a few seconds";
+  ILOG << "HUP received, setting _hup flag";
   _hup = true;
   // If we received a USR1 which has not been handled, this later signal
   // overrides it
@@ -84,7 +84,7 @@ void hupHandler(int sig) {
 /////////////////////////////////////////////////////////////////////
 /// @brief Note receipt of a USR1 signal
 void usr1Handler(int sig) {
-  ILOG << "USR1 received...response  may take a few seconds";
+  ILOG << "USR1 received, setting _usr1 flag";
   _usr1 = true;
   // If we received a HUP which has not been handled, this later signal
   // overrides it
@@ -316,7 +316,7 @@ exitIfNoSyncPulses() {
 /// This function should be called frequently for timely response to the
 /// received signals. It performs heavy lifting that should not be done in
 /// the signal handlers.
-void doHupAndUsr1Work() {
+void actOnFlags() {
     if (! _hup && ! _usr1) {
         return;
     }
@@ -333,16 +333,16 @@ void doHupAndUsr1Work() {
     // bit. If _usr1 is true, clear the HUP_SIGNAL_RECEIVED bit to allow
     // transmit if no other NoXmitBitmap bits are set.
     if (_hup) {
-      ILOG << "HUP received...disabling transmit";
+      ILOG << "_hup flag is set...disabling transmit";
       // Set the HUP_SIGNAL_RECEIVED bit in the NoXmitBitmap
       setNoXmitBit(NoXmitBitmap::HUP_SIGNAL_RECEIVED);
       _hup = false;
     } else if (_usr1) {
       if (! _noXmitBitmap.bitIsSet(NoXmitBitmap::HUP_SIGNAL_RECEIVED)) {
-          WLOG << "USR1 ignored because transmit is not currently disabled " <<
-                  "by HUP signal";
+          WLOG << "_usr1 flag ignored because transmit is not currently " <<
+                  "disabled by HUP signal";
       } else {
-          ILOG << "USR1 received, canceling HUP transmit disable";
+          ILOG << "_usr1 flag is set...canceling HUP transmit disable";
           clearNoXmitBit(NoXmitBitmap::HUP_SIGNAL_RECEIVED);
           exitIfNoSyncPulses();
       }
@@ -687,9 +687,9 @@ main(int argc, char** argv)
     // blanking sector), otherwise false (since no sectors will be blanked).
     _allowBlanking = kaConfig.allow_blanking();
     if (_allowBlanking) {
-        setNoXmitBit(NoXmitBitmap::IN_BLANKING_SECTOR);
+        _noXmitBitmap.setBit(NoXmitBitmap::IN_BLANKING_SECTOR);
     } else {
-        clearNoXmitBit(NoXmitBitmap::IN_BLANKING_SECTOR);
+        _noXmitBitmap.clearBit(NoXmitBitmap::IN_BLANKING_SECTOR);
     }
 
     // Make sure our KaPmc730 is created in simulation mode if requested
@@ -916,6 +916,16 @@ main(int argc, char** argv)
                      &qCheckN2Pressure, SLOT(callFunction()));
     n2TestTimer.setInterval(1000);      // check every 1000 ms
     n2TestTimer.start();
+
+    // Create a QFunctionWrapper and timer to act on flags that are set
+    // on receipt of HUP and USR1 signals.
+    QFunctionWrapper qActOnFlags(actOnFlags);
+
+    QTimer flagCheckTimer(_app);
+    QObject::connect(&flagCheckTimer, SIGNAL(timeout()),
+                     &qActOnFlags, SLOT(callFunction()));
+    flagCheckTimer.setInterval(250);	// check every 250 ms
+    flagCheckTimer.start();
 
     // Run the app until we're interrupted by SIGINT or SIGTERM
     _app->exec();
