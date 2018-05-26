@@ -210,6 +210,7 @@ private:
         if (version >= 0) {
             // Map named entries to our member variables using serialization's
             // name/value pairs (nvp).
+            ar & BOOST_SERIALIZATION_NVP(_afcEnabled);
             ar & BOOST_SERIALIZATION_NVP(_gpsTimeServerGood);
             ar & BOOST_SERIALIZATION_NVP(_locked100MHz);
             ar & BOOST_SERIALIZATION_NVP(_n2PressureGood);
