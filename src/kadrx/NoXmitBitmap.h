@@ -107,10 +107,13 @@ public:
     /// @brief Operator to allow for incrementing BITNUM
     friend BITNUM operator++(BITNUM & bitnum, int dummy) {
         int newval = bitnum + 1;
-        if (newval >= NBITS) {
+        // Allow incrementing up to NBITS, so that NBITS can be used as
+        // a test for terminating a loop. Anything bigger is out of range.
+        if (newval > NBITS) {
             throw(std::range_error("Attempt to increment BITNUM outside legal range"));
         }
-        return(static_cast<BITNUM>(newval));
+        bitnum = static_cast<BITNUM>(newval);
+        return(bitnum);
     }
 
 private:
