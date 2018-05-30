@@ -660,7 +660,11 @@ main(int argc, char** argv)
     // Parse out our command line options
     parseOptions(argc, argv);
 
-    ILOG << "kadrx - Git commit " << REPO_REVISION << "," << REPO_EXTERNALS;
+    // Log start time
+    boost::posix_time::ptime now(boost::posix_time::second_clock::universal_time());
+    ILOG << "kadrx start at: " << now;
+
+    ILOG << "Git commit " << REPO_REVISION << "," << REPO_EXTERNALS;
 
     // QApplication
     _app = new QCoreApplication(argc, argv);
@@ -678,8 +682,8 @@ main(int argc, char** argv)
         exit(1);
     }
 
-    // Start out assuming we have no limiter triggers and that N2 waveguide
-    // pressure is low until we confirm otherwise.
+    // Start out assuming that N2 waveguide pressure is low until we confirm
+    //otherwise.
     _noXmitBitmap.setBit(NoXmitBitmap::N2_PRESSURE_LOW);
 
     // Start with the IN_BLANKING_SECTOR bit set if we're allowing for
