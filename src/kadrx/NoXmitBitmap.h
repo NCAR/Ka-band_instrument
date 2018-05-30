@@ -114,25 +114,9 @@ public:
     }
 
 private:
-    friend class boost::serialization::access;
-
-    /// @brief Serialize our members to a boost save (output) archive or
-    /// populate our members from a boost load (input) archive.
-    /// @param ar the archive to load from or save to.
-    /// @param version the NoXmitBitmap version number
-    template<class Archive>
-    void serialize(Archive & ar, const unsigned int version) {
-        using boost::serialization::make_nvp;
-        // Version 0 (see BOOST_CLASS_VERSION macro below for latest version)
-        if (version >= 0) {
-            // Map named entries to our member variables using serialization's
-            // name/value pairs (nvp).
-            ar & BOOST_SERIALIZATION_NVP(_noXmitBitmap);
-        }
-        if (version >= 1) {
-            // Version 1 stuff will go here...
-        }
-    }
+    // KadrxStatus is a friend, allowed to use the NoXmitBitmap(int)
+    // constructor below
+    friend class KadrxStatus;
 
     /// @brief Construct from a raw bitmap value
     /// @param rawBitmap a raw bitmap value, as returned by the rawBitmap()
