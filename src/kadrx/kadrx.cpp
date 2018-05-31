@@ -3,6 +3,7 @@
 #include <cmath>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/program_options.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 #include <logx/Logging.h>
 #include <toolsa/pmu.h>
 #include <QFunctionWrapper.h>
@@ -29,6 +30,10 @@ LOGGING("kadrx")
 
 using namespace Pentek;
 namespace po = boost::program_options;
+
+/// @brief Mutex to use for thread-safe access to all of the kadrx static
+/// variables
+boost::recursive_try_mutex _kadrxVarMutex;
 
 QCoreApplication * _app = NULL; ///< Our QApplication instance
 std::string _drxConfig;         ///< DRX configuration file
@@ -71,27 +76,27 @@ void sigHandler(int sig) {
 /////////////////////////////////////////////////////////////////////
 /// @brief Note receipt of a HUP signal
 void hupHandler(int sig) {
-  ILOG << "HUP received, setting _hup flag";
-  _hup = true;
-  // If we received a USR1 which has not been handled, this later signal
-  // overrides it
-  if (_usr1) {
-      WLOG << "HUP is overriding previously received USR1";
-      _usr1 = false;
-  }
+    ILOG << "HUP received, setting _hup flag";
+    _hup = true;
+    // If we received a USR1 which has not been handled, this later signal
+    // overrides it
+    if (_usr1) {
+        WLOG << "This HUP overrides previously received (but unhandled) USR1";
+        _usr1 = false;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////
 /// @brief Note receipt of a USR1 signal
 void usr1Handler(int sig) {
-  ILOG << "USR1 received, setting _usr1 flag";
-  _usr1 = true;
-  // If we received a HUP which has not been handled, this later signal
-  // overrides it
-  if (_hup) {
-      WLOG << "USR1 is overriding previously received HUP";
-      _hup = false;
-  }
+    ILOG << "USR1 received, setting _usr1 flag";
+    _usr1 = true;
+    // If we received a HUP which has not been handled, this later signal
+    // overrides it
+    if (_hup) {
+        WLOG << "This USR1 overrides previously received (but unhandled) HUP";
+        _hup = false;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -103,7 +108,6 @@ void usr1Handler(int sig) {
 void parseOptions(int argc,
         char** argv)
 {
-
     // get the options
     po::options_description descripts("Options");
     descripts.add_options()
@@ -142,27 +146,6 @@ void parseOptions(int argc,
 }
 
 ///////////////////////////////////////////////////////////
-/// If the user has root privileges, make the process real-time.
-void
-makeRealTime()
-{
-    uid_t id = getuid();
-
-    // don't even try if we are not root.
-    if (id != 0) {
-        WLOG << "Not root, unable to change scheduling priority";
-        return;
-    }
-
-    sched_param sparam;
-    sparam.sched_priority = 50;
-
-    if (sched_setscheduler(0, SCHED_RR, &sparam)) {
-        ELOG << "warning, unable to set scheduler parameters: " << strerror(errno);
-    }
-}
-
-///////////////////////////////////////////////////////////
 void
 startUpconverter(p7142sd3c * sd3c) {
 
@@ -184,13 +167,18 @@ startUpconverter(p7142sd3c * sd3c) {
 }
 
 ///////////////////////////////////////////////////////////
+/// @brief Update the state of the "transmit enable" line based on
+/// the current value of _noXmitBitmap
 void
 updateTxEnableLineState() {
+    boost::recursive_try_mutex::scoped_lock varLock(_kadrxVarMutex);
+
     static NoXmitBitmap prevNoXmitBitmap;
+    static bool prevBitmapValid = false;
 
     // If _noXmitBitmap changed from the last time this was called, log
     // whether transmit is allowed, and the reasons why if disallowed.
-    if (_noXmitBitmap != prevNoXmitBitmap) {
+    if (! prevBitmapValid || (_noXmitBitmap != prevNoXmitBitmap)) {
         if (_noXmitBitmap.allBitsClear()) {
             ILOG << "Transmit is now allowed";
         } else {
@@ -203,11 +191,13 @@ updateTxEnableLineState() {
                 }
             }
         }
+        prevNoXmitBitmap = _noXmitBitmap;
+        prevBitmapValid = true;
     }
-    prevNoXmitBitmap = _noXmitBitmap;
 
     // Enable transmit if no bits are set in _noXmitBitmap
     bool enableTx = _noXmitBitmap.allBitsClear();
+
     KaPmc730::setTxEnable(enableTx);
 }
 
@@ -216,6 +206,8 @@ updateTxEnableLineState() {
 // to set the state of the Tx Enable line based on the new bitmap.
 void
 setNoXmitBit(NoXmitBitmap::BITNUM bitnum) {
+    boost::recursive_try_mutex::scoped_lock varLock(_kadrxVarMutex);
+
     // Set the selected bit in _noXmitBitmap, then set the state
     // of the Tx Enable line
     _noXmitBitmap.setBit(bitnum);
@@ -227,6 +219,8 @@ setNoXmitBit(NoXmitBitmap::BITNUM bitnum) {
 // to set the state of the Tx Enable line based on the new bitmap.
 void
 clearNoXmitBit(NoXmitBitmap::BITNUM bitnum) {
+    boost::recursive_try_mutex::scoped_lock varLock(_kadrxVarMutex);
+
     // Clear the selected bit in _noXmitBitmap, then set the state
     // of the Tx Enable line
     _noXmitBitmap.clearBit(bitnum);
@@ -237,6 +231,8 @@ clearNoXmitBit(NoXmitBitmap::BITNUM bitnum) {
 /// @brief Shutdown and cleanup function
 void
 shutDownAndClean() {
+    boost::recursive_try_mutex::scoped_lock varLock(_kadrxVarMutex);
+
     ILOG << "Shutting down";
     // Drop the Transmit Enable line
     ILOG << "Lowering the transmit enable line";
@@ -316,8 +312,11 @@ exitIfNoSyncPulses() {
 /// This function should be called frequently for timely response to the
 /// received signals. It performs heavy lifting that should not be done in
 /// the signal handlers.
-void actOnFlags() {
-    if (! _hup && ! _usr1) {
+void actOnSignalFlags() {
+    boost::recursive_try_mutex::scoped_lock varLock(_kadrxVarMutex);
+
+    // If neither flag is set, we're done!
+    if (! (_hup || _usr1)) {
         return;
     }
     // We should not see both _hup and _usr1 true. If both are true, report
@@ -336,6 +335,7 @@ void actOnFlags() {
       ILOG << "_hup flag is set...disabling transmit";
       // Set the HUP_SIGNAL_RECEIVED bit in the NoXmitBitmap
       setNoXmitBit(NoXmitBitmap::HUP_SIGNAL_RECEIVED);
+      ILOG << "Back from setNoXmitBit(NoXmitBitmap::HUP_SIGNAL_RECEIVED)";
       _hup = false;
     } else if (_usr1) {
       if (! _noXmitBitmap.bitIsSet(NoXmitBitmap::HUP_SIGNAL_RECEIVED)) {
@@ -651,9 +651,6 @@ public:
 int
 main(int argc, char** argv)
 {
-    // try to change scheduling to real-time
-    makeRealTime();
-
     // Let logx get and strip out its arguments
     logx::ParseLogArgs(argc, argv);
 
@@ -682,22 +679,29 @@ main(int argc, char** argv)
         exit(1);
     }
 
-    // Start out assuming that N2 waveguide pressure is low until we confirm
-    //otherwise.
+    // Make sure our KaPmc730 is created in simulation mode if requested
+    KaPmc730::doSimulate(kaConfig.simulate_pmc730());
+
+    // Configure and apply our startup NoXmitBitmap
+    //
+    // o assume that N2 waveguide pressure is low until we confirm
+    //   otherwise.
+    // o if sector blanking is enabled, start with the IN_BLANKING_SECTOR bit
+    //   set (i.e., blank until we're explicitly told we're *not* in a
+    //   blanking sector). Otherwise clear the bit.
+    ILOG << "Assuming N2 waveguide pressure is low until the state is tested";
     _noXmitBitmap.setBit(NoXmitBitmap::N2_PRESSURE_LOW);
 
-    // Start with the IN_BLANKING_SECTOR bit set if we're allowing for
-    // blanking (we'll blank until we're explicitly told we're *not* in a
-    // blanking sector), otherwise false (since no sectors will be blanked).
     _allowBlanking = kaConfig.allow_blanking();
     if (_allowBlanking) {
+        ILOG << "Assuming we are in a blanking sector until " <<
+                "a non-blanking sector is signaled";
         _noXmitBitmap.setBit(NoXmitBitmap::IN_BLANKING_SECTOR);
     } else {
         _noXmitBitmap.clearBit(NoXmitBitmap::IN_BLANKING_SECTOR);
     }
 
-    // Make sure our KaPmc730 is created in simulation mode if requested
-    KaPmc730::doSimulate(kaConfig.simulate_pmc730());
+    updateTxEnableLineState();
 
     // set to ignore SIGPIPE errors which occur when sockets
     // are broken between client and server
@@ -923,7 +927,7 @@ main(int argc, char** argv)
 
     // Create a QFunctionWrapper and timer to act on flags that are set
     // on receipt of HUP and USR1 signals.
-    QFunctionWrapper qActOnFlags(actOnFlags);
+    QFunctionWrapper qActOnFlags(actOnSignalFlags);
 
     QTimer flagCheckTimer(_app);
     QObject::connect(&flagCheckTimer, SIGNAL(timeout()),
