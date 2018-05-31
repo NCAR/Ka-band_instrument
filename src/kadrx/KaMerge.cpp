@@ -976,7 +976,7 @@ string KaMerge::_assembleStatusXml()
   
   xml += TaXml::writeStartTag("KaTransmitterStatus", 1);
 
-  const XmitClient::XmitStatus &xs = _kaMonitor.transmitterStatus();
+  const XmitdStatus &xs = _kaMonitor.transmitterStatus();
 
   xml += TaXml::writeBoolean
     ("SerialConnected", 2, xs.serialConnected());

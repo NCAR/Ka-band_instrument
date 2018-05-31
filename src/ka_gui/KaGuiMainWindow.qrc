@@ -1,0 +1,9 @@
+<RCC>
+  <qresource>
+    <file>greenLED.png</file>
+    <file>greenLED_off.png</file>
+    <file>redLED.png</file>
+    <file>redLED_off.png</file>
+    <file>powerbutton.png</file>
+  </qresource>
+</RCC>

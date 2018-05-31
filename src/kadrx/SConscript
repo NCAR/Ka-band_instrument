@@ -1,17 +1,17 @@
 # -*- python -*-
 
 tools = Split("""
-boost_date_time
-boost_thread
 boost_program_options
 doxygen
+KadrxRpcClient
 logx
 lrose
 Pentek7142
 pmc730
+QFunctionWrapper
 qtcore
+QXmlRpcServerAbyss
 xmitclient
-xmlrpc
 """)
 
 sources = Split("""
@@ -41,6 +41,7 @@ KaMonitor.h
 KaOscControl.h
 KaOscillator3.h
 KaPmc730.h
+NoXmitBitmap.h
 PulseData.h
 TtyOscillator.h
 """)

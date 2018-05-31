@@ -1,0 +1,5 @@
+ka_gui
+
+moc_*.cc
+qrc_*.cc
+ui_*.h

@@ -22,3 +22,12 @@
 [submodule "src/ascope"]
 	path = src/ascope
 	url = https://github.com/NCAR/ascope.git
+[submodule "src/Archive_xmlrpc_c"]
+	path = src/Archive_xmlrpc_c
+	url = https://github.com/ncar/Archive_xmlrpc_c.git
+[submodule "src/QXmlRpcServerAbyss"]
+	path = src/QXmlRpcServerAbyss
+	url = https://github.com/ncar/QXmlRpcServerAbyss.git
+[submodule "src/QFunctionWrapper"]
+	path = src/QFunctionWrapper
+	url = https://github.com/ncar/QFunctionWrapper.git

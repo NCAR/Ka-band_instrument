@@ -245,7 +245,7 @@ KaMonitor::gpsTimeServerGood() const {
     return _gpsTimeServerGood;
 }
 
-XmitClient::XmitStatus
+XmitdStatus
 KaMonitor::transmitterStatus() const {
     QMutexLocker locker(&_mutex);
     return _xmitStatus;
@@ -376,7 +376,7 @@ KaMonitor::_getXmitStatus() {
     // Get the status first (which may take a little while under some 
     // circumstances), then get the mutex and set our member variable. This 
     // way, we don't have the mutex locked very long at all....
-    XmitClient::XmitStatus xmitStatus;
+    XmitdStatus xmitStatus;
     _xmitClient.getStatus(xmitStatus);
     
     QMutexLocker locker(&_mutex);

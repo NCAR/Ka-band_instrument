@@ -1,0 +1,47 @@
+# -*- python -*-
+
+gui_tools = Split("""
+logx
+doxygen
+KadrxRpcClient
+xmitclient
+qt4
+""")
+guiEnv = Environment(tools = ['default'] + gui_tools)
+guiEnv.EnableQt4Modules(['QtCore', 'QtGui'])
+
+gui_sources = Split("""
+ka_gui.cpp
+KadrxMonitorDetails.cpp
+KadrxStatusThread.cpp
+KaGuiMainWindow.cpp
+qrc_KaGuiMainWindow.cc
+XmitdStatusThread.cpp
+XmitterFaultDetails.cpp
+""")
+ka_gui = guiEnv.Program('ka_gui', gui_sources)
+Default(ka_gui)
+
+uifiles = Split("""
+KadrxMonitorDetails.ui
+KaGuiMainWindow.ui
+XmitterFaultDetails.ui
+""")
+guiEnv.Uic4(uifiles)
+
+# This generates the rules for *.qrc -> qrc_*.cc
+qrcfiles = Split("""
+KaGuiMainWindow.qrc
+""")
+guiEnv.Qrc(qrcfiles)
+
+headers = Split("""
+KadrxMonitorDetails.h
+KadrxStatusThread.h
+KaGuiMainWindow.h
+XmitdStatusThread.h
+XmitterFaultDetails.h
+""")
+
+html = guiEnv.Apidocs(gui_sources + headers)
+Default(html)

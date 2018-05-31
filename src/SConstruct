@@ -21,6 +21,7 @@ env = Environment(tools = ['default'],
                   GLOBAL_TOOLS = ['prefixoptions', 'buildmode', 'gitinfo', KaSetup])
 gitInfo = env.GitInfo('gitInfo.h', '#')
 
+SConscript("ka_gui/SConscript")
 SConscript("ka_xmit/SConscript")
 SConscript("kadrx/SConscript")
 SConscript("tcpscope/SConscript")
