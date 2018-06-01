@@ -38,7 +38,7 @@
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="../../../../../../h/eol/burghart/git/Ka-band_instrument/src/ka_gui/KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
+         <pixmap resource="KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
         </property>
        </widget>
       </item>
@@ -54,7 +54,7 @@
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="../../../../../../h/eol/burghart/git/Ka-band_instrument/src/ka_gui/KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
+         <pixmap resource="KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
         </property>
        </widget>
       </item>
@@ -141,7 +141,7 @@
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="../../../../../../h/eol/burghart/git/Ka-band_instrument/src/ka_gui/KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
+         <pixmap resource="KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
         </property>
        </widget>
       </item>
@@ -175,7 +175,7 @@ COUNT</string>
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="../../../../../../h/eol/burghart/git/Ka-band_instrument/src/ka_gui/KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
+         <pixmap resource="KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
         </property>
        </widget>
       </item>
@@ -233,7 +233,7 @@ COUNT</string>
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="../../../../../../h/eol/burghart/git/Ka-band_instrument/src/ka_gui/KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
+         <pixmap resource="KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
         </property>
        </widget>
       </item>
@@ -317,7 +317,7 @@ COUNT</string>
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="../../../../../../h/eol/burghart/git/Ka-band_instrument/src/ka_gui/KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
+         <pixmap resource="KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
         </property>
        </widget>
       </item>
@@ -333,7 +333,7 @@ COUNT</string>
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="../../../../../../h/eol/burghart/git/Ka-band_instrument/src/ka_gui/KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
+         <pixmap resource="KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
         </property>
        </widget>
       </item>
@@ -442,7 +442,7 @@ COUNT</string>
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="../../../../../../h/eol/burghart/git/Ka-band_instrument/src/ka_gui/KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
+         <pixmap resource="KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
         </property>
        </widget>
       </item>
@@ -484,7 +484,7 @@ COUNT</string>
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="../../../../../../h/eol/burghart/git/Ka-band_instrument/src/ka_gui/KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
+         <pixmap resource="KaGuiMainWindow.qrc">:/redLED_off.png</pixmap>
         </property>
        </widget>
       </item>
@@ -621,8 +621,6 @@ COUNT</string>
   </layout>
  </widget>
  <resources>
-  <include location="../ka_xmit/KaXmitCtlMainWindow.qrc"/>
-  <include location="../../../../../../h/eol/burghart/git/Ka-band_instrument/src/ka_gui/KaGuiMainWindow.qrc"/>
   <include location="KaGuiMainWindow.qrc"/>
  </resources>
  <connections>
