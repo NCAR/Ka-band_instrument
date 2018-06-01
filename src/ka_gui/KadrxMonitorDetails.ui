@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>197</width>
-    <height>430</height>
+    <width>227</width>
+    <height>536</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -20,19 +20,10 @@
       <string>Temperatures, etc.</string>
      </property>
      <layout class="QGridLayout" name="gridLayout_4">
-      <item row="0" column="1">
-       <widget class="QLabel" name="drxComputerTempValue">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
+      <item row="2" column="2">
+       <widget class="QLabel" name="rxBackTempUnits">
         <property name="text">
-         <string>00.0</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;°C&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
         </property>
        </widget>
       </item>
@@ -49,17 +40,95 @@
         </property>
        </widget>
       </item>
-      <item row="0" column="0">
-       <widget class="QLabel" name="drxComputerTempLabel">
+      <item row="7" column="2">
+       <widget class="QLabel" name="psVoltageUnits">
         <property name="text">
-         <string>DRX Computer</string>
+         <string>V</string>
+        </property>
+       </widget>
+      </item>
+      <item row="1" column="2">
+       <widget class="QLabel" name="procBoxTempUnits">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="text">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;°C&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="1">
+       <widget class="QLabel" name="rxBoxFrontValue">
+        <property name="text">
+         <string>00.0</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="3" column="0">
+       <widget class="QLabel" name="rxFrontTempLabel">
+        <property name="text">
+         <string>RX Enclosure (front)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="0">
+       <widget class="QLabel" name="rxBoxTopLabel">
+        <property name="text">
+         <string>RX Enclosure (top)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="5" column="2">
+       <widget class="QLabel" name="rxBoxTopUnits">
+        <property name="text">
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;°C&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="0">
+       <widget class="QLabel" name="rxBackTempLabel">
+        <property name="text">
+         <string>RX Enclosure (back)</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="0">
+       <widget class="QLabel" name="psVoltageLabel">
+        <property name="text">
+         <string>5V Digital PS</string>
+        </property>
+       </widget>
+      </item>
+      <item row="7" column="1">
+       <widget class="QLabel" name="psVoltageValue">
+        <property name="text">
+         <string>0.00</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="2" column="1">
+       <widget class="QLabel" name="rxBackTempValue">
+        <property name="text">
+         <string>00.0</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
       <item row="1" column="0">
        <widget class="QLabel" name="procBoxTempLabel">
         <property name="text">
-         <string>Processor Box</string>
+         <string>Processor Enclosure</string>
         </property>
        </widget>
       </item>
@@ -79,23 +148,36 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="2">
-       <widget class="QLabel" name="procBoxTempUnits">
+      <item row="5" column="1">
+       <widget class="QLabel" name="rxBoxTopValue">
+        <property name="text">
+         <string>00.0</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
+       </widget>
+      </item>
+      <item row="0" column="1">
+       <widget class="QLabel" name="drxComputerTempValue">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
         <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;°C&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+         <string>00.0</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
-      <item row="4" column="0">
-       <widget class="QLabel" name="rxBoxTopLabel">
+      <item row="0" column="0">
+       <widget class="QLabel" name="drxComputerTempLabel">
         <property name="text">
-         <string>RX Box (top)</string>
+         <string>DRX Computer</string>
         </property>
        </widget>
       </item>
@@ -106,85 +188,27 @@
         </property>
        </widget>
       </item>
-      <item row="2" column="0">
-       <widget class="QLabel" name="rxBackTempLabel">
+      <item row="6" column="0">
+       <widget class="QLabel" name="txBoxTempLabel">
         <property name="text">
-         <string>RX Box (back)</string>
+         <string>TX Enclosure</string>
         </property>
        </widget>
       </item>
-      <item row="3" column="0">
-       <widget class="QLabel" name="rxFrontTempLabel">
+      <item row="6" column="1">
+       <widget class="QLabel" name="txBoxTempValue">
         <property name="text">
-         <string>RX Box (front)</string>
+         <string>00.0</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
-      <item row="2" column="2">
-       <widget class="QLabel" name="rxBackTempUnits">
+      <item row="6" column="2">
+       <widget class="QLabel" name="txBoxTempUnits">
         <property name="text">
          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;°C&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-       </widget>
-      </item>
-      <item row="2" column="1">
-       <widget class="QLabel" name="rxBackTempValue">
-        <property name="text">
-         <string>00.0</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="1">
-       <widget class="QLabel" name="rxBoxTopValue">
-        <property name="text">
-         <string>00.0</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="3" column="1">
-       <widget class="QLabel" name="rxBoxFrontValue">
-        <property name="text">
-         <string>00.0</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="4" column="2">
-       <widget class="QLabel" name="rxBoxTopUnits">
-        <property name="text">
-         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;°C&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="0">
-       <widget class="QLabel" name="psVoltageLabel">
-        <property name="text">
-         <string>5V Digital PS</string>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="1">
-       <widget class="QLabel" name="psVoltageValue">
-        <property name="text">
-         <string>0.00</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-        </property>
-       </widget>
-      </item>
-      <item row="5" column="2">
-       <widget class="QLabel" name="psVoltageUnits">
-        <property name="text">
-         <string>V</string>
         </property>
        </widget>
       </item>

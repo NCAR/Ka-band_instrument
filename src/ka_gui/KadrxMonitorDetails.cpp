@@ -55,6 +55,8 @@ KadrxMonitorDetails::update(const KadrxStatus & status) {
         setText(QString::number(status.rxFrontTemp(), 'f', 1));
     _ui.rxBoxTopValue->
         setText(QString::number(status.rxTopTemp(), 'f', 1));
+    _ui.txBoxTempValue->
+        setText(QString::number(status.txEnclosureTemp(), 'f', 1));
 
     // PS voltage
     _ui.psVoltageValue->
