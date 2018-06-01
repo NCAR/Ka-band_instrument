@@ -30,6 +30,11 @@ public:
                     const KadrxStatusThread & kadrxStatusThread);
     virtual ~KaGuiMainWindow();
 
+protected:
+    /// @brief Implementation of closeEvent() to close our application when
+    /// this window is closed
+    virtual void closeEvent(QCloseEvent *e);
+
 private slots:
     void on_kadrxMoreButton_clicked();
     void on_xmitterPowerButton_clicked();

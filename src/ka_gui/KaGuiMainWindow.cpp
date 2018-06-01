@@ -307,3 +307,10 @@ KaGuiMainWindow::_setXmitdResponsiveness(bool responsive) {
     _xmitdResponsive = responsive;
     _updateGui();
 }
+
+void
+KaGuiMainWindow::closeEvent(QCloseEvent * e) {
+    // Quit the app
+    QCoreApplication::instance()->quit();
+}
+
