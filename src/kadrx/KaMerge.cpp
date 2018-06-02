@@ -1009,7 +1009,7 @@ string KaMerge::_assembleStatusXml()
   xml += TaXml::writeBoolean
     ("HvpsCurrentFault", 2, xs.hvpsCurrentFault());
   xml += TaXml::writeBoolean
-    ("WaveguidePressureFault", 2, xs.waveguidePressureFault());
+    ("SF6PressureFault", 2, xs.waveguidePressureFault());
   xml += TaXml::writeBoolean
     ("HvpsUnderVoltage", 2, xs.hvpsUnderVoltage());
   xml += TaXml::writeBoolean
@@ -1044,7 +1044,7 @@ string KaMerge::_assembleStatusXml()
   xml += TaXml::writeInt
     ("HvpsCurrentFaultCount", 2, xs.hvpsCurrentFaultCount());
   xml += TaXml::writeInt
-    ("WaveguidePressureFaultCount", 2, xs.waveguidePressureFaultCount());
+    ("SF6PressureFaultCount", 2, xs.waveguidePressureFaultCount());
   xml += TaXml::writeInt
     ("HvpsUnderVoltageCount", 2, xs.hvpsUnderVoltageCount());
   xml += TaXml::writeInt
@@ -1088,7 +1088,7 @@ string KaMerge::_assembleStatusXml()
     ("PsVoltage", 2, km.psVoltage());
   
   xml += TaXml::writeBoolean
-    ("WgPressureGood", 2, km.wgPressureGood());
+    ("N2WgPressureGood", 2, km.wgPressureGood());
   xml += TaXml::writeBoolean
     ("Locked100MHz", 2, km.locked100MHz());
   xml += TaXml::writeBoolean
