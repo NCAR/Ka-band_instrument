@@ -25,6 +25,7 @@ KaOscControl.cpp
 KaOscillator3.cpp
 KaPmc730.cpp
 PulseData.cpp
+QM2010_Oscillator.cpp
 TtyOscillator.cpp
 kadrx.cpp
 qrc_kadrx.cc
@@ -43,6 +44,7 @@ KaOscillator3.h
 KaPmc730.h
 NoXmitBitmap.h
 PulseData.h
+QM2010_Oscillator.h
 TtyOscillator.h
 """)
 # Qt resource file
@@ -60,4 +62,3 @@ kadrx = env.Program('kadrx', sources)
 html = env.Apidocs(sources + headers)
 
 Default(kadrx, html)
-

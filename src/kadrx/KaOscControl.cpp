@@ -7,8 +7,9 @@
 
 #include "KaOscControl.h"
 #include "KaPmc730.h"
-#include "TtyOscillator.h"
 #include "KaOscillator3.h"
+#include "QM2010_Oscillator.h"
+#include "TtyOscillator.h"
 
 #include <QThread>
 #include <QMutex>
@@ -118,8 +119,8 @@ private:
     typedef enum { AFC_SEARCHING, AFC_TRACKING } AfcMode_t;
     AfcMode_t _afcMode;
 
-    /// Oscillator 0: 1.4-1.5 GHz (1.4400 GHz nominal), 100 kHz step
-    TtyOscillator _osc0;
+    /// Oscillator 0: 1.5-1.6 GHz (1.4400 GHz nominal), 100 kHz step
+    QM2010_Oscillator _osc0;
 
     /// Oscillator 1: 132-133 MHz (132.5 MHz nominal), 10 kHz step.
     /// Adjustments to this oscillator track those of oscillator 3. E.g., if
@@ -240,8 +241,7 @@ KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
         double maxDataLatency) : QThread(),
     _mutex(QMutex::NonRecursive),   // must be non-recursive for QWaitCondition!
     _afcMode(AFC_SEARCHING),
-    _osc0(config.simulate_tty_oscillators() ? TtyOscillator::SIM_OSCILLATOR : "/dev/ttydp00",
-    		0, 100000, 15000, 16000),
+    _osc0("/dev/usbtmc0", 0, 10, 100000, 15000, 16000),
     _osc1(config.simulate_tty_oscillators() ? TtyOscillator::SIM_OSCILLATOR : "/dev/ttydp01",
     		1, 10000, 12750, 13750),
     _osc2(config.simulate_tty_oscillators() ? TtyOscillator::SIM_OSCILLATOR : "/dev/ttydp02",
@@ -318,14 +318,19 @@ KaOscControlPriv::_setOscillators(unsigned int osc0ScaledFreq,
     // Set starting frequencies for all three oscillators. We try as many times
     // as necessary...
     for (int attempt = 0; !(osc0_OK && osc1_OK && osc2_OK && osc3_OK); attempt++) {
-        // Initiate the frequency settings for the three oscillators in parallel,
-        // since it's a slow asynchronous process...
+        // The oscillators that respond synchronously are simple...
         if (! osc0_OK) {
-            if (attempt > 0)
-                WLOG << "...try again to set oscillator 0 frequency";
-            _osc0.setScaledFreqAsync(osc0ScaledFreq);
+            _osc0.setScaledFreq(osc0ScaledFreq);
+            osc0_OK = true;
         }
 
+        if (! osc3_OK) {
+            _osc3.setScaledFreq(osc3ScaledFreq);
+            osc3_OK = true; // we have no way to validate that osc3 is set (yet)
+        }
+
+        // Initiate the frequency settings for the TTY oscillators in parallel,
+        // since it's a slow asynchronous process...
         if (! osc1_OK) {
             if (attempt > 0)
                 WLOG << "...try again to set oscillator 1 frequency";
@@ -338,13 +343,7 @@ KaOscControlPriv::_setOscillators(unsigned int osc0ScaledFreq,
             _osc2.setScaledFreqAsync(osc2ScaledFreq);
         }
 
-        if (! osc3_OK) {
-            _osc3.setScaledFreq(osc3ScaledFreq);
-            osc3_OK = true; // we have no way to validate that osc3 is set (yet)
-        }
-
-        // Now complete the asynchronous process for the two serial oscillators
-        osc0_OK = _osc0.freqAttained();
+        // Now complete the asynchronous process for the two TTY oscillators
         osc1_OK = _osc1.freqAttained();
         osc2_OK = _osc2.freqAttained();
     }
