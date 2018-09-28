@@ -23,25 +23,25 @@ public:
     /// @param scaledMaxFreq maximum frequency for the oscillator, in
     ///      units of freqStep
     QM2010_Oscillator(std::string devName,
-                      uint32_t oscNum,
-                      uint32_t refFreqMHz,
-                      uint32_t freqStepHz,
-                      uint32_t scaledMinFreq,
-                      uint32_t scaledMaxFreq);
+                      uint oscNum,
+                      uint refFreqMHz,
+                      uint freqStepHz,
+                      uint scaledMinFreq,
+                      uint scaledMaxFreq);
     virtual ~QM2010_Oscillator();
 
     /// @brief Set the frequency of the oscillator, in units of its frequency
     /// step.
     /// @param scaledFreq the desired frequency, in units of the oscillator's
     ///      frequency step (@see getFreqStep()).
-    void setScaledFreq(uint32_t scaledFreq);
+    void setScaledFreq(uint scaledFreq);
 
     /// @brief Get the current frequency of the oscillator, in units of its
     /// frequency step
     ///
     /// True frequency = scaled frequency x frequency step.
     /// @return the frequency of the oscillator, in units of the frequency step
-    uint32_t getScaledFreq() const { return _scaledCurrentFreq; }
+    uint getScaledFreq() const { return _scaledCurrentFreq; }
 
     /// @brief Get the scaled minimum frequency of the oscillator, in units of its
     /// frequency step
@@ -49,7 +49,7 @@ public:
     /// True frequency = scaled frequency x frequency step.
     /// @return the minimum frequency of the oscillator, in units of the
     ///      frequency step
-    uint32_t getScaledMinFreq() const { return _scaledMinFreq; }
+    uint getScaledMinFreq() const { return _scaledMinFreq; }
 
     /// @brief Get the scaled maximum frequency of the oscillator, in units of its
     /// frequency step
@@ -57,11 +57,11 @@ public:
     /// True frequency = scaled frequency x frequency step.
     /// @return the maximum frequency of the oscillator, in units of the
     ///      frequency step
-    uint32_t getScaledMaxFreq() const { return _scaledMaxFreq; }
+    uint getScaledMaxFreq() const { return _scaledMaxFreq; }
 
     /// @brief Get the frequency step for the oscillator.
     /// @return the frequency step for the oscillator, in Hz
-    uint32_t getFreqStep() const { return _freqStep; }
+    uint getFreqStep() const { return _freqStep; }
 
 private:
     /// @brief Get the current status from the oscillator, which will be used
@@ -95,6 +95,12 @@ private:
     /// @return the floating point result in the reply to cmd
     float _sendCmdAndGetFloatReply(const std::string & cmd);
 
+    /// @brief Send a command string to the oscillator then parse and return
+    /// the integer result in the reply to cmd
+    /// @param cmd the command string
+    /// @return the integer result in the reply to cmd
+    int _sendCmdAndGetIntReply(const std::string & cmd);
+
     /// @brief Return the oscillator name, "osc<oscNum>"
     /// @return the oscillator name, "osc<oscNum>"
     std::string _oscName() {
@@ -108,22 +114,22 @@ private:
     int _fd;
 
     /// @brief Integer ID for the oscillator, used for log messages
-    uint32_t _oscNum;
+    uint _oscNum;
 
     /// @brief External reference frequency provided to the oscillator, Hz
-    uint32_t _refFreq;
+    uint _refFreq;
 
     /// @brief The step increment for oscillator frequency, Hz
-    uint32_t _freqStep;
+    uint _freqStep;
 
     /// @brief _scaledCurrentFreq = current frequency / _freqStep
-    uint32_t _scaledCurrentFreq;
+    uint _scaledCurrentFreq;
 
     /// @brief _scaledMinFreq = minimum frequency / _freqStep
-    uint32_t _scaledMinFreq;
+    uint _scaledMinFreq;
 
     /// @brief _scaledMaxFreq = maximum frequency / _freqStep
-    uint32_t _scaledMaxFreq;
+    uint _scaledMaxFreq;
 
     /// @brief Is the oscillator PLL locked?
     bool _locked;

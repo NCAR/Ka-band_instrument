@@ -18,11 +18,11 @@
 LOGGING("QM2010_Oscillator")
 
 QM2010_Oscillator::QM2010_Oscillator(std::string devName,
-                                     uint32_t oscNum,
-                                     uint32_t refFreqMhz,
-                                     uint32_t freqStep,
-                                     uint32_t scaledMinFreq,
-                                     uint32_t scaledMaxFreq) :
+                                     uint oscNum,
+                                     uint refFreqMhz,
+                                     uint freqStep,
+                                     uint scaledMinFreq,
+                                     uint scaledMaxFreq) :
 _devName(devName),
 _fd(-1),
 _oscNum(oscNum),
@@ -50,11 +50,73 @@ _locked(false) {
 
     std::string cmd;
 
+    // Get the current frequency (returned in MHz) and calculate
+    // _scaledCurrentFreq in units of _freqStep
+    float currentFreqMhz = _sendCmdAndGetFloatReply("FREQ:RETACT?");
+    _scaledCurrentFreq = rintf((1.0e6 * currentFreqMhz) / _freqStep);
+    ILOG << _oscName() << " started at " << currentFreqMhz << " MHz";
+
+    // Note if the oscillator's startup frequency is not between the specified
+    // min and max.
+    if ((_scaledCurrentFreq < _scaledMinFreq) ||
+        (_scaledCurrentFreq > _scaledMaxFreq)) {
+        WLOG << _oscName() <<
+            " startup scaled freq (" << _scaledCurrentFreq <<
+            ") is not between given min (" << _scaledMinFreq << ") and max (" <<
+            _scaledMaxFreq << ")";
+    }
+
+    // Set up to use external reference at the given frequency
+    {
+        std::ostringstream os;
+        os << "FREQ:REF:FREQ " << refFreqMhz << "; FREQ:REF:FREQ?";
+        cmd = os.str();
+    }
+    int replyFreqMhz = _sendCmdAndGetIntReply(cmd);
+    if (replyFreqMhz != int(refFreqMhz)) {
+        std::ostringstream os;
+        os << _oscName() << ": failed to set reference frequency to " <<
+              refFreqMhz << " MHz!";
+        throw(std::runtime_error(os.str()));
+    }
+
+    bool usingExtRef = _sendCmdAndGetBoolReply("FREQ:REF:EXT ON; FREQ:REF:EXT?");
+    if (! usingExtRef) {
+        std::ostringstream os;
+        os << _oscName() << ": failed to enable use of external reference";
+        throw(std::runtime_error(os.str()));
+    }
+
+    // Set frequency reference divider so that _freqStep is the integer PLL step
+    // and set the PLL mode to "integer"
+    int refDiv = (1000000 * refFreqMhz) / _freqStep;
+    {
+        std::ostringstream os;
+        os << "FREQ:REF:DIV " << refDiv << "; FREQ:REF:DIV?";
+        cmd = os.str();
+    }
+    int replyRefDiv = _sendCmdAndGetIntReply(cmd);
+    if (replyRefDiv != refDiv) {
+        std::ostringstream os;
+        os << _oscName() << ": failed to set FREQ:REF_DIV to " << refDiv;
+        throw(std::runtime_error(os.str()));
+    }
+
+    int replyPllmInt = _sendCmdAndGetIntReply("FREQ:PLLM INT; FREQ:PLLM?");
+    if (replyPllmInt != 1) {    // 0 -> Fractional Mode, 1 -> Integer Mode
+        std::ostringstream os;
+        os << _oscName() << ": failed to set PLL mode to INTEGER";
+        throw(std::runtime_error(os.str()));
+    }
+
+    // @TODO Below here is configuration that is specific for the Ka-band
+    // radar's "oscillator 0". This should probably be moved elsewhere...
+
     // Turn off oscillator output while we configure
     bool rfOn = _sendCmdAndGetBoolReply("POWER:RF OFF; POWER:RF?");
     if (rfOn) {
         std::ostringstream os;
-        os << _oscName() << ": attempt to disable output failed!";
+        os << _oscName() << ": failed to turn off RF output";
         ELOG << os.str();
         throw(std::runtime_error(os.str()));
     }
@@ -78,27 +140,22 @@ _locked(false) {
         ILOG << _oscName() << ": output power is " << actualPowerDbm << "dBm";
     }
 
-    // Get the current frequency (returned in MHz) and calculate
-    // _scaledCurrentFreq in units of _freqStep
-    float currentFreqMhz = _sendCmdAndGetFloatReply("FREQ:RETACT?");
-    _scaledCurrentFreq = rintf((1.0e6 * currentFreqMhz) / _freqStep);
-    ILOG << _oscName() << " started at " << currentFreqMhz << " MHz";
+    // Finally, turn on RF output
+    rfOn = _sendCmdAndGetBoolReply("POWER:RF ON; POWER:RF?");
+    if (! rfOn) {
+        std::ostringstream os;
+        os << _oscName() << ": failed to turn on RF output";
+        ELOG << os.str();
+        throw(std::runtime_error(os.str()));
+    }
 
-    // XXX Bogus frequency setting for testing
-    unsigned int seed;
-    getentropy(&seed, sizeof(seed));
-    srandom(seed);
-    int iGhz = int(4 * (double(random()) / RAND_MAX) + 1);
-    setScaledFreq(iGhz * 10000 + (time(0) % 60));
-
-    // Note if the oscillator's startup frequency is not between the specified
-    // min and max.
-    if ((_scaledCurrentFreq < _scaledMinFreq) ||
-        (_scaledCurrentFreq > _scaledMaxFreq)) {
-        WLOG << _oscName() <<
-            " startup scaled freq (" << _scaledCurrentFreq <<
-            ") is not between given min (" << _scaledMinFreq << ") and max (" <<
-            _scaledMaxFreq << ")";
+    // Test for lock. Note that the oscillator will only report as locked
+    // if RF output is enabled.
+    bool locked = _sendCmdAndGetBoolReply("FREQ:LOCK?");
+    if (locked) {
+        ILOG << _oscName() << " output is locked to the reference";
+    } else {
+        WLOG << _oscName() << " output is NOT LOCKED to the reference";
     }
 }
 
@@ -148,6 +205,15 @@ QM2010_Oscillator::setScaledFreq(unsigned int scaledFreq) {
         DLOG << _oscName() << " frequency set to " << requestFreqMhz << "MHz";
     }
     _scaledCurrentFreq = rintf((1.0e6 * newFreqMhz) / _freqStep);
+
+    // Test for lock. Note that the oscillator will only report as locked
+    // if RF output is enabled.
+    bool locked = _sendCmdAndGetBoolReply("FREQ:LOCK?");
+    if (locked) {
+        ILOG << _oscName() << " output is locked to the reference";
+    } else {
+        WLOG << _oscName() << " output is NOT LOCKED to the reference";
+    }
 }
 
 void
@@ -187,7 +253,7 @@ QM2010_Oscillator::_sendCmdAndGetReply(const std::string & cmd) {
     }
     // Trim trailing whitespace and return the reply string
     std::string reply(buf, nread);
-    reply.erase(reply.find_last_not_of("\s"));
+    reply.erase(reply.find_last_not_of(" \n\r\t") + 1);
     return(reply);
 }
 
@@ -226,4 +292,19 @@ QM2010_Oscillator::_sendCmdAndGetFloatReply(const std::string & cmd) {
         throw(std::runtime_error(os.str()));
     }
     return(fval);
+}
+
+int
+QM2010_Oscillator::_sendCmdAndGetIntReply(const std::string & cmd) {
+    std::string reply = _sendCmdAndGetReply(cmd);
+    int ival;
+    try {
+        ival = stoi(reply);
+    } catch (std::invalid_argument & e) {
+        std::ostringstream os;
+        os << _oscName() << ": command '" << cmd << "' reply '" <<
+              reply << "' cannot be parsed as int";
+        throw(std::runtime_error(os.str()));
+    }
+    return(ival);
 }
