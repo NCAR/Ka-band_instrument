@@ -149,14 +149,14 @@ _locked(false) {
         throw(std::runtime_error(os.str()));
     }
 
-    // Test for lock. Note that the oscillator will only report as locked
-    // if RF output is enabled.
-    bool locked = _sendCmdAndGetBoolReply("FREQ:LOCK?");
-    if (locked) {
-        ILOG << _oscName() << " output is locked to the reference";
-    } else {
-        WLOG << _oscName() << " output is NOT LOCKED to the reference";
-    }
+//    // Test for lock. Note that the oscillator will only report as locked
+//    // if RF output is enabled.
+//    bool locked = _sendCmdAndGetBoolReply("FREQ:LOCK?");
+//    if (locked) {
+//        ILOG << _oscName() << " output is locked to the reference";
+//    } else {
+//        WLOG << _oscName() << " output is NOT LOCKED to the reference";
+//    }
 }
 
 QM2010_Oscillator::~QM2010_Oscillator() {
@@ -178,13 +178,12 @@ QM2010_Oscillator::setScaledFreq(unsigned int scaledFreq) {
         scaledFreq = _scaledMinFreq;
     }
 
-    // Get requested frequency in MHz
+    // Calculate requested frequency in MHz
     float requestFreqMhz = (_freqStep * scaledFreq) * 1.0e-6;
 
     // Nothing to do if they requested the current frequency...
     if (scaledFreq == _scaledCurrentFreq) {
-        ILOG << _oscName() << " already at " << 
-                (scaledFreq * _freqStep) * 1.0e-6 << " MHz";
+        ILOG << _oscName() << " already at " << requestFreqMhz << " MHz";
         return;
     }
 
@@ -202,18 +201,18 @@ QM2010_Oscillator::setScaledFreq(unsigned int scaledFreq) {
         WLOG << _oscName() << ": requested freq. " << requestFreqMhz <<
                 " MHz, but got " << newFreqMhz << " MHz!";
     } else {
-        DLOG << _oscName() << " frequency set to " << requestFreqMhz << "MHz";
+        ILOG << _oscName() << " frequency set to " << requestFreqMhz << "MHz";
     }
     _scaledCurrentFreq = rintf((1.0e6 * newFreqMhz) / _freqStep);
 
-    // Test for lock. Note that the oscillator will only report as locked
-    // if RF output is enabled.
-    bool locked = _sendCmdAndGetBoolReply("FREQ:LOCK?");
-    if (locked) {
-        ILOG << _oscName() << " output is locked to the reference";
-    } else {
-        WLOG << _oscName() << " output is NOT LOCKED to the reference";
-    }
+//    // Test for lock. Note that the oscillator will only report as locked
+//    // if RF output is enabled.
+//    bool locked = _sendCmdAndGetBoolReply("FREQ:LOCK?");
+//    if (locked) {
+//        ILOG << _oscName() << " output is locked to the reference";
+//    } else {
+//        WLOG << _oscName() << " output is NOT LOCKED to the reference";
+//    }
 }
 
 void
