@@ -23,7 +23,9 @@
 LOGGING("KaOscControl")
 
 // Are we using the old TTY oscillator 0 or the new QM2010 oscillator 0?
-#define USE_OLD_OSC0 TRUE
+#ifndef USE_OLD_OSC0
+#    define USE_OLD_OSC0 FALSE
+#endif
 
 // Pointer to our singleton instance
 KaOscControl * KaOscControl::_theControl = 0;
