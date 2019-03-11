@@ -22,15 +22,18 @@
 
 LOGGING("KaOscControl")
 
+// Are we using the old TTY oscillator 0 or the new QM2010 oscillator 0?
+#define USE_OLD_OSC0 TRUE
+
 // Pointer to our singleton instance
 KaOscControl * KaOscControl::_theControl = 0;
 
-/// KaOscControlPriv is the private implementation class for KaOscControl, subclassed from
-/// QThread. The object gets new xmit samples via newXmitSample() calls (from
-/// another thread), adds them to sums, and when sufficient samples have
-/// been summed releases the averages which will be processed by the local
-/// thread. The local thread takes the averages and adjusts the three
-/// programmable oscillators it controls.
+/// KaOscControlPriv is the private implementation class for KaOscControl,
+/// subclassed from QThread. The object gets new xmit samples via
+/// newXmitSample() calls (from another thread), adds them to sums, and when
+/// sufficient samples have been summed releases the averages which will be
+/// processed by the local thread. The local thread takes the averages and
+/// adjusts the three programmable oscillators it controls.
 class KaOscControlPriv : public QThread {
 public:
     /// Instantiate
@@ -119,8 +122,12 @@ private:
     typedef enum { AFC_SEARCHING, AFC_TRACKING } AfcMode_t;
     AfcMode_t _afcMode;
 
-    /// Oscillator 0: 1.5-1.6 GHz (1.4400 GHz nominal), 100 kHz step
+    /// Oscillator 0: 1.5-1.6 GHz, 100 kHz step
+#if USE_OLD_OSC0
+    TtyOscillator _osc0;
+#else
     QM2010_Oscillator _osc0;
+#endif
 
     /// Oscillator 1: 132-133 MHz (132.5 MHz nominal), 10 kHz step.
     /// Adjustments to this oscillator track those of oscillator 3. E.g., if
@@ -241,7 +248,12 @@ KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
         double maxDataLatency) : QThread(),
     _mutex(QMutex::NonRecursive),   // must be non-recursive for QWaitCondition!
     _afcMode(AFC_SEARCHING),
+#if USE_OLD_OSC0
+    _osc0(config.simulate_tty_oscillators() ? TtyOscillator::SIM_OSCILLATOR : "/dev/ttydp00",
+            0, 100000, 15000, 16000),
+#else
     _osc0("/dev/usbtmc0", 0, 10, 100000, 15000, 16000),
+#endif
     _osc1(config.simulate_tty_oscillators() ? TtyOscillator::SIM_OSCILLATOR : "/dev/ttydp01",
     		1, 10000, 12750, 13750),
     _osc2(config.simulate_tty_oscillators() ? TtyOscillator::SIM_OSCILLATOR : "/dev/ttydp02",
@@ -318,15 +330,19 @@ KaOscControlPriv::_setOscillators(unsigned int osc0ScaledFreq,
     // Set starting frequencies for all three oscillators. We try as many times
     // as necessary...
     for (int attempt = 0; !(osc0_OK && osc1_OK && osc2_OK && osc3_OK); attempt++) {
-        // The oscillators that respond synchronously are simple...
+        // Set oscillator 0. We initiate frequency change asynchronously for
+        // the old TTY oscillator, but the newer oscillator changes state
+        // (effectively) immediately on request.
         if (! osc0_OK) {
+#if USE_OLD_OSC0
+            // Start the asynchronous frequency change for TTY oscillator 0
+            if (attempt > 0)
+                WLOG << "...try again to set oscillator 0 frequency";
+            _osc0.setScaledFreqAsync(osc0ScaledFreq);
+#else
             _osc0.setScaledFreq(osc0ScaledFreq);
             osc0_OK = true;
-        }
-
-        if (! osc3_OK) {
-            _osc3.setScaledFreq(osc3ScaledFreq);
-            osc3_OK = true; // we have no way to validate that osc3 is set (yet)
+#endif
         }
 
         // Initiate the frequency settings for the TTY oscillators in parallel,
@@ -343,7 +359,16 @@ KaOscControlPriv::_setOscillators(unsigned int osc0ScaledFreq,
             _osc2.setScaledFreqAsync(osc2ScaledFreq);
         }
 
+        // Oscillator 3 responds synchronously
+        if (! osc3_OK) {
+            _osc3.setScaledFreq(osc3ScaledFreq);
+            osc3_OK = true; // we have no way to validate that osc3 is set (yet)
+        }
+
         // Now complete the asynchronous process for the two TTY oscillators
+#if USE_OLD_OSC0
+        osc0_OK = _osc0.freqAttained();
+#endif
         osc1_OK = _osc1.freqAttained();
         osc2_OK = _osc2.freqAttained();
     }
