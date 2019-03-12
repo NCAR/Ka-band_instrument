@@ -107,6 +107,9 @@ private:
         return(std::string("osc") + std::to_string(_oscNum));
     }
 
+    /// @brief Wait briefly for frequency lock, logging the result
+    void _logLockedState();
+
     /// @brief Pathname for the device
     std::string _devName;
 

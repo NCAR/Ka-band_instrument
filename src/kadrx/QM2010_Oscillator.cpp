@@ -149,14 +149,8 @@ _locked(false) {
         throw(std::runtime_error(os.str()));
     }
 
-//    // Test for lock. Note that the oscillator will only report as locked
-//    // if RF output is enabled.
-//    bool locked = _sendCmdAndGetBoolReply("FREQ:LOCK?");
-//    if (locked) {
-//        ILOG << _oscName() << " output is locked to the reference";
-//    } else {
-//        WLOG << _oscName() << " output is NOT LOCKED to the reference";
-//    }
+    // Wait briefly for lock and log the result
+    _logLockedState();
 }
 
 QM2010_Oscillator::~QM2010_Oscillator() {
@@ -205,14 +199,28 @@ QM2010_Oscillator::setScaledFreq(unsigned int scaledFreq) {
     }
     _scaledCurrentFreq = rintf((1.0e6 * newFreqMhz) / _freqStep);
 
-//    // Test for lock. Note that the oscillator will only report as locked
-//    // if RF output is enabled.
-//    bool locked = _sendCmdAndGetBoolReply("FREQ:LOCK?");
-//    if (locked) {
-//        ILOG << _oscName() << " output is locked to the reference";
-//    } else {
-//        WLOG << _oscName() << " output is NOT LOCKED to the reference";
-//    }
+    // Wait briefly for lock and log the result
+    _logLockedState();
+}
+
+void
+QM2010_Oscillator::_logLockedState() {
+    // Test for lock, waiting up to 10 ms for lock. Note that the oscillator
+    // will only report as locked if RF output is enabled.
+    bool locked = false;
+    static const int LOCK_WAIT_MS = 10;
+    for (int i = 0; i <= LOCK_WAIT_MS; i++) {
+        locked = _sendCmdAndGetBoolReply("FREQ:LOCK?");
+        if (locked) {
+            ILOG << _oscName() << " output locked after " << i << " ms";
+            break;
+        }
+        // Try again in 1 ms
+        usleep(1000);
+    }
+    if (! locked) {
+        ELOG << _oscName() << " did not lock within " << LOCK_WAIT_MS << "ms";
+    }
 }
 
 void
