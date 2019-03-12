@@ -87,6 +87,10 @@ _locked(false) {
         throw(std::runtime_error(os.str()));
     }
 
+    ILOG << _oscName() << " configured for " << refFreqMhz <<
+            " MHz " << (usingExtRef ? "external" : "internal") <<
+            " reference clock";
+
     // Set frequency reference divider so that _freqStep is the integer PLL step
     // and set the PLL mode to "integer"
     int refDiv = (1000000 * refFreqMhz) / _freqStep;
