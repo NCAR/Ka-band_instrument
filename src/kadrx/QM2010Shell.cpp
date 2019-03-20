@@ -82,14 +82,18 @@ main(int argc, char * argv[]) {
         exit(1);
     }
 
-    std::cout << "QM2010 OSCILLATOR SHELL" << std::endl;
-    std::cout << "device: " << devName << std::endl;
-    std::cout << "-----------------------" << std::endl;
-    std::cout << std::endl;
-    std::cout << "Enter QM2010 commands at the prompt." << std::endl;
-    std::cout << "Enter an empty command to exit." << std::endl;
-    std::cout << std::endl;
-    std::cout << std::endl;
+    // Print instructions if we're running interactively
+    bool interactive = isatty(STDIN_FILENO);
+    if (interactive) {
+        std::cout << "QM2010 OSCILLATOR SHELL" << std::endl;
+        std::cout << "device: " << devName << std::endl;
+        std::cout << "-----------------------" << std::endl;
+        std::cout << std::endl;
+        std::cout << "Enter QM2010 commands at the prompt." << std::endl;
+        std::cout << "Enter an empty command to exit." << std::endl;
+        std::cout << std::endl;
+        std::cout << std::endl;
+    }
 
     // Clear any residual errors queued in the device
     write(DevFd, "*CLS", 4);
@@ -99,17 +103,26 @@ main(int argc, char * argv[]) {
     // command
     while (true) {
         // Prompt
-        std::cout << "QM2010# ";
-        std::flush(std::cout);
+        if (interactive) {
+            std::cout << "QM2010# ";
+            std::flush(std::cout);
+        }
 
         // Get the user's next command
         std::string cmd;
         std::getline(std::cin, cmd);
+ 
+        // If it's not an interactive shell, echo the command that was read
+        if (! interactive) {
+            std::cout << cmd << std::endl;
+        }
+
+        // Exit when an empty command is given
         if (cmd.length() <= 0) {
             break;
         }
 
-        // Send the command
+        // Send the command to the oscillator
         write(DevFd, cmd.c_str(), cmd.length());
         usleep(REPLY_WAIT_US);
 
