@@ -91,6 +91,9 @@ main(int argc, char * argv[]) {
     std::cout << std::endl;
     std::cout << std::endl;
 
+    // Clear any residual errors queued in the device
+    write(DevFd, "*CLS", 4);
+
     // Loop to read commands from the user, pass them to the oscillator, and
     // print the replies (if any). The loop exits when the user enters an empty
     // command
