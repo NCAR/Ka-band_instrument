@@ -64,5 +64,6 @@ html = env.Apidocs(sources + headers)
 Default(kadrx, html)
 
 # QM2010 shell program
-qm2010shell = env.Program('QM2010Shell', 'QM2010Shell.cpp')
+bareEnv = Environment()
+qm2010shell = bareEnv.Program('QM2010Shell.cpp')
 Default(qm2010shell)
