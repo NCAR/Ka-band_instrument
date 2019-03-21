@@ -22,6 +22,23 @@ int DevFd = 0;
 // in microseconds.
 static const int REPLY_WAIT_US = 100;
 
+// Read reply from the QM2010
+std::string
+readReply() {
+    char buf[256];
+    int nread = read(DevFd, buf, sizeof(buf));
+    if (nread == -1) {
+        std::cerr << "Error " << errno << " reading from oscillator" <<
+                     std::endl;
+        exit(1);
+    }
+
+    // Strip trailing whitespace character(s) from the reply
+    std::string reply(buf, nread);
+    reply.erase(reply.find_last_not_of(" \n\r\t") + 1);
+    return(reply);
+}
+
 // Print any messages in the QM2010's error queue
 void
 printQM2010Errors() {
@@ -32,13 +49,8 @@ printQM2010Errors() {
         write(DevFd, cmd.c_str(), cmd.length());
         usleep(REPLY_WAIT_US);
 
-        char buf[128];
-        int nread = read(DevFd, buf, sizeof(buf));
-        if (nread > 0) {
-            // Strip trailing newline character(s) from the reply
-            std::string reply(buf, nread);
-            reply.erase(reply.find_last_not_of(" \n\r\t") + 1);
-
+        std::string reply(readReply());
+        if (reply.length() > 0) {
             // We're done if the reply is: 0,"No Error"
             if (reply == std::string("0,\"No Error\"")) {
                 break;
@@ -69,7 +81,8 @@ printQM2010Errors() {
 int
 main(int argc, char * argv[]) {
     if (argc != 2) {
-        std::cerr << "Usage: " << argv[0] << " <oscillator_device>" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <oscillator_device>" <<
+                     std::endl;
         exit(1);
     }
 
@@ -104,21 +117,29 @@ main(int argc, char * argv[]) {
     while (true) {
         // Prompt
         if (interactive) {
-            std::cout << "QM2010# ";
+            std::cout << "QM2010 > ";
             std::flush(std::cout);
         }
 
         // Get the user's next command
         std::string cmd;
         std::getline(std::cin, cmd);
- 
+
         // If it's not an interactive shell, echo the command that was read
         if (! interactive) {
             std::cout << cmd << std::endl;
         }
 
-        // Exit when an empty command is given
-        if (cmd.length() <= 0) {
+        // Move to the next line if we got a comment
+        if (cmd.c_str()[0] == '#') {
+            continue;
+        }
+
+        // Exit if:
+        //   o It's an interactive terminal and the user entered an
+        //     empty command
+        //   o We hit EOF from a script file
+        if ((interactive && cmd.length() == 0) || std::cin.eof()) {
             break;
         }
 
@@ -127,31 +148,13 @@ main(int argc, char * argv[]) {
         usleep(REPLY_WAIT_US);
 
         // Read and print the reply
-        char reply[128];
-        int nread = read(DevFd, reply, sizeof(reply));
-        if (nread > 0) {
-            std::cout << std::string(reply, nread);
-        } else {
-            std::cout << "<no reply>" << std::endl;
-        }
+        std::string reply(readReply());
+        std::cout << ((reply.length() > 0) ? reply : "<no reply>") << std::endl;
 
         // Print errors that were generated, if any
         printQM2010Errors();
     }
 
     close(DevFd);
-//    std::string devName("/dev/usbtmc0");
-//    std::ofstream os(devName.c_str());
-//    std::ifstream is(devName.c_str());
-//    os << "POWER:RF?";
-//    usleep(500000);
-//    std::string line;
-//    is >> line;
-//    std::cout << line << std::endl;
-//    os.close();
-//    is.close();
 }
-
-
-
 
