@@ -83,6 +83,9 @@ main(int argc, char * argv[]) {
     if (argc != 2) {
         std::cerr << "Usage: " << argv[0] << " <oscillator_device>" <<
                      std::endl;
+        std::cerr << std::endl;
+        std::cerr << "Note: the device name is generally /dev/usbtmc0" <<
+                     std::endl;
         exit(1);
     }
 
@@ -116,14 +119,13 @@ main(int argc, char * argv[]) {
     // command
     while (true) {
         // Prompt
-        if (interactive) {
-            std::cout << "QM2010 > ";
-            std::flush(std::cout);
-        }
+        std::cout << "QM2010 > ";
+        std::flush(std::cout);
 
-        // Get the user's next command
+        // Get the user's next command and strip trailing whitespace
         std::string cmd;
         std::getline(std::cin, cmd);
+        cmd.erase(cmd.find_last_not_of(" \n\r\t") + 1);
 
         // If it's not an interactive shell, echo the command that was read
         if (! interactive) {
@@ -143,6 +145,11 @@ main(int argc, char * argv[]) {
             break;
         }
 
+        // Continue if we got an empty command
+        if (cmd.length() == 0) {
+            continue;
+        }
+ 
         // Send the command to the oscillator
         write(DevFd, cmd.c_str(), cmd.length());
         usleep(REPLY_WAIT_US);
