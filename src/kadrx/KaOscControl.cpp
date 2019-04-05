@@ -22,11 +22,6 @@
 
 LOGGING("KaOscControl")
 
-// Are we using the old TTY oscillator 0 or the new QM2010 oscillator 0?
-#ifndef USE_OLD_OSC0
-#    define USE_OLD_OSC0 FALSE
-#endif
-
 // Pointer to our singleton instance
 KaOscControl * KaOscControl::_theControl = 0;
 
@@ -250,12 +245,7 @@ KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
         double maxDataLatency) : QThread(),
     _mutex(QMutex::NonRecursive),   // must be non-recursive for QWaitCondition!
     _afcMode(AFC_SEARCHING),
-#if USE_OLD_OSC0
-    _osc0(config.simulate_tty_oscillators() ? TtyOscillator::SIM_OSCILLATOR : "/dev/ttydp00",
-            0, 100000, 15000, 16000),
-#else
-    _osc0("/dev/usbtmc0", 0, 10, 100000, 15000, 16000),
-#endif
+    _osc0("/dev/usbtmc0", 0, 100, 100000, 15000, 16000),
     _osc1(config.simulate_tty_oscillators() ? TtyOscillator::SIM_OSCILLATOR : "/dev/ttydp01",
     		1, 10000, 12750, 13750),
     _osc2(config.simulate_tty_oscillators() ? TtyOscillator::SIM_OSCILLATOR : "/dev/ttydp02",
