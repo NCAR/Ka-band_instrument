@@ -100,11 +100,15 @@ _locked(false) {
         cmd = os.str();
     }
     int replyRefDiv = _sendCmdAndGetIntReply(cmd);
-    if (replyRefDiv != refDiv) {
-        std::ostringstream os;
-        os << _oscName() << ": failed to set FREQ:REF_DIV to " << refDiv;
-        throw(std::runtime_error(os.str()));
-    }
+    std::cerr << "111111111 refFreqMhz: " << refFreqMhz << std::endl;
+    std::cerr << "111111111 replyFreqMhz: " << replyFreqMhz << std::endl;
+    std::cerr << "111111111 refDiv: " << refDiv << std::endl;
+    std::cerr << "111111111 replyRefDiv: " << replyRefDiv << std::endl;
+    // if (replyRefDiv != refDiv) {
+    //     std::ostringstream os;
+    //     os << _oscName() << ": failed to set FREQ:REF_DIV to " << refDiv;
+    //     throw(std::runtime_error(os.str()));
+    // }
 
     int replyPllmInt = _sendCmdAndGetIntReply("FREQ:PLLM INT; FREQ:PLLM?");
     if (replyPllmInt != 1) {    // 0 -> Fractional Mode, 1 -> Integer Mode
