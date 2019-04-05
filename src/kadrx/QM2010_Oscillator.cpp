@@ -91,30 +91,51 @@ _locked(false) {
             " MHz " << (usingExtRef ? "external" : "internal") <<
             " reference clock";
 
-    // Set frequency reference divider so that _freqStep is the integer PLL step
-    // and set the PLL mode to "integer"
+    // Calculate the reference frequency integer divider which would yield the
+    // chosen _freqStep for the oscillator. If the divider is <= 127 (the
+    // maximum divider for using PLL Integer Mode), we will use PLL Integer Mode
+    // on the oscillator, which decreases phase noise. Otherwise, we must use
+    // PLL Fractional Mode to get the desired step, at the cost of higher phase
+    // noise.
     int refDiv = (1000000 * refFreqMhz) / _freqStep;
-    {
-        std::ostringstream os;
-        os << "FREQ:REF:DIV " << refDiv << "; FREQ:REF:DIV?";
-        cmd = os.str();
-    }
-    int replyRefDiv = _sendCmdAndGetIntReply(cmd);
-    std::cerr << "111111111 refFreqMhz: " << refFreqMhz << std::endl;
-    std::cerr << "111111111 replyFreqMhz: " << replyFreqMhz << std::endl;
-    std::cerr << "111111111 refDiv: " << refDiv << std::endl;
-    std::cerr << "111111111 replyRefDiv: " << replyRefDiv << std::endl;
-    // if (replyRefDiv != refDiv) {
-    //     std::ostringstream os;
-    //     os << _oscName() << ": failed to set FREQ:REF_DIV to " << refDiv;
-    //     throw(std::runtime_error(os.str()));
-    // }
 
-    int replyPllmInt = _sendCmdAndGetIntReply("FREQ:PLLM INT; FREQ:PLLM?");
-    if (replyPllmInt != 1) {    // 0 -> Fractional Mode, 1 -> Integer Mode
-        std::ostringstream os;
-        os << _oscName() << ": failed to set PLL mode to INTEGER";
-        throw(std::runtime_error(os.str()));
+    if (refDiv <= 127) {
+        // Use Integer Mode for the frequency PLL
+        int replyPllmInt = _sendCmdAndGetIntReply("FREQ:PLLM INT; FREQ:PLLM?");
+        if (replyPllmInt != 1) {    // 0 -> Fractional Mode, 1 -> Integer Mode
+            std::ostringstream os;
+            os << _oscName() << ": failed to set PLL mode to INTEGER";
+            throw(std::runtime_error(os.str()));
+        }
+
+        // Set frequency reference divider to yield our desired _freqStep
+        {
+            std::ostringstream os;
+            os << "FREQ:REF:DIV " << refDiv << "; FREQ:REF:DIV?";
+            cmd = os.str();
+        }
+        int replyRefDiv = _sendCmdAndGetIntReply(cmd);
+        if (replyRefDiv != refDiv) {
+            std::ostringstream os;
+            os << _oscName() << ": failed to set FREQ:REF_DIV to " << refDiv;
+            throw(std::runtime_error(os.str()));
+        } else {
+            ILOG << _oscName() << ": INTEGER mode for the PLL with divisor " <<
+                    refDiv << " to support " << _freqStep <<
+                    " Hz steps with a " << refFreqMhz << "MHz reference clock";
+        }
+    } else {
+        // Use Fractional Mode for the frequency PLL
+        int replyPllmInt = _sendCmdAndGetIntReply("FREQ:PLLM FRAC; FREQ:PLLM?");
+        if (replyPllmInt != 0) {    // 0 -> Fractional Mode, 1 -> Integer Mode
+            std::ostringstream os;
+            os << _oscName() << ": failed to set PLL mode to FRACTIONAL";
+            throw(std::runtime_error(os.str()));
+        } else {
+            ILOG << _oscName() << ": FRACTIONAL mode for the PLL " <<
+                    "to support " << _freqStep << " Hz steps with a " <<
+                    refFreqMhz << " MHz reference clock";
+        }
     }
 
     // @TODO Below here is configuration that is specific for the Ka-band
