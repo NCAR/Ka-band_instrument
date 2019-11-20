@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>207</width>
-    <height>449</height>
+    <height>487</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -428,28 +428,28 @@
          <property name="margin">
           <number>0</number>
          </property>
-         <item row="3" column="2">
+         <item row="5" column="2">
           <widget class="QLabel" name="osc3FreqUnits">
            <property name="text">
             <string>MHz</string>
            </property>
           </widget>
          </item>
-         <item row="1" column="0">
+         <item row="3" column="0">
           <widget class="QLabel" name="osc1FreqLabel">
            <property name="text">
             <string>Oscillator 1</string>
            </property>
           </widget>
          </item>
-         <item row="2" column="2">
+         <item row="4" column="2">
           <widget class="QLabel" name="osc2FreqUnits">
            <property name="text">
             <string>GHz</string>
            </property>
           </widget>
          </item>
-         <item row="2" column="1">
+         <item row="4" column="1">
           <widget class="QLabel" name="osc2FreqValue">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -465,7 +465,7 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="1">
+         <item row="2" column="1">
           <widget class="QLabel" name="osc0FreqValue">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -481,28 +481,28 @@
            </property>
           </widget>
          </item>
-         <item row="1" column="2">
+         <item row="3" column="2">
           <widget class="QLabel" name="osc1FreqUnits">
            <property name="text">
             <string>MHz</string>
            </property>
           </widget>
          </item>
-         <item row="2" column="0">
+         <item row="4" column="0">
           <widget class="QLabel" name="osc2FreqLabel">
            <property name="text">
             <string>Oscillator 2</string>
            </property>
           </widget>
          </item>
-         <item row="0" column="2">
+         <item row="2" column="2">
           <widget class="QLabel" name="osc0FreqUnits">
            <property name="text">
             <string>GHz</string>
            </property>
           </widget>
          </item>
-         <item row="3" column="1">
+         <item row="5" column="1">
           <widget class="QLabel" name="osc3FreqValue">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -518,21 +518,21 @@
            </property>
           </widget>
          </item>
-         <item row="0" column="0">
+         <item row="2" column="0">
           <widget class="QLabel" name="osc0FreqLabel">
            <property name="text">
             <string>Oscillator 0</string>
            </property>
           </widget>
          </item>
-         <item row="3" column="0">
+         <item row="5" column="0">
           <widget class="QLabel" name="osc3FreqLabel">
            <property name="text">
             <string>Oscillator 3</string>
            </property>
           </widget>
          </item>
-         <item row="1" column="1">
+         <item row="3" column="1">
           <widget class="QLabel" name="osc1FreqValue">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -548,14 +548,14 @@
            </property>
           </widget>
          </item>
-         <item row="4" column="0">
+         <item row="6" column="0">
           <widget class="QLabel" name="derivedTxFreqLabel">
            <property name="text">
             <string>Tx (derived)</string>
            </property>
           </widget>
          </item>
-         <item row="4" column="1">
+         <item row="6" column="1">
           <widget class="QLabel" name="derivedTxFreqValue">
            <property name="sizePolicy">
             <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
@@ -571,10 +571,51 @@
            </property>
           </widget>
          </item>
-         <item row="4" column="2">
+         <item row="6" column="2">
           <widget class="QLabel" name="derivedTxFreqUnits">
            <property name="text">
             <string>GHz</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="0">
+          <widget class="QLabel" name="afcModeLabel">
+           <property name="text">
+            <string>AFC mode</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1" colspan="2">
+          <widget class="QLabel" name="afcModeValue">
+           <property name="text">
+            <string>tracking xmitter</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="g0PowerLabel">
+           <property name="text">
+            <string>Avg. G0 pwr</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLabel" name="g0PowerValue">
+           <property name="text">
+            <string>-999.0</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QLabel" name="g0PowerUnits">
+           <property name="text">
+            <string>dBm</string>
            </property>
           </widget>
          </item>

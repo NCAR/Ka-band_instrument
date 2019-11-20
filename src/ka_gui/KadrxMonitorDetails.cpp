@@ -27,6 +27,9 @@ KadrxMonitorDetails::update(const KadrxStatus & status) {
     _ui.afcEnabledIcon->
         setPixmap(status.afcEnabled() ? _greenLED : _greenLED_off);
     _ui.oscillatorFrame->setEnabled(status.afcEnabled());
+    _ui.afcModeValue->setText(status.afcIsTracking() ?
+                              "tracking xmitter" : "coarse search");
+    _ui.g0PowerValue->setText(QString::number(status.g0AvgPower(), 'f', 1));
     _ui.osc0FreqValue->
         setText(QString::number(1.0e-9 * status.osc0Frequency(), 'f', 4));
     _ui.osc1FreqValue->

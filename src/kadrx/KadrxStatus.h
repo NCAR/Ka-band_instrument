@@ -25,6 +25,10 @@ public:
     /// @param gpsTimeServerGood true iff the GPS time server is locked
     /// @param locked100MHz true iff the 100 MHz oscillator is locked
     /// @param n2PressureGood true iff pressure in the N2 waveguide is good
+    /// @param afcIsTracking true iff the AFC is currently tracking transmitter
+    /// frequency
+    /// @param g0AvgPower the last burst channel power average calculated by
+    /// the AFC, dBm
     /// @param osc0Frequency current frequency of AFC oscillator 0, Hz
     /// @param osc1Frequency current frequency of AFC oscillator 1, Hz
     /// @param osc2Frequency current frequency of AFC oscillator 2, Hz
@@ -53,6 +57,8 @@ public:
                 bool gpsTimeServerGood,
                 bool locked100MHz,
                 bool n2PressureGood,
+                bool afcIsTracking,
+                double g0AvgPower,
                 double osc0Frequency,
                 double osc1Frequency,
                 double osc2Frequency,
@@ -113,6 +119,18 @@ public:
     /// @return true iff pressure is good in the N2 waveguide between
     /// the outside of the transmitter and the antenna.
     bool n2PressureGood() const { return(_n2PressureGood); }
+
+    /// @brief Return true iff the AFC is currently tracking transmitter
+    /// frequency
+    /// @return true iff the AFC is currently tracking transmitter
+    /// frequency
+    bool afcIsTracking() const { return(_afcIsTracking); }
+
+    /// @brief Return the last average burst channel power calculated by the
+    /// AFC, dBm
+    /// @return the last average burst channel power calculated by the
+    /// AFC, dBm
+    double g0AvgPower() const { return(_g0AvgPower); }
 
     /// @brief Return the currently programmed frequency (in Hz) for AFC
     /// oscillator 0
@@ -214,6 +232,8 @@ private:
             ar & BOOST_SERIALIZATION_NVP(_gpsTimeServerGood);
             ar & BOOST_SERIALIZATION_NVP(_locked100MHz);
             ar & BOOST_SERIALIZATION_NVP(_n2PressureGood);
+            ar & BOOST_SERIALIZATION_NVP(_afcIsTracking);
+            ar & BOOST_SERIALIZATION_NVP(_g0AvgPower);
             ar & BOOST_SERIALIZATION_NVP(_osc0Frequency);
             ar & BOOST_SERIALIZATION_NVP(_osc1Frequency);
             ar & BOOST_SERIALIZATION_NVP(_osc2Frequency);
@@ -247,15 +267,17 @@ private:
     bool _locked100MHz;         ///< is the 100 MHz oscillator locked?
     bool _n2PressureGood;       ///< is the N2 waveguide pressure good?
 
-    double _osc0Frequency;       ///< AFC oscillator 0 frequency, Hz
-    double _osc1Frequency;       ///< AFC oscillator 1 frequency, Hz
-    double _osc2Frequency;       ///< AFC oscillator 2 frequency, Hz
-    double _osc3Frequency;       ///< AFC oscillator 3 frequency, Hz
-    double _derivedTxFrequency;  ///< transmit frequency, derived from AFC
+    bool _afcIsTracking;        ///< true iff AFC is tracking transmitter frequency
+    double _g0AvgPower;         ///< last burst channel power reported to AFC, dBm
+    double _osc0Frequency;      ///< AFC oscillator 0 frequency, Hz
+    double _osc1Frequency;      ///< AFC oscillator 1 frequency, Hz
+    double _osc2Frequency;      ///< AFC oscillator 2 frequency, Hz
+    double _osc3Frequency;      ///< AFC oscillator 3 frequency, Hz
+    double _derivedTxFrequency; ///< transmit frequency, derived from AFC
 
-    double _hTxPower;            ///< H polarization transmit power, dBm
-    double _vTxPower;            ///< V polarization transmit power, dBm
-    double _testPulsePower;  ///< test pulse raw power, dBm
+    double _hTxPower;           ///< H polarization transmit power, dBm
+    double _vTxPower;           ///< V polarization transmit power, dBm
+    double _testPulsePower;     ///< test pulse raw power, dBm
 
     double _procDrxTemp;         ///< DRX temp in the processor enclosure, deg C
     double _procEnclosureTemp;   ///< processor enclosure temperature, deg C

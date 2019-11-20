@@ -56,7 +56,16 @@ public:
     /// @return the four oscillator frequencies (in Hz) in the four reference 
     /// parameters which were passed in.
     void getOscFrequencies(uint64_t & osc0Freq, uint64_t & osc1Freq, 
-            uint64_t & osc2Freq, uint64_t & osc3Freq);
+            uint64_t & osc2Freq, uint64_t & osc3Freq) const;
+
+    /// @brief Return true iff the AFC is currently tracking transmitter
+    /// frequency. Otherwise, the AFC is doing a coarse frequency search
+    /// to see sufficient received power to begin tracking.
+    bool afcIsTracking() const;
+
+    /// @brief Return the last calculated average G0 power used for AFC, dBm
+    /// @return the last calculated average G0 power used for AFC, dBm
+    double g0AvgPowerDbm() const;
 
 protected:
     /// constructor

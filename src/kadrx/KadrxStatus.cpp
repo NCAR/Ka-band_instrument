@@ -20,6 +20,8 @@ KadrxStatus::KadrxStatus(const NoXmitBitmap & noXmitBitmap,
                          bool gpsTimeServerGood,
                          bool locked100MHz,
                          bool n2PressureGood,
+                         bool afcIsTracking,
+                         double g0AvgPower,
                          double osc0Frequency,
                          double osc1Frequency,
                          double osc2Frequency,
@@ -39,6 +41,8 @@ KadrxStatus::KadrxStatus(const NoXmitBitmap & noXmitBitmap,
     _gpsTimeServerGood(gpsTimeServerGood),
     _locked100MHz(locked100MHz),
     _n2PressureGood(n2PressureGood),
+    _afcIsTracking(afcIsTracking),
+    _g0AvgPower(g0AvgPower),
     _osc0Frequency(osc0Frequency),
     _osc1Frequency(osc1Frequency),
     _osc2Frequency(osc2Frequency),
@@ -75,6 +79,8 @@ KadrxStatus::_zeroAllMembers() {
     _gpsTimeServerGood = false;
     _locked100MHz = false;
     _n2PressureGood = false;
+    _afcIsTracking = false;
+    _g0AvgPower = -999.0;
     _osc0Frequency = 0.0;
     _osc1Frequency = 0.0;
     _osc2Frequency = 0.0;

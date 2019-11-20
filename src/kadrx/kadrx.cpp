@@ -490,6 +490,8 @@ public:
                            _kaMonitor->gpsTimeServerGood(),
                            _kaMonitor->locked100MHz(),
                            _kaMonitor->wgPressureGood(),
+                           _kaMonitor->afcIsTracking(),
+                           _kaMonitor->g0AvgPower(),
                            _kaMonitor->osc0Frequency(),
                            _kaMonitor->osc1Frequency(),
                            _kaMonitor->osc2Frequency(),

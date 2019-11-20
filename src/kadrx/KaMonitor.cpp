@@ -152,6 +152,8 @@ KaMonitor::KaMonitor(std::string xmitdHost, int xmitdPort) :
     _wgPressureGood(false),
     _locked100MHz(false),
     _gpsTimeServerGood(false),
+    _afcIsTracking(false),
+    _g0AvgPower(-999.0),
     _osc0Frequency(0),
     _osc1Frequency(0),
     _osc2Frequency(0),
@@ -263,6 +265,17 @@ KaMonitor::osc1Frequency() const {
     return(_osc1Frequency);
 }
 
+bool
+KaMonitor::afcIsTracking() const {
+    QMutexLocker locker(&_mutex);
+    return(_afcIsTracking);
+}
+
+double
+KaMonitor::g0AvgPower() const {
+    QMutexLocker locker(&_mutex);
+    return(_g0AvgPower);
+}
 uint64_t
 KaMonitor::osc2Frequency() const {
     QMutexLocker locker(&_mutex);
@@ -306,7 +319,7 @@ KaMonitor::run() {
         _getXmitStatus();
         
         // Get oscillator frequencies
-        _getOscFrequencies();
+        _getAfcStatus();
     }
 }
 
@@ -385,10 +398,12 @@ KaMonitor::_getXmitStatus() {
 }
 
 void
-KaMonitor::_getOscFrequencies() {
+KaMonitor::_getAfcStatus() {
     QMutexLocker locker(&_mutex);
     KaOscControl::theControl().getOscFrequencies(_osc0Frequency,
             _osc1Frequency, _osc2Frequency, _osc3Frequency);
+    _afcIsTracking = KaOscControl::theControl().afcIsTracking();
+    _g0AvgPower = KaOscControl::theControl().g0AvgPowerDbm();
     
     DLOG << std::fixed << "oscillator frequencies - " <<
         std::setprecision(4) << "0: " << _osc0Frequency / 1.0e9 << " GHz" <<

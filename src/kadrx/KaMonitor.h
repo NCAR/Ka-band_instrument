@@ -117,7 +117,17 @@ public:
      * @return oscillator 0 frequency, in Hz.
      */
     uint64_t osc0Frequency() const;
-    
+
+    /// @brief Return true iff AFC is currently tracking transmitter frequency
+    /// (vs. doing a coarse search for transmitter frequency).
+    /// @return true iff AFC is currently tracking transmitter frequency
+    /// (vs. doing a coarse search for transmitter frequency).
+    bool afcIsTracking() const;
+
+    /// @brief Return the last g0 average power used by AFC, dBm
+    /// @return the last g0 average power used by AFC, dBm
+    double g0AvgPower() const;
+
     /**
      * Oscillator 1 frequency, in Hz.
      * @return oscillator 1 frequency, in Hz.
@@ -175,7 +185,7 @@ private:
     /**
      * Get oscillator frequencies from the singleton KaOscControl.
      */
-    void _getOscFrequencies();
+    void _getAfcStatus();
     /**
      * Return the average of values in a deque<float>, or -99.9 if the deque
      * is empty.
@@ -217,6 +227,12 @@ private:
     /// GPS time server alarm state
     bool _gpsTimeServerGood;
     
+    /// Is AFC currently tracking the transmitter (vs. doing a coarse search)?
+    bool _afcIsTracking;
+
+    /// Last g0 power average used by AFC, dBm
+    double _g0AvgPower;
+
     /// Oscillator frequencies, Hz
     uint64_t _osc0Frequency;
     uint64_t _osc1Frequency;

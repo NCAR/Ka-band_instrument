@@ -32,6 +32,7 @@ KaOscControl * KaOscControl::_theControl = 0;
 /// processed by the local thread. The local thread takes the averages and
 /// adjusts the three programmable oscillators it controls.
 class KaOscControlPriv : public QThread {
+    friend class KaOscControl;
 public:
     /// Instantiate
     /// @param config the KaDrxConfig in use, which will provide AFC parameters
@@ -151,11 +152,11 @@ private:
     /// Number of g0 powers currently summed
     unsigned int _nSummed;
 
-    /// g0 power sum
+    /// g0 power sum, mW
     double _g0PowerSum;
 
-    /// g0 power averaged over _nToSum samples
-    double _g0PowerAvg;
+    /// g0 power averaged over _nToSum samples, dBm
+    double _g0PowerAvgDbm;
 
     /// offset frequency
     double _freqOffset;
@@ -233,8 +234,18 @@ KaOscControl::setBlankingEnabled(bool enabled, int64_t pulseSeqNum) {
 
 void
 KaOscControl::getOscFrequencies(uint64_t & osc0Freq, uint64_t & osc1Freq,
-        uint64_t & osc2Freq, uint64_t & osc3Freq) {
+        uint64_t & osc2Freq, uint64_t & osc3Freq) const {
     _privImpl->getOscFrequencies(osc0Freq, osc1Freq, osc2Freq, osc3Freq);
+}
+
+bool
+KaOscControl::afcIsTracking() const {
+    return(_privImpl->_afcMode == KaOscControlPriv::AFC_TRACKING);
+}
+
+double
+KaOscControl::g0AvgPowerDbm() const {
+    return(_privImpl->_g0PowerAvgDbm);
 }
 
 KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
@@ -250,7 +261,7 @@ KaOscControlPriv::KaOscControlPriv(const KaDrxConfig & config,
     _nToSum(10),
     _nSummed(0),
     _g0PowerSum(0.0),
-    _g0PowerAvg(0.0),
+    _g0PowerAvgDbm(-999.0),
     _freqOffset(0.0),
     _lastRcvdPulse(0),
     _pulsesRcvd(0),
@@ -539,7 +550,8 @@ KaOscControlPriv::newXmitSample(double g0Power, double freqOffset,
     // If we've summed the required number of pulses, calculate the averages
     // and wake our thread waiting for the new averages
     if (_nSummed == _nToSum) {
-        _g0PowerAvg = _g0PowerSum / _nToSum;
+        // Calculate the average linear power in mW and convert to log power in dBm
+        _g0PowerAvgDbm = 10.0 * log10(_g0PowerSum / _nToSum);
         _freqOffset = freqOffset;
         _clearSum();
         _newAverage.wakeAll();
@@ -556,14 +568,11 @@ KaOscControlPriv::_clearSum() {
 
 void
 KaOscControlPriv::_processXmitAverage() {
- //   double g0PowerDbm = 10.0 * log10(_g0PowerAvg) + 30; // +30 for dBW to dBm
-    double g0PowerDbm = 10.0 * log10(_g0PowerAvg); // dBm
-
-    ILOG << "New " << _nToSum << "-pulse average: G0 " << g0PowerDbm <<
+    ILOG << "New " << _nToSum << "-pulse average: G0 " << _g0PowerAvgDbm <<
         " dBm, freq offset " << _freqOffset;
 
     // Set mode based on whether g0PowerDbm is less than our threshold
-    AfcMode_t newMode = (g0PowerDbm < _g0ThreshDbm) ? AFC_SEARCHING : AFC_TRACKING;
+    AfcMode_t newMode = (_g0PowerAvgDbm < _g0ThreshDbm) ? AFC_SEARCHING : AFC_TRACKING;
 
     switch (newMode) {
       // In AFC_SEARCHING mode, step upward in coarse steps through frequencies
@@ -572,7 +581,7 @@ KaOscControlPriv::_processXmitAverage() {
       {
           // If mode just changed to searching, log it and apply the change
           if (newMode != _afcMode) {
-              WLOG << "G0 power " << g0PowerDbm <<
+              WLOG << "G0 power " << _g0PowerAvgDbm <<
                       " dBm has dropped below min of " <<
                       _g0ThreshDbm << " dBm. Returning to SEARCH mode.";
               // Only sum 10 pulses at a time when in searching mode
