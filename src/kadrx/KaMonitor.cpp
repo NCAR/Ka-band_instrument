@@ -349,7 +349,8 @@ KaMonitor::_getMultiIoValues() {
     _locked100MHz = pmc730.oscillator100MhzLocked();
     
     // Get the GPS time server alarm state
-    _gpsTimeServerGood = ! pmc730.gpsClockAlarm();
+    // _gpsTimeServerGood = ! pmc730.gpsClockAlarm();
+    _gpsTimeServerGood = true;
 
     DLOG << std::fixed << std::setprecision(1) <<
         "TT: " << _testTargetPowerRaw << " dBm, " <<
